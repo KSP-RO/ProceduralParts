@@ -25,6 +25,9 @@ You may also find, in the StretchyTanks/Parts folder, a Template file with the g
 License remains CC-BY-SA 3.0 Unported
 
 Changelog
+v6 == \/ ==
+*Added height and width display
+
 v5 == \/ ==
 *Changed texture handling system. Now all textures are specified in the CFG file.
 *Fixed MFS integration again, no ModuleManager patch needed (modules are in the part cfgs)

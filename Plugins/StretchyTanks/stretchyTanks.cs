@@ -800,6 +800,7 @@ public class StretchyTanks : PartModule
             Vector2 screenPoint = Camera.main.WorldToScreenPoint(transform.position);
             Rect posMass = new Rect(screenPoint.x - 88f, Screen.height - screenPoint.y, 176f, 35f);
             Rect posRes = new Rect(screenPoint.x - 88f, Screen.height - screenPoint.y - 35, 176f, 35f);
+            Rect posSize = new Rect(screenPoint.x - 88f, Screen.height - screenPoint.y + 35, 176f, 35f);
             GUIStyle styMass = new GUIStyle();
             GUIStyle styRes = new GUIStyle();
             styMass.alignment = TextAnchor.MiddleCenter;
@@ -828,6 +829,7 @@ public class StretchyTanks : PartModule
             }
             GUI.Label(posRes, getResourceNames(), styRes);
             GUI.Label(posMass, "Total Mass: " + Math.Round(part.mass + part.GetResourceMass(), 3) + " tons\nDry Mass: " + part.mass + " tons", styMass);
+            GUI.Label(posSize, "Size: " + Math.Round(radialFactor * origScale.x * 2.5, 3) + "m x " + Math.Round(stretchFactor * origScale.y * 1.875, 3) + "m", styRes);
         }
     }
 
