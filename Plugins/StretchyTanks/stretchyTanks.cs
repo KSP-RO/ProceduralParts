@@ -63,7 +63,7 @@ public class StretchyTanks : PartModule
     public string textureKey = "t";
 
     public List<SurfaceNode> nodeList = new List<SurfaceNode>();
-    
+
     public float lastUpdateFactor = 0f;
 
     public float topStretchPosition = 0f;
@@ -142,13 +142,13 @@ public class StretchyTanks : PartModule
                 return "While mousing over the tank:\n* Hold '" + stretchKey + "' then move the mouse up or down to stretch its length." +
                 "\n* Hold '" + radialKey + "' then move the mouse side to side to stretch its width." +
                 "\n* Press 'g' to change its fuel type." +
-                "\n* Press 't' to change its texture."; 
+                "\n* Press 't' to change its texture.";
         }
         else
         {
             return "While mousing over the tank:\n* Hold '" + stretchKey + "' then move the mouse up or down to stretch its length." +
                 "\n* Press 'g' to change its fuel type." +
-                "\n* Press 't' to change its texture."; 
+                "\n* Press 't' to change its texture.";
         }
     }
 
@@ -187,7 +187,7 @@ public class StretchyTanks : PartModule
         }
         updateScale(); // NK TEST
     }
-    
+
     public string getResourceNames()
     {
         String total = "";
@@ -333,7 +333,7 @@ public class StretchyTanks : PartModule
 
     }
 
-    public void updateScale()
+    public virtual void updateScale()
     {
         try // run on OnLoad() now, so may be nulls
         {
@@ -543,7 +543,7 @@ public class StretchyTanks : PartModule
             }
             if (stillAttached == false)
             {
-                nodeList.RemoveAt(i);                
+                nodeList.RemoveAt(i);
             }
         }
     }
@@ -695,7 +695,7 @@ public class StretchyTanks : PartModule
         }
 
         // Apply texture
-        
+
         // get settings
         Vector2 scaleUV = new Vector2(2f, 1f);
         string sides, ends, sidesBump = "";
@@ -760,7 +760,7 @@ public class StretchyTanks : PartModule
             transform.GetChild(0).GetChild(0).GetChild(0).renderer.material.shader = Shader.Find("KSP/Bumped");
         else
             transform.GetChild(0).GetChild(0).GetChild(0).renderer.material.shader = Shader.Find("KSP/Diffuse");
-        
+
         // top is no longer specular ever, just diffuse.
         transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).renderer.material.shader = Shader.Find("KSP/Diffuse");
 
@@ -875,7 +875,7 @@ public class StretchyTanks : PartModule
                         counterpart.triggerUpdate = true;
                     }
                 }
-                // SW Added: On first run: Store basemass (already set by ModularFuelTanks) in initialBasemass. 
+                // SW Added: On first run: Store basemass (already set by ModularFuelTanks) in initialBasemass.
                 // All part.mass and basemass calculations will be based on initialBasemass AFTER volume has been determined.
                 if (part.Modules.Contains("ModuleFuelTanks"))
                 {
@@ -896,7 +896,7 @@ public class StretchyTanks : PartModule
 
     public void OnMouseEnter()
     {
-        if (HighLogic.LoadedSceneIsEditor) 
+        if (HighLogic.LoadedSceneIsEditor)
             GUIon = true;
     }
 

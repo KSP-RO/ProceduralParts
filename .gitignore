@@ -7,7 +7,7 @@
 *.sln.docstates
 
 # e-dog's stuff
-Plugins/StretchyTanks/build.bat
+build.bat
 *.sublime-project
 *.sublime-workspace
 
