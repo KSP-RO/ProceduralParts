@@ -333,16 +333,21 @@ public class StretchyTanks : PartModule
 
     }
 
-    public virtual void updateScale()
+    public virtual void rescaleModel()
+    {
+        //transform.GetChild(0).GetChild(0).GetChild(0).localScale = new Vector3(radialFactor, radialFactor, stretchFactor);
+        if (origScale.x < 0)
+            origScale = transform.GetChild(0).GetChild(0).localScale;
+        Vector3 scale = new Vector3(radialFactor, stretchFactor, radialFactor);
+        scale.Scale(origScale);
+        transform.GetChild(0).GetChild(0).localScale = scale;
+    }
+
+    public void updateScale()
     {
         try // run on OnLoad() now, so may be nulls
         {
-            //transform.GetChild(0).GetChild(0).GetChild(0).localScale = new Vector3(radialFactor, radialFactor, stretchFactor);
-            if (origScale.x < 0)
-                origScale = transform.GetChild(0).GetChild(0).localScale;
-            Vector3 scale = new Vector3(radialFactor, stretchFactor, radialFactor);
-            scale.Scale(origScale);
-            transform.GetChild(0).GetChild(0).localScale = scale;
+            rescaleModel();
 
             float srbHeight = 1f;
             float srbOffset = -0.18f;
