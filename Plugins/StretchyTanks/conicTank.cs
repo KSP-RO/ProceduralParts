@@ -45,6 +45,9 @@ public class StretchyConicTank : StretchyTanks
     int sideVerts=(circleSegments+1)*(heightSegments+1);
     int sideFaces=circleSegments*heightSegments*2;
 
+    int capVerts=circleSegments*2;
+    int capFaces=(circleSegments-1)*2;
+
     var dirs=new Vector3[circleSegments+1];
     for (int i=0; i<=circleSegments; ++i)
     {
@@ -54,12 +57,13 @@ public class StretchyConicTank : StretchyTanks
 
     float baseRad=radialFactor*1.25f;
     float  topRad=   topFactor*1.25f;
+    float height=stretchFactor*1.875f;
 
     var shape=new Vector3[heightSegments+1];
     for (int i=0; i<=heightSegments; ++i)
     {
       float v=(float)i/heightSegments;
-      float y=(v-0.5f)*1.875f;
+      float y=(v-0.5f)*height;
       float r=Mathf.Lerp(baseRad, topRad, v);
       shape[i]=new Vector3(r, y, v);
     }
@@ -122,6 +126,10 @@ public class StretchyConicTank : StretchyTanks
 
     if (!HighLogic.LoadedSceneIsEditor) m.Optimize();
 
+    var collider=tr.GetComponent<MeshCollider>();
+    collider.sharedMesh=null;
+    collider.sharedMesh=m;
+
     // get cap mesh
     tr=tr.GetChild(0);
 
@@ -131,6 +139,57 @@ public class StretchyConicTank : StretchyTanks
     m=mf.mesh;
     if (!m) { Debug.LogError("[StretchyConicTank] no mesh to reshape", part); return; }
 
-    //== cap mesh
+    // build cap mesh
+    m.Clear();
+
+    verts=new Vector3[capVerts];
+    uv=new Vector2[capVerts];
+    norm=new Vector3[capVerts];
+    tang=new Vector4[capVerts];
+
+    const float capMapScale=0.47f;
+
+    for (int i=0; i<circleSegments; ++i)
+    {
+      var d=dirs[i];
+
+      verts[i]=d*baseRad-Vector3.forward*height*0.5f;
+      norm [i]=-Vector3.forward;
+      tang[i].Set(-1, 0, 0, 1);
+      uv[i].Set(-d.x*capMapScale+0.5f, d.y*capMapScale+0.5f);
+
+      verts[i+circleSegments]=d*topRad+Vector3.forward*height*0.5f;
+      norm [i+circleSegments]=Vector3.forward;
+      tang[i+circleSegments].Set(1, 0, 0, 1);
+      uv[i+circleSegments].Set(d.x*capMapScale+0.5f, d.y*capMapScale+0.5f);
+    }
+
+    // set vertex data to mesh
+    m.vertices=verts;
+    m.uv=uv;
+    m.normals=norm;
+    m.tangents=tang;
+
+    m.uv2=null;
+    m.colors32=null;
+
+    tri=new int[capFaces*3];
+
+    for (int i=1, ti=0; i<circleSegments; ++i, ti+=3)
+    {
+      int nv=i+1; if (nv==circleSegments) nv=0;
+
+      tri[ti  ]=0;
+      tri[ti+1]=i;
+      tri[ti+2]=nv;
+
+      tri[ti  +(circleSegments-1)*3]=circleSegments;
+      tri[ti+1+(circleSegments-1)*3]=circleSegments+nv;
+      tri[ti+2+(circleSegments-1)*3]=circleSegments+i;
+    }
+
+    m.triangles=tri;
+
+    if (!HighLogic.LoadedSceneIsEditor) m.Optimize();
   }
 }
