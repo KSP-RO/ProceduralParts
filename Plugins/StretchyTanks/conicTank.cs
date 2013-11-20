@@ -29,7 +29,7 @@ public class StretchyConicTank : StretchyTanks
 
   public override void rescaleModel()
   {
-    // get mesh
+    // get side mesh
     var tr=transform.GetChild(0).GetChild(0).GetChild(0);
 
     var mf=tr.GetComponent<MeshFilter>();
@@ -42,11 +42,11 @@ public class StretchyConicTank : StretchyTanks
     if (circleSegments<3) circleSegments=3;
     if (heightSegments<1) heightSegments=1;
 
-    int sideVerts=circleSegments*(heightSegments+1);
+    int sideVerts=(circleSegments+1)*(heightSegments+1);
     int sideFaces=circleSegments*heightSegments*2;
 
-    var dirs=new Vector3[circleSegments];
-    for (int i=0; i<circleSegments; ++i)
+    var dirs=new Vector3[circleSegments+1];
+    for (int i=0; i<=circleSegments; ++i)
     {
       float a=Mathf.PI*2*i/circleSegments;
       dirs[i]=new Vector3(Mathf.Cos(a), -Mathf.Sin(a), 0);
@@ -83,7 +83,7 @@ public class StretchyConicTank : StretchyTanks
       n.Set(n.y, -n.x);
       n.Normalize();
 
-      for (int j=0; j<circleSegments; ++j, ++vi)
+      for (int j=0; j<=circleSegments; ++j, ++vi)
       {
         var d=dirs[j];
         verts[vi]=d*p.x+Vector3.forward*p.y;
@@ -104,24 +104,32 @@ public class StretchyConicTank : StretchyTanks
 
     var tri=new int[sideFaces*3];
 
-    for (int i=0, vi=0, ti=0; i<heightSegments; ++i)
+    for (int i=0, vi=0, ti=0; i<heightSegments; ++i, ++vi)
       for (int j=0; j<circleSegments; ++j, ++vi)
       {
         int nv=vi+1;
-        if (j==circleSegments-1) nv-=circleSegments;
 
         tri[ti++]=vi;
-        tri[ti++]=nv+circleSegments;
+        tri[ti++]=nv+circleSegments+1;
         tri[ti++]=nv;
 
         tri[ti++]=vi;
-        tri[ti++]=vi+circleSegments;
-        tri[ti++]=nv+circleSegments;
+        tri[ti++]=vi+circleSegments+1;
+        tri[ti++]=nv+circleSegments+1;
       }
 
     m.triangles=tri;
 
     if (!HighLogic.LoadedSceneIsEditor) m.Optimize();
+
+    // get cap mesh
+    tr=tr.GetChild(0);
+
+    mf=tr.GetComponent<MeshFilter>();
+    if (!mf) { Debug.LogError("[StretchyConicTank] no model to reshape", part); return; }
+
+    m=mf.mesh;
+    if (!m) { Debug.LogError("[StretchyConicTank] no mesh to reshape", part); return; }
 
     //== cap mesh
   }
