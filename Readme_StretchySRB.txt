@@ -27,6 +27,15 @@ License remains CC-BY-SA 3.0 Unported
 Changelog
 v6 == \/ ==
 *Added height and width display
+*Changed scaling steps (slightly finer control). Hold LeftShift for 10x speed.
+*Removed width and height limits
+*Added even-meter tanks (0.5m, 1m, 2m, 3m, 4m)
+*Added one new texture by me
+*Added three new textures by Chestburster
+*Added three new textures by Dante80
+*Resized a couple textures, for hopefully no loss in quality.
+*Added Balloon-type superstretchy. Needs MFSC v3.3 or above.
+*Fixed surface attachment problems (I think)
 
 v5 == \/ ==
 *Changed texture handling system. Now all textures are specified in the CFG file.
