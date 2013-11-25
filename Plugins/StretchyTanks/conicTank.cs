@@ -5,9 +5,34 @@ using System.Text;
 using UnityEngine;
 
 
+struct BezierSlope
+{
+  Vector2 p1, p2;
+
+  public BezierSlope(Vector4 v)
+  {
+    p1=new Vector2(v.x, v.y);
+    p2=new Vector2(v.z, v.w);
+  }
+
+  public Vector2 interp(float t)
+  {
+    Vector2 a=Vector2.Lerp(Vector2.zero, p1, t);
+    Vector2 b=Vector2.Lerp(p1, p2, t);
+    Vector2 c=Vector2.Lerp(p2, Vector2.one, t);
+
+    Vector2 d=Vector2.Lerp(a, b, t);
+    Vector2 e=Vector2.Lerp(b, c, t);
+
+    return Vector2.Lerp(d, e, t);
+  }
+}
+
+
 public class StretchyConicTank : StretchyTanks
 {
-  [KSPField(isPersistant = true)] public float topFactor = 1f;
+  [KSPField(isPersistant=true)] public float topFactor=1f;
+  [KSPField(isPersistant=true)] public Vector4 coneShape=new Vector4(0.3f, 0.2f, 0.8f, 0.7f);
 
   [KSPField] public int circleSegments=24;
   [KSPField] public int heightSegments=10;
@@ -91,13 +116,25 @@ public class StretchyConicTank : StretchyTanks
     float  topRad=   topFactor*1.25f;
     float height=stretchFactor*1.875f;
 
+    var slope=new BezierSlope(coneShape);
+
     var shape=new Vector3[heightSegments+1];
     for (int i=0; i<=heightSegments; ++i)
     {
       float v=(float)i/heightSegments;
-      float y=(v-0.5f)*height;
-      float r=Mathf.Lerp(baseRad, topRad, v);
-      shape[i]=new Vector3(r, y, v);
+
+      Vector2 p;
+      if (baseRad<=topRad)
+        p=slope.interp(v);
+      else
+      {
+        p=slope.interp(1-v);
+        p.y=1-p.y;
+      }
+
+      float y=(p.y-0.5f)*height;
+      float r=Mathf.Abs(baseRad-topRad)*p.x+Mathf.Min(baseRad, topRad);
+      shape[i]=new Vector3(r, y, p.y);
     }
 
     // build side surface mesh
