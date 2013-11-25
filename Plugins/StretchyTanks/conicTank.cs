@@ -47,6 +47,56 @@ public class StretchyConicTank : StretchyTanks
   [KSPField] public string shapeKey="b";
 
 
+  public override float getTopFactor() { return topFactor; }
+
+
+  public override float getMappingRadialFactor()
+  {
+    return (radialFactor+topFactor)*0.5f;
+  }
+
+
+  public override string getSizeText()
+  {
+    return Math.Round(radialFactor * origScale.x * 2.5, 3) + "m .. "
+      + Math.Round(topFactor * origScale.x * 2.5, 3) + "m x "
+      + Math.Round(stretchFactor * origScale.y * 1.875, 3) + "m";
+  }
+
+
+  public override float calcVolumeFactor()
+  {
+    double volume=0;
+    var pp=new Vector2(radialFactor, 0);
+    var slope=new BezierSlope(coneShape);
+
+    for (int i=1; i<=heightSegments; ++i)
+    {
+      float v=(float)i/heightSegments;
+
+      Vector2 p;
+      if (radialFactor<=topFactor)
+      {
+        p=slope.interp(v);
+        p.x=Mathf.Lerp(radialFactor, topFactor, p.x);
+      }
+      else
+      {
+        p=slope.interp(1-v);
+        p.y=1-p.y;
+        p.x=Mathf.Lerp(topFactor, radialFactor, p.x);
+      }
+
+      double r=(p.x+pp.x)*0.5;
+      volume+=r*r*(p.y-pp.y);
+
+      pp=p;
+    }
+
+    return (float)volume*stretchFactor;
+  }
+
+
   public override string GetInfo()
   {
     return base.GetInfo()+
@@ -67,7 +117,7 @@ public class StretchyConicTank : StretchyTanks
       {
         float initialValue=topFactor;
         topFactor+=(Input.GetAxis("Mouse X")+Input.GetAxis("Mouse Y")) * 0.075f;
-        topFactor=Mathf.Max(topFactor, 0.075f);
+        topFactor=Mathf.Max(topFactor, 0.025f);
         topFactor=Mathf.Min(topFactor, 7.5f);
         if (initialValue!=radialFactor)
         {

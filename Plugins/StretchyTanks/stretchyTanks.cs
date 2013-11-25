@@ -152,30 +152,32 @@ public class StretchyTanks : PartModule
         }
     }
 
+    public virtual float calcVolumeFactor() { return stretchFactor * radialFactor * radialFactor; }
+
     public void updateMass()
     {
         if (part.Modules.Contains("ModuleFuelTanks"))
             return;
         if (tankType == 0)
         {
-            part.mass = Mathf.Round(initialDryMass * stretchFactor * radialFactor * radialFactor * 1000f) / 1000f;
+            part.mass = Mathf.Round(initialDryMass * calcVolumeFactor() * 1000f) / 1000f;
         }
         else if (tankType == 1)
         {
-            part.mass = Mathf.Round(initialDryMass * 0.575f * stretchFactor * radialFactor * radialFactor * 1000f) / 1000f;
+            part.mass = Mathf.Round(initialDryMass * 0.575f * calcVolumeFactor() * 1000f) / 1000f;
         }
         else if (tankType == 2)
         {
-            part.mass = Mathf.Round(initialDryMass * 1f * stretchFactor * radialFactor * radialFactor * 1000f) / 1000f;
+            part.mass = Mathf.Round(initialDryMass * 1f * calcVolumeFactor() * 1000f) / 1000f;
         }
         else if (tankType == 3)
         {
-            part.mass = Mathf.Round(initialDryMass * 0.75f * stretchFactor * radialFactor * radialFactor * 1000f) / 1000f;
+            part.mass = Mathf.Round(initialDryMass * 0.75f * calcVolumeFactor() * 1000f) / 1000f;
         }
         // NK add solid fuel, dry mass = 0.0015 per unit, or 1:6 given SF's mass of 0.0075t per unit
         else if (tankType == 4)
         {
-            part.mass = Mathf.Round(initialDryMass * 1.5f * stretchFactor * radialFactor * radialFactor * 1000f) / 1000f;
+            part.mass = Mathf.Round(initialDryMass * 1.5f * calcVolumeFactor() * 1000f) / 1000f;
         }
     }
 
@@ -245,7 +247,7 @@ public class StretchyTanks : PartModule
 
     public void updateForceTorque()
     {
-        float massFactor = initialDryMass * stretchFactor * radialFactor * radialFactor;
+        float massFactor = initialDryMass * calcVolumeFactor();
         part.breakingForce = 969.47f * Mathf.Pow(massFactor, 0.3684f);
         part.breakingTorque = 969.47f * Mathf.Pow(massFactor, 0.3684f);
     }
@@ -257,7 +259,7 @@ public class StretchyTanks : PartModule
             if(stretchSRB)
                 tankType = 4; // NK
             part.Resources.list.Clear();
-            float volume = initialDryMass * 9.203885f * stretchFactor * radialFactor * radialFactor;
+            float volume = initialDryMass * 9.203885f * calcVolumeFactor();
             if (tankType == 0)
             {
                 ConfigNode nodeF = new ConfigNode("RESOURCE");
@@ -472,7 +474,7 @@ public class StretchyTanks : PartModule
                 part.srfAttachNode.position.x = attach * radialFactor;
                 refreshSrfAttachNodes();
                 // NK rescale attach nodes
-                part.findAttachNode("top").size = (int)Math.Round((radialFactor - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
+                part.findAttachNode("top").size = (int)Math.Round((getTopFactor() - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
                 part.findAttachNode("bottom").size = (int)Math.Round((radialFactor - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
             }
             srbNodeOffset = newsrbNodeOffset; // NK
@@ -481,6 +483,8 @@ public class StretchyTanks : PartModule
         {
         }
     }
+
+    public virtual float getTopFactor() { return radialFactor; }
 
     public void detectNewAttach()
     {
@@ -772,7 +776,7 @@ public class StretchyTanks : PartModule
         // set up UVs
         if(autoScale)
         {
-            scaleUV.x = (float)Math.Round(scaleUV.x * radialFactor);
+            scaleUV.x = (float)Math.Round(scaleUV.x * getMappingRadialFactor());
             if (scaleUV.x < 1)
                     scaleUV.x = 1;
             if(autoWidthDivide)
@@ -797,6 +801,8 @@ public class StretchyTanks : PartModule
         }
         transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).renderer.material.SetTexture("_MainTex", secondary);
     }
+
+    public virtual float getMappingRadialFactor() { return radialFactor; }
 
     void OnGUI()
     {
@@ -834,8 +840,13 @@ public class StretchyTanks : PartModule
             }
             GUI.Label(posRes, getResourceNames(), styRes);
             GUI.Label(posMass, "Total Mass: " + Math.Round(part.mass + part.GetResourceMass(), 3) + " tons\nDry Mass: " + part.mass + " tons", styMass);
-            GUI.Label(posSize, "Size: " + Math.Round(radialFactor * origScale.x * 2.5, 3) + "m x " + Math.Round(stretchFactor * origScale.y * 1.875, 3) + "m", styRes);
+            GUI.Label(posSize, "Size: " + getSizeText(), styRes);
         }
+    }
+
+    public virtual string getSizeText()
+    {
+        return Math.Round(radialFactor * origScale.x * 2.5, 3) + "m x " + Math.Round(stretchFactor * origScale.y * 1.875, 3) + "m";
     }
 
     public void Update()
@@ -886,7 +897,7 @@ public class StretchyTanks : PartModule
                 // All part.mass and basemass calculations will be based on initialBasemass AFTER volume has been determined.
                 if (part.Modules.Contains("ModuleFuelTanks"))
                 {
-                    int vol = (int)Math.Round(initialDryMass * stretchFactor * radialFactor * radialFactor * 1600*10);
+                    int vol = (int)Math.Round(initialDryMass * calcVolumeFactor() * 1600*10);
                     int mVol = (int)Math.Round((float)(part.Modules["ModuleFuelTanks"].Fields.GetValue("volume"))*10);
                     if (mVol != vol)
                     {
@@ -917,12 +928,12 @@ public class StretchyTanks : PartModule
             if (triggerRounding && part.Modules.Contains("ModuleFuelTanks"))
             {
                 triggerRounding = false;
-                part.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", (float)Math.Round(initialDryMass * stretchFactor * radialFactor * radialFactor * 1600*10)*.1f);
+                part.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", (float)Math.Round(initialDryMass * calcVolumeFactor() * 1600*10)*.1f);
                 foreach (Part p in part.symmetryCounterparts)
                 {
                     try
                     {
-                        p.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", (float)Math.Round(initialDryMass * stretchFactor * radialFactor * radialFactor * 1600 * 10) * .1f);
+                        p.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", (float)Math.Round(initialDryMass * calcVolumeFactor() * 1600 * 10) * .1f);
                         var counterpart = p.Modules.OfType<StretchyTanks>().FirstOrDefault();
                         counterpart.triggerRounding = false;
                     }
