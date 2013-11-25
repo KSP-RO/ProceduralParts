@@ -934,7 +934,7 @@ public class StretchyTanks : PartModule
         }
     }
 
-    public void OnMouseOver()
+    public virtual void OnMouseOver()
     {
         if (HighLogic.LoadedSceneIsEditor)
         {

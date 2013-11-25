@@ -12,6 +12,8 @@ public class StretchyConicTank : StretchyTanks
   [KSPField] public int circleSegments=24;
   [KSPField] public int heightSegments=10;
 
+  [KSPField] public string topRadKey="y";
+
 
   // void dumpObj(Transform t)
   // {
@@ -25,6 +27,36 @@ public class StretchyConicTank : StretchyTanks
   //   for (int i=0; i<t.childCount; ++i)
   //     dumpObj(t.GetChild(i));
   // }
+
+
+  public override string GetInfo()
+  {
+    return base.GetInfo()+
+      "\n* Hold '"+topRadKey+"' and move mouse to change top width.";
+  }
+
+
+  public override void OnMouseOver()
+  {
+    base.OnMouseOver();
+
+    if (HighLogic.LoadedSceneIsEditor)
+    {
+      EditorLogic editor = EditorLogic.fetch;
+      if (Input.GetKey(topRadKey) && editor.editorScreen!=EditorLogic.EditorScreen.Actions)
+      {
+        float initialValue=topFactor;
+        topFactor+=(Input.GetAxis("Mouse X")+Input.GetAxis("Mouse Y")) * 0.075f;
+        topFactor=Mathf.Max(topFactor, 0.075f);
+        topFactor=Mathf.Min(topFactor, 7.5f);
+        if (initialValue!=radialFactor)
+        {
+          triggerUpdate=true;
+          rescaled=true;
+        }
+      }
+    }
+  }
 
 
   public override void rescaleModel()
