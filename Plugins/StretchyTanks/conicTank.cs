@@ -5,6 +5,9 @@ using System.Text;
 using UnityEngine;
 
 
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ//
+
+
 struct BezierSlope
 {
   Vector2 p1, p2;
@@ -29,35 +32,26 @@ struct BezierSlope
 }
 
 
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ//
+
+
 public class StretchyConicTank : StretchyTanks
 {
-  [KSPField(isPersistant=true)] public float topFactor=1f;
-  [KSPField(isPersistant=true)] public Vector4 coneShape=new Vector4(0.3f, 0.2f, 0.8f, 0.7f);
+  [KSPField(isPersistant=true)] public float topFactor=0.5f;
+  [KSPField(isPersistant=true)] public Vector4 coneShape=new Vector4(0.3f, 0.3f, 0.7f, 0.7f);
 
   [KSPField] public int circleSegments=24;
-  [KSPField] public int heightSegments=10;
+  [KSPField] public int heightSegments=9;
 
   [KSPField] public string topRadKey="y";
-
-
-  // void dumpObj(Transform t)
-  // {
-  //   if (t==null) { print("null object"); return; }
-
-  //   print("object "+t.name);
-  //   if (t.parent!=null) print("  parent "+t.parent.name);
-  //   if (t.GetComponent<MeshFilter>()) print("  mesh");
-  //   if (t.collider) print("  collider");
-
-  //   for (int i=0; i<t.childCount; ++i)
-  //     dumpObj(t.GetChild(i));
-  // }
+  [KSPField] public string shapeKey="b";
 
 
   public override string GetInfo()
   {
     return base.GetInfo()+
-      "\n* Hold '"+topRadKey+"' and move mouse to change top width.";
+      "\n* Hold '"+topRadKey+"' and move mouse to change top width."+
+      "\n* Press '"+shapeKey+"' to change its cone shape.";
   }
 
 
@@ -68,6 +62,7 @@ public class StretchyConicTank : StretchyTanks
     if (HighLogic.LoadedSceneIsEditor)
     {
       EditorLogic editor = EditorLogic.fetch;
+
       if (Input.GetKey(topRadKey) && editor.editorScreen!=EditorLogic.EditorScreen.Actions)
       {
         float initialValue=topFactor;
@@ -79,6 +74,25 @@ public class StretchyConicTank : StretchyTanks
           triggerUpdate=true;
           rescaled=true;
         }
+      }
+
+      if (Input.GetKeyDown(shapeKey) && editor.editorScreen!=EditorLogic.EditorScreen.Actions)
+      {
+        var shapes=new List<Vector4>();
+        foreach (var sl in GameDatabase.Instance.GetConfigNodes("STRETCHYTANKCONESHAPES"))
+          for (int i=0; i<sl.values.Count; ++i)
+            if (sl.values[i].name=="shape")
+              shapes.Add(ConfigNode.ParseVector4(sl.values[i].value));
+
+        if (shapes.Count==0) shapes.Add(coneShape);
+
+        int idx=0;
+        for (; idx<shapes.Count; ++idx) if (shapes[idx]==coneShape) break;
+
+        if (++idx>=shapes.Count) idx=0;
+        coneShape=shapes[idx];
+
+        triggerUpdate=true;
       }
     }
   }
