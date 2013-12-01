@@ -1,7 +1,6 @@
-STRETCHYSRB v5
 StretchyTanks is by the great Ancient Gammoner.
 
-This addon is by NathanKell, featuring further textures by Chestburster
+This addon is by NathanKell, featuring further textures by Chestburster and Dante80
 
 This addon to Stretchy Tanks adds a Stretchable SRB, a new texture system, and some fixes.
 *Node size scales when resizing super-stretchy tanks
