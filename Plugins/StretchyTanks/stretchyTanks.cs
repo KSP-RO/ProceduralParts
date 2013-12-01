@@ -7,10 +7,6 @@ using UnityEngine;
 
 public class StretchyTanks : PartModule
 {
-    //SW Added: initialBasemass variable to store MFT's basemass calculation using the tank's initial during KSP startup.
-    [KSPField(isPersistant = true)]
-    public float initialBasemass = 0.0f;
-
     [KSPField(isPersistant = true)]
     public float stretchFactor = 1f;
 
@@ -100,6 +96,7 @@ public class StretchyTanks : PartModule
 
     public override void OnStart(StartState state)
     {
+        nodeList.Clear();
         if (HighLogic.LoadedSceneIsEditor)
         {
             changeTextures();
@@ -108,7 +105,7 @@ public class StretchyTanks : PartModule
             updateMass();
             changeResources();
             updateScale();
-            updateSurfaceNodes();
+            //updateSurfaceNodes(); -- will do on triggered update.
         }
         if (HighLogic.LoadedSceneIsFlight)
         {
@@ -187,6 +184,7 @@ public class StretchyTanks : PartModule
         {
             part.Resources.list.Clear();
         }
+        nodeList.Clear();
         updateScale(); // NK TEST
     }
 
@@ -352,10 +350,11 @@ public class StretchyTanks : PartModule
             rescaleModel();
 
             float srbHeight = 1f;
-            float srbOffset = -0.18f;
+            float srbOffset = 0.0f;
             float newsrbNodeOffset = 0.0f;
             if (stretchSRB)
             {
+                srbOffset = -0.18f;
                 if (stretchFactor < 1f)
                 {
                     srbHeight = stretchFactor;
@@ -383,6 +382,8 @@ public class StretchyTanks : PartModule
             }
             if (HighLogic.LoadedSceneIsEditor)
             {
+                if (triggerUpdate)
+                {
                 if (part.attachMode == AttachModes.SRF_ATTACH && superStretch == true)
                 {
                     var diff = attach * radialFactor - part.srfAttachNode.position.x;
@@ -476,6 +477,7 @@ public class StretchyTanks : PartModule
                 // NK rescale attach nodes
                 part.findAttachNode("top").size = (int)Math.Round((getTopFactor() - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
                 part.findAttachNode("bottom").size = (int)Math.Round((radialFactor - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
+            }
             }
             srbNodeOffset = newsrbNodeOffset; // NK
         }
@@ -953,15 +955,15 @@ public class StretchyTanks : PartModule
             if (Input.GetKey(stretchKey) && editor.editorScreen != EditorLogic.EditorScreen.Actions)
             {
                 float initialValue = stretchFactor;
-                stretchFactor += Input.GetAxis("Mouse Y") * 0.125f;
-                if (stretchFactor < 0.125f )
+                stretchFactor += Input.GetAxis("Mouse Y") * 0.1f * (Input.GetKey(KeyCode.LeftShift) ? 10f : 1f);
+                if (stretchFactor < 0.1f )
                 {
-                    stretchFactor = 0.125f;
+                    stretchFactor = 0.1f;
                 }
-                if (stretchFactor > 25f)
+                /*if (stretchFactor > 25f)
                 {
                     stretchFactor = 25f;
-                }
+                }*/
                 if (initialValue != stretchFactor)
                 {
                     triggerUpdate = true;
@@ -971,15 +973,15 @@ public class StretchyTanks : PartModule
             if (Input.GetKey(radialKey) && editor.editorScreen != EditorLogic.EditorScreen.Actions && superStretch == true)
             {
                 float initialValue = radialFactor;
-                radialFactor += Input.GetAxis("Mouse X") * 0.075f;
-                if (radialFactor < 0.075f)
+                radialFactor += Input.GetAxis("Mouse X") * 0.01f * (Input.GetKey(KeyCode.LeftShift) ? 10f : 1f);
+                if (radialFactor < 0.01f)
                 {
-                    radialFactor = 0.075f;
+                    radialFactor = 0.01f;
                 }
-                if (radialFactor > 7.5f)
+                /*if (radialFactor > 8.0f)
                 {
-                    radialFactor = 7.5f;
-                }
+                    radialFactor = 8.0f;
+                }*/
                 if (initialValue != radialFactor)
                 {
                     triggerUpdate = true;
@@ -990,10 +992,10 @@ public class StretchyTanks : PartModule
             if (stretchSRB && Input.GetKey(tankTypeKey) && editor.editorScreen != EditorLogic.EditorScreen.Actions)
             {
                 float initialValue = burnTime;
-                burnTime += (Input.GetAxis("Mouse Y") * 2.0f);
-                if (burnTime < 1f)
+                burnTime += Input.GetAxis("Mouse Y") * 1.0f * (Input.GetKey(KeyCode.LeftShift) ? 10f : 1f); ;
+                if (burnTime < 0.25f)
                 {
-                    burnTime = 1f;
+                    burnTime = 0.25f;
                 }
                 if (burnTime > 360f)
                 {
