@@ -105,6 +105,23 @@ public class StretchyConicTank : StretchyTanks
   }
 
 
+  public override void updateConterpartSize(StretchyTanks counterpart)
+  {
+    var cpart=counterpart as StretchyConicTank;
+    if (cpart==null) return;
+
+    if (cpart.stretchFactor!=stretchFactor || cpart.radialFactor!=radialFactor
+      || cpart.topFactor!=topFactor || cpart.coneShape!=coneShape)
+    {
+      cpart.stretchFactor=stretchFactor;
+      cpart.radialFactor =radialFactor;
+      cpart.topFactor    =topFactor;
+      cpart.coneShape    =coneShape;
+      cpart.triggerUpdate=true;
+    }
+  }
+
+
   public override void OnMouseOver()
   {
     base.OnMouseOver();

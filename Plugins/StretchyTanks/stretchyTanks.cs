@@ -851,6 +851,16 @@ public class StretchyTanks : PartModule
         return Math.Round(radialFactor * origScale.x * 2.5, 3) + "m x " + Math.Round(stretchFactor * origScale.y * 1.875, 3) + "m";
     }
 
+    public virtual void updateConterpartSize(StretchyTanks counterpart)
+    {
+        if (counterpart.stretchFactor != stretchFactor || counterpart.radialFactor != radialFactor)
+        {
+            counterpart.stretchFactor = stretchFactor;
+            counterpart.radialFactor = radialFactor;
+            counterpart.triggerUpdate = true;
+        }
+    }
+
     public void Update()
     {
         if (HighLogic.LoadedSceneIsEditor)
@@ -874,12 +884,7 @@ public class StretchyTanks : PartModule
                 foreach (Part p in part.symmetryCounterparts)
                 {
                     var counterpart = p.Modules.OfType<StretchyTanks>().FirstOrDefault();
-                    if (counterpart.stretchFactor != stretchFactor || counterpart.radialFactor != radialFactor)
-                    {
-                        counterpart.stretchFactor = stretchFactor;
-                        counterpart.radialFactor = radialFactor;
-                        counterpart.triggerUpdate = true;
-                    }
+                    updateConterpartSize(counterpart);
                     if (counterpart.tankType != tankType || counterpart.burnTime != burnTime) // NK SRB
                     {
                         counterpart.tankType = tankType;
@@ -926,6 +931,11 @@ public class StretchyTanks : PartModule
         {
             // NK update texture scale
             changeTextures();
+            foreach (Part p in part.symmetryCounterparts)
+            {
+                var counterpart = p.Modules.OfType<StretchyTanks>().FirstOrDefault();
+                counterpart.changeTextures();
+            }
             GUIon = false;
             if (triggerRounding && part.Modules.Contains("ModuleFuelTanks"))
             {
