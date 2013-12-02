@@ -100,6 +100,39 @@ public class StretchyConicTank : StretchyTanks
   }
 
 
+  public override SurfaceNode newSurfaceNode(Part p)
+  {
+    var node=base.newSurfaceNode(p);
+    node.prevTFactor=topFactor;
+    return node;
+  }
+
+
+  public override void updateSurfaceNode(SurfaceNode node, Part p)
+  {
+    if (node.yPos > 0)
+      p.transform.Translate(0f, (stretchFactor / node.prevFactor) * (node.yPos - node.rad) + node.rad - node.yPos, 0f, part.transform);
+    else
+      p.transform.Translate(0f, (stretchFactor / node.prevFactor) * (node.yPos + node.rad) - node.rad - node.yPos, 0f, part.transform);
+
+    node.prevFactor = stretchFactor;
+    node.yPos = p.transform.localPosition.y;
+
+    float v=node.yPos/(stretchFactor*1.875f)+0.5f;
+    float  rf=Mathf.Lerp(radialFactor, topFactor, v);
+    float prf=Mathf.Lerp(node.prevRFactor, node.prevTFactor, v);
+
+    float radius = Mathf.Sqrt(node.xPos * node.xPos + node.zPos * node.zPos);
+    float angle = Mathf.Atan2(node.xPos, node.zPos);
+    float newRad = (rf / prf) * (radius - node.rad) + node.rad - radius;
+    p.transform.Translate(newRad * Mathf.Sin(angle), 0f, newRad * Mathf.Cos(angle), part.transform);
+    node.xPos = p.transform.localPosition.x;
+    node.zPos = p.transform.localPosition.z;
+    node.prevRFactor = radialFactor;
+    node.prevTFactor = topFactor;
+  }
+
+
   public override string GetInfo()
   {
     return base.GetInfo()+

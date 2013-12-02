@@ -567,20 +567,23 @@ public class StretchyTanks : PartModule
             if (p.attachMode == AttachModes.SRF_ATTACH)
             {
                 if (!nodeList.Exists(x => x.id == p.uid))
-                {
-                    SurfaceNode newNode = new SurfaceNode();
-                    newNode.id = p.uid;
-                    newNode.rad = p.srfAttachNode.position.x;
-                    newNode.xPos = p.transform.localPosition.x;
-                    newNode.yPos = p.transform.localPosition.y;
-                    newNode.zPos = p.transform.localPosition.z;
-                    newNode.prevFactor = stretchFactor;
-                    newNode.prevRFactor = radialFactor;
-                    nodeList.Add(newNode);
-                  }
+                    nodeList.Add(newSurfaceNode(p));
             }
         }
         newAttachSurface = false;
+    }
+
+    public virtual SurfaceNode newSurfaceNode(Part p)
+    {
+        SurfaceNode newNode = new SurfaceNode();
+        newNode.id = p.uid;
+        newNode.rad = p.srfAttachNode.position.x;
+        newNode.xPos = p.transform.localPosition.x;
+        newNode.yPos = p.transform.localPosition.y;
+        newNode.zPos = p.transform.localPosition.z;
+        newNode.prevFactor = stretchFactor;
+        newNode.prevRFactor = radialFactor;
+        return newNode;
     }
 
     public void refreshSrfAttachNodes()
@@ -597,6 +600,28 @@ public class StretchyTanks : PartModule
         }
     }
 
+    public virtual void updateSurfaceNode(SurfaceNode node, Part p)
+    {
+        if (node.yPos > 0)
+        {
+            p.transform.Translate(0f, (stretchFactor / node.prevFactor) * (node.yPos - node.rad) + node.rad - node.yPos, 0f, part.transform);
+        }
+        else
+        {
+            p.transform.Translate(0f, (stretchFactor / node.prevFactor) * (node.yPos + node.rad) - node.rad - node.yPos, 0f, part.transform);
+        }
+        node.prevFactor = stretchFactor;
+        node.yPos = p.transform.localPosition.y;
+
+        float radius = Mathf.Sqrt(node.xPos * node.xPos + node.zPos * node.zPos);
+        float angle = Mathf.Atan2(node.xPos, node.zPos);
+        float newRad = (radialFactor / node.prevRFactor) * (radius - node.rad) + node.rad - radius;
+        p.transform.Translate(newRad * Mathf.Sin(angle), 0f, newRad * Mathf.Cos(angle), part.transform);
+        node.xPos = p.transform.localPosition.x;
+        node.zPos = p.transform.localPosition.z;
+        node.prevRFactor = radialFactor;
+    }
+
     public void updateSurfaceNodes()
     {
         foreach (Part p in part.children)
@@ -604,26 +629,7 @@ public class StretchyTanks : PartModule
             foreach (SurfaceNode node in nodeList)
             {
                 if (node.id == p.uid)
-                {
-                    if (node.yPos > 0)
-                    {
-                        p.transform.Translate(0f, (stretchFactor / node.prevFactor) * (node.yPos - node.rad) + node.rad - node.yPos, 0f, part.transform);
-                    }
-                    else
-                    {
-                        p.transform.Translate(0f, (stretchFactor / node.prevFactor) * (node.yPos + node.rad) - node.rad - node.yPos, 0f, part.transform);
-                    }
-                    node.prevFactor = stretchFactor;
-                    node.yPos = p.transform.localPosition.y;
-
-                    float radius = Mathf.Sqrt(node.xPos * node.xPos + node.zPos * node.zPos);
-                    float angle = Mathf.Atan2(node.xPos, node.zPos);
-                    float newRad = (radialFactor / node.prevRFactor) * (radius - node.rad) + node.rad - radius;
-                    p.transform.Translate(newRad * Mathf.Sin(angle), 0f, newRad * Mathf.Cos(angle), part.transform);
-                    node.xPos = p.transform.localPosition.x;
-                    node.zPos = p.transform.localPosition.z;
-                    node.prevRFactor = radialFactor;
-                }
+                    updateSurfaceNode(node, p);
             }
         }
     }
@@ -637,6 +643,7 @@ public class StretchyTanks : PartModule
         public float rad { set; get; }
         public float prevFactor { set; get; }
         public float prevRFactor { set; get; }
+        public float prevTFactor { set; get; }
     }
 
     List<ConfigNode> GetTextures()
