@@ -50,6 +50,9 @@ public class StretchyConicTank : StretchyTanks
   public override float getTopFactor() { return topFactor; }
 
 
+  public override float getAttachFactor() { return (radialFactor+topFactor)*0.5f; }
+
+
   public override float getMappingRadialFactor()
   {
     return (radialFactor+topFactor)*0.5f;

@@ -386,7 +386,7 @@ public class StretchyTanks : PartModule
                 {
                 if (part.attachMode == AttachModes.SRF_ATTACH && superStretch == true)
                 {
-                    var diff = attach * radialFactor - part.srfAttachNode.position.x;
+                    var diff = attach * getAttachFactor() - part.srfAttachNode.position.x;
                     var x = part.transform.localPosition.x;
                     var z = part.transform.localPosition.z;
                     var angle = Mathf.Atan2(x, z);
@@ -472,7 +472,7 @@ public class StretchyTanks : PartModule
             }
             if (superStretch == true)
             {
-                part.srfAttachNode.position.x = attach * radialFactor;
+                part.srfAttachNode.position.x = attach * getAttachFactor();
                 refreshSrfAttachNodes();
                 // NK rescale attach nodes
                 part.findAttachNode("top").size = (int)Math.Round((getTopFactor() - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
@@ -487,6 +487,7 @@ public class StretchyTanks : PartModule
     }
 
     public virtual float getTopFactor() { return radialFactor; }
+    public virtual float getAttachFactor() { return radialFactor; }
 
     public void detectNewAttach()
     {
