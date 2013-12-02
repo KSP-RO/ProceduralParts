@@ -94,11 +94,32 @@ public class StretchyTanks : PartModule
     [KSPField]
     public Vector3 origScale = new Vector3(-1, -1, -1); // NK, for changed way parts resize
 
+    public float maxRFactor = 0;
+
+    public virtual void updateMaxRFactor()
+    {
+        if (!superStretch) return;
+
+        maxRFactor=0.01f;
+        foreach (ConfigNode tech in GameDatabase.Instance.GetConfigNodes("STRETCHYTANKMAXRAD"))
+            for (int i = 0; i < tech.values.Count; i++)
+            {
+                var value=tech.values[i];
+                float r=float.Parse(value.value);
+                if (r<maxRFactor) continue;
+                if (ResearchAndDevelopment.GetTechnologyState(value.name)!=RDTech.State.Available) continue;
+                maxRFactor=r;
+            }
+
+        if (radialFactor>maxRFactor) radialFactor=maxRFactor;
+    }
+
     public override void OnStart(StartState state)
     {
         nodeList.Clear();
         if (HighLogic.LoadedSceneIsEditor)
         {
+            updateMaxRFactor();
             changeTextures();
             //triggerUpdate = true;
             // instead:
@@ -347,6 +368,8 @@ public class StretchyTanks : PartModule
     {
         try // run on OnLoad() now, so may be nulls
         {
+            updateMaxRFactor();
+
             rescaleModel();
 
             float srbHeight = 1f;
@@ -996,10 +1019,10 @@ public class StretchyTanks : PartModule
                 {
                     radialFactor = 0.01f;
                 }
-                /*if (radialFactor > 8.0f)
+                if (radialFactor > maxRFactor)
                 {
-                    radialFactor = 8.0f;
-                }*/
+                    radialFactor = maxRFactor;
+                }
                 if (initialValue != radialFactor)
                 {
                     triggerUpdate = true;

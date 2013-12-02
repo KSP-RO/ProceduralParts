@@ -67,6 +67,13 @@ public class StretchyConicTank : StretchyTanks
   }
 
 
+  public override void updateMaxRFactor()
+  {
+    base.updateMaxRFactor();
+    if (topFactor>maxRFactor) topFactor=maxRFactor;
+  }
+
+
   public override float calcVolumeFactor()
   {
     double volume=0;
@@ -171,7 +178,7 @@ public class StretchyConicTank : StretchyTanks
         float initialValue=topFactor;
         topFactor+=(Input.GetAxis("Mouse X")+Input.GetAxis("Mouse Y")) * 0.075f;
         topFactor=Mathf.Max(topFactor, 0.025f);
-        topFactor=Mathf.Min(topFactor, 7.5f);
+        topFactor=Mathf.Min(topFactor, maxRFactor);
         if (initialValue!=radialFactor)
         {
           triggerUpdate=true;
