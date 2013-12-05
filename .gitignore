@@ -6,6 +6,11 @@
 *.user
 *.sln.docstates
 
+# e-dog's stuff
+build.bat
+*.sublime-project
+*.sublime-workspace
+
 # Build results
 
 [Dd]ebug/

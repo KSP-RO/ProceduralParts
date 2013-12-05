@@ -59,7 +59,7 @@ public class StretchyTanks : PartModule
     public string textureKey = "t";
 
     public List<SurfaceNode> nodeList = new List<SurfaceNode>();
-    
+
     public float lastUpdateFactor = 0f;
 
     public float topStretchPosition = 0f;
@@ -94,11 +94,32 @@ public class StretchyTanks : PartModule
     [KSPField]
     public Vector3 origScale = new Vector3(-1, -1, -1); // NK, for changed way parts resize
 
+    public float maxRFactor = 0;
+
+    public virtual void updateMaxRFactor()
+    {
+        if (!superStretch) return;
+
+        maxRFactor=0.01f;
+        foreach (ConfigNode tech in GameDatabase.Instance.GetConfigNodes("STRETCHYTANKMAXRAD"))
+            for (int i = 0; i < tech.values.Count; i++)
+            {
+                var value=tech.values[i];
+                float r=float.Parse(value.value);
+                if (r<maxRFactor) continue;
+                if (ResearchAndDevelopment.GetTechnologyState(value.name)!=RDTech.State.Available) continue;
+                maxRFactor=r;
+            }
+
+        if (radialFactor>maxRFactor) radialFactor=maxRFactor;
+    }
+
     public override void OnStart(StartState state)
     {
         nodeList.Clear();
         if (HighLogic.LoadedSceneIsEditor)
         {
+            updateMaxRFactor();
             changeTextures();
             //triggerUpdate = true;
             // instead:
@@ -139,15 +160,17 @@ public class StretchyTanks : PartModule
                 return "While mousing over the tank:\n* Hold '" + stretchKey + "' then move the mouse up or down to stretch its length." +
                 "\n* Hold '" + radialKey + "' then move the mouse side to side to stretch its width." +
                 "\n* Press 'g' to change its fuel type." +
-                "\n* Press 't' to change its texture."; 
+                "\n* Press 't' to change its texture.";
         }
         else
         {
             return "While mousing over the tank:\n* Hold '" + stretchKey + "' then move the mouse up or down to stretch its length." +
                 "\n* Press 'g' to change its fuel type." +
-                "\n* Press 't' to change its texture."; 
+                "\n* Press 't' to change its texture.";
         }
     }
+
+    public virtual float calcVolumeFactor() { return stretchFactor * radialFactor * radialFactor; }
 
     public void updateMass()
     {
@@ -155,24 +178,24 @@ public class StretchyTanks : PartModule
             return;
         if (tankType == 0)
         {
-            part.mass = Mathf.Round(initialDryMass * stretchFactor * radialFactor * radialFactor * 1000f) / 1000f;
+            part.mass = Mathf.Round(initialDryMass * calcVolumeFactor() * 1000f) / 1000f;
         }
         else if (tankType == 1)
         {
-            part.mass = Mathf.Round(initialDryMass * 0.575f * stretchFactor * radialFactor * radialFactor * 1000f) / 1000f;
+            part.mass = Mathf.Round(initialDryMass * 0.575f * calcVolumeFactor() * 1000f) / 1000f;
         }
         else if (tankType == 2)
         {
-            part.mass = Mathf.Round(initialDryMass * 1f * stretchFactor * radialFactor * radialFactor * 1000f) / 1000f;
+            part.mass = Mathf.Round(initialDryMass * 1f * calcVolumeFactor() * 1000f) / 1000f;
         }
         else if (tankType == 3)
         {
-            part.mass = Mathf.Round(initialDryMass * 0.75f * stretchFactor * radialFactor * radialFactor * 1000f) / 1000f;
+            part.mass = Mathf.Round(initialDryMass * 0.75f * calcVolumeFactor() * 1000f) / 1000f;
         }
         // NK add solid fuel, dry mass = 0.0015 per unit, or 1:6 given SF's mass of 0.0075t per unit
         else if (tankType == 4)
         {
-            part.mass = Mathf.Round(initialDryMass * 1.5f * stretchFactor * radialFactor * radialFactor * 1000f) / 1000f;
+            part.mass = Mathf.Round(initialDryMass * 1.5f * calcVolumeFactor() * 1000f) / 1000f;
         }
     }
 
@@ -185,7 +208,7 @@ public class StretchyTanks : PartModule
         nodeList.Clear();
         updateScale(); // NK TEST
     }
-    
+
     public string getResourceNames()
     {
         String total = "";
@@ -243,7 +266,7 @@ public class StretchyTanks : PartModule
 
     public void updateForceTorque()
     {
-        float massFactor = initialDryMass * stretchFactor * radialFactor * radialFactor;
+        float massFactor = initialDryMass * calcVolumeFactor();
         part.breakingForce = 969.47f * Mathf.Pow(massFactor, 0.3684f);
         part.breakingTorque = 969.47f * Mathf.Pow(massFactor, 0.3684f);
     }
@@ -255,7 +278,7 @@ public class StretchyTanks : PartModule
             if(stretchSRB)
                 tankType = 4; // NK
             part.Resources.list.Clear();
-            float volume = initialDryMass * 9.203885f * stretchFactor * radialFactor * radialFactor;
+            float volume = initialDryMass * 9.203885f * calcVolumeFactor();
             if (tankType == 0)
             {
                 ConfigNode nodeF = new ConfigNode("RESOURCE");
@@ -331,16 +354,23 @@ public class StretchyTanks : PartModule
 
     }
 
+    public virtual void rescaleModel()
+    {
+        //transform.GetChild(0).GetChild(0).GetChild(0).localScale = new Vector3(radialFactor, radialFactor, stretchFactor);
+        if (origScale.x < 0)
+            origScale = transform.GetChild(0).GetChild(0).localScale;
+        Vector3 scale = new Vector3(radialFactor, stretchFactor, radialFactor);
+        scale.Scale(origScale);
+        transform.GetChild(0).GetChild(0).localScale = scale;
+    }
+
     public void updateScale()
     {
         try // run on OnLoad() now, so may be nulls
         {
-            //transform.GetChild(0).GetChild(0).GetChild(0).localScale = new Vector3(radialFactor, radialFactor, stretchFactor);
-            if (origScale.x < 0)
-                origScale = transform.GetChild(0).GetChild(0).localScale;
-            Vector3 scale = new Vector3(radialFactor, stretchFactor, radialFactor);
-            scale.Scale(origScale);
-            transform.GetChild(0).GetChild(0).localScale = scale;
+            updateMaxRFactor();
+
+            rescaleModel();
 
             float srbHeight = 1f;
             float srbOffset = 0.0f;
@@ -377,100 +407,100 @@ public class StretchyTanks : PartModule
             {
                 if (triggerUpdate)
                 {
-                    if (part.attachMode == AttachModes.SRF_ATTACH && superStretch == true)
-                    {
-                        var diff = attach * radialFactor - part.srfAttachNode.position.x;
-                        var x = part.transform.localPosition.x;
-                        var z = part.transform.localPosition.z;
-                        var angle = Mathf.Atan2(x, z);
-                        part.transform.Translate(diff * Mathf.Sin(angle), 0f, diff * Mathf.Cos(angle), part.parent.transform);
-                    }
-                    float length = topPosition - bottomPosition;
-                    part.findAttachNode("top").position.y = topPosition * stretchFactor;
-                    if (part.findAttachNode("top").attachedPart != null)
-                    {
-                        float stretchDifference = (stretchFactor - 1f) / 2f * length;
-                        if (topCheck)
-                        {
-                            topStretchPosition = stretchDifference;
-                            topCheck = false;
-                        }
-                        if (part.findAttachNode("top").attachedPart == part.parent)
-                        {
-                            var p = EditorLogic.SortedShipList[0];
-                            if (part.symmetryCounterparts != null)
-                            {
-                                float count = 1f;
-                                foreach (Part P in part.symmetryCounterparts)
-                                {
-                                    count += 1f;
-                                }
-                                p.transform.Translate(0f, (stretchDifference - topStretchPosition) / count, 0f, part.transform);
-                                part.transform.Translate(0f, -(stretchDifference - topStretchPosition), 0f);
-                            }
-                            else
-                            {
-                                p.transform.Translate(0f, stretchDifference - topStretchPosition, 0f, part.transform);
-                                part.transform.Translate(0f, -(stretchDifference - topStretchPosition), 0f);
-                            }
-                        }
-                        else
-                        {
-                            part.findAttachNode("top").attachedPart.transform.Translate(0f, stretchDifference - topStretchPosition, 0f, part.transform);
-                        }
-                        topStretchPosition = stretchDifference;
-                    }
-                    else
-                    {
-                        topCheck = true;
-                    }
-                    part.findAttachNode("bottom").position.y = bottomPosition * stretchFactor + newsrbNodeOffset; // NK
-                    if (part.findAttachNode("bottom").attachedPart != null)
-                    {
-                        float stretchDifference = (stretchFactor - 1f) / 2f * length + newsrbNodeOffset - srbNodeOffset;
-                        if (bottomCheck)
-                        {
-                            bottomStretchPosition = stretchDifference;
-                            bottomCheck = false;
-                        }
-                        if (part.findAttachNode("bottom").attachedPart == part.parent)
-                        {
-                            var p = EditorLogic.SortedShipList[0];
-                            if (part.symmetryCounterparts != null)
-                            {
-                                float count = 1f;
-                                foreach (Part P in part.symmetryCounterparts)
-                                {
-                                    count += 1f;
-                                }
-                                p.transform.Translate(0f, (-stretchDifference + bottomStretchPosition) / count, 0f, part.transform);
-                                part.transform.Translate(0f, -(-stretchDifference + bottomStretchPosition), 0f);
-                            }
-                            else
-                            {
-                                p.transform.Translate(0f, -stretchDifference + bottomStretchPosition, 0f, part.transform);
-                                part.transform.Translate(0f, -(-stretchDifference + bottomStretchPosition), 0f);
-                            }
-                        }
-                        else
-                        {
-                            part.findAttachNode("bottom").attachedPart.transform.Translate(0f, -stretchDifference + bottomStretchPosition, 0f, part.transform);
-                        }
-                        bottomStretchPosition = stretchDifference;
-                    }
-                    else
-                    {
-                        bottomCheck = true;
-                    }
-                }
-                if (superStretch == true)
+                if (part.attachMode == AttachModes.SRF_ATTACH && superStretch == true)
                 {
-                    part.srfAttachNode.position.x = attach * radialFactor;
-                    refreshSrfAttachNodes();
-                    // NK rescale attach nodes
-                    part.findAttachNode("top").size = (int)Math.Round((radialFactor - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
-                    part.findAttachNode("bottom").size = (int)Math.Round((radialFactor - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
+                    var diff = attach * getAttachFactor() - part.srfAttachNode.position.x;
+                    var x = part.transform.localPosition.x;
+                    var z = part.transform.localPosition.z;
+                    var angle = Mathf.Atan2(x, z);
+                    part.transform.Translate(diff * Mathf.Sin(angle), 0f, diff * Mathf.Cos(angle), part.parent.transform);
                 }
+                float length = topPosition - bottomPosition;
+                part.findAttachNode("top").position.y = topPosition * stretchFactor;
+                if (part.findAttachNode("top").attachedPart != null)
+                {
+                    float stretchDifference = (stretchFactor - 1f) / 2f * length;
+                    if (topCheck)
+                    {
+                        topStretchPosition = stretchDifference;
+                        topCheck = false;
+                    }
+                    if (part.findAttachNode("top").attachedPart == part.parent)
+                    {
+                        var p = EditorLogic.SortedShipList[0];
+                        if (part.symmetryCounterparts != null)
+                        {
+                            float count = 1f;
+                            foreach (Part P in part.symmetryCounterparts)
+                            {
+                                count += 1f;
+                            }
+                            p.transform.Translate(0f, (stretchDifference - topStretchPosition) / count, 0f, part.transform);
+                            part.transform.Translate(0f, -(stretchDifference - topStretchPosition), 0f);
+                        }
+                        else
+                        {
+                            p.transform.Translate(0f, stretchDifference - topStretchPosition, 0f, part.transform);
+                            part.transform.Translate(0f, -(stretchDifference - topStretchPosition), 0f);
+                        }
+                    }
+                    else
+                    {
+                        part.findAttachNode("top").attachedPart.transform.Translate(0f, stretchDifference - topStretchPosition, 0f, part.transform);
+                    }
+                    topStretchPosition = stretchDifference;
+                }
+                else
+                {
+                    topCheck = true;
+                }
+                part.findAttachNode("bottom").position.y = bottomPosition * stretchFactor + newsrbNodeOffset; // NK
+                if (part.findAttachNode("bottom").attachedPart != null)
+                {
+                    float stretchDifference = (stretchFactor - 1f) / 2f * length + newsrbNodeOffset - srbNodeOffset;
+                    if (bottomCheck)
+                    {
+                        bottomStretchPosition = stretchDifference;
+                        bottomCheck = false;
+                    }
+                    if (part.findAttachNode("bottom").attachedPart == part.parent)
+                    {
+                        var p = EditorLogic.SortedShipList[0];
+                        if (part.symmetryCounterparts != null)
+                        {
+                            float count = 1f;
+                            foreach (Part P in part.symmetryCounterparts)
+                            {
+                                count += 1f;
+                            }
+                            p.transform.Translate(0f, (-stretchDifference + bottomStretchPosition) / count, 0f, part.transform);
+                            part.transform.Translate(0f, -(-stretchDifference + bottomStretchPosition), 0f);
+                        }
+                        else
+                        {
+                            p.transform.Translate(0f, -stretchDifference + bottomStretchPosition, 0f, part.transform);
+                            part.transform.Translate(0f, -(-stretchDifference + bottomStretchPosition), 0f);
+                        }
+                    }
+                    else
+                    {
+                        part.findAttachNode("bottom").attachedPart.transform.Translate(0f, -stretchDifference + bottomStretchPosition, 0f, part.transform);
+                    }
+                    bottomStretchPosition = stretchDifference;
+                }
+                else
+                {
+                    bottomCheck = true;
+                }
+            }
+            if (superStretch == true)
+            {
+                part.srfAttachNode.position.x = attach * getAttachFactor();
+                refreshSrfAttachNodes();
+                // NK rescale attach nodes
+                part.findAttachNode("top").size = (int)Math.Round((getTopFactor() - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
+                part.findAttachNode("bottom").size = (int)Math.Round((radialFactor - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
+            }
             }
             srbNodeOffset = newsrbNodeOffset; // NK
         }
@@ -478,6 +508,9 @@ public class StretchyTanks : PartModule
         {
         }
     }
+
+    public virtual float getTopFactor() { return radialFactor; }
+    public virtual float getAttachFactor() { return radialFactor; }
 
     public void detectNewAttach()
     {
@@ -545,7 +578,7 @@ public class StretchyTanks : PartModule
             }
             if (stillAttached == false)
             {
-                nodeList.RemoveAt(i);                
+                nodeList.RemoveAt(i);
             }
         }
     }
@@ -557,20 +590,23 @@ public class StretchyTanks : PartModule
             if (p.attachMode == AttachModes.SRF_ATTACH)
             {
                 if (!nodeList.Exists(x => x.id == p.uid))
-                {
-                    SurfaceNode newNode = new SurfaceNode();
-                    newNode.id = p.uid;
-                    newNode.rad = p.srfAttachNode.position.x;
-                    newNode.xPos = p.transform.localPosition.x;
-                    newNode.yPos = p.transform.localPosition.y;
-                    newNode.zPos = p.transform.localPosition.z;
-                    newNode.prevFactor = stretchFactor;
-                    newNode.prevRFactor = radialFactor;
-                    nodeList.Add(newNode);
-                  }
+                    nodeList.Add(newSurfaceNode(p));
             }
         }
         newAttachSurface = false;
+    }
+
+    public virtual SurfaceNode newSurfaceNode(Part p)
+    {
+        SurfaceNode newNode = new SurfaceNode();
+        newNode.id = p.uid;
+        newNode.rad = p.srfAttachNode.position.x;
+        newNode.xPos = p.transform.localPosition.x;
+        newNode.yPos = p.transform.localPosition.y;
+        newNode.zPos = p.transform.localPosition.z;
+        newNode.prevFactor = stretchFactor;
+        newNode.prevRFactor = radialFactor;
+        return newNode;
     }
 
     public void refreshSrfAttachNodes()
@@ -587,6 +623,28 @@ public class StretchyTanks : PartModule
         }
     }
 
+    public virtual void updateSurfaceNode(SurfaceNode node, Part p)
+    {
+        if (node.yPos > 0)
+        {
+            p.transform.Translate(0f, (stretchFactor / node.prevFactor) * (node.yPos - node.rad) + node.rad - node.yPos, 0f, part.transform);
+        }
+        else
+        {
+            p.transform.Translate(0f, (stretchFactor / node.prevFactor) * (node.yPos + node.rad) - node.rad - node.yPos, 0f, part.transform);
+        }
+        node.prevFactor = stretchFactor;
+        node.yPos = p.transform.localPosition.y;
+
+        float radius = Mathf.Sqrt(node.xPos * node.xPos + node.zPos * node.zPos);
+        float angle = Mathf.Atan2(node.xPos, node.zPos);
+        float newRad = (radialFactor / node.prevRFactor) * (radius - node.rad) + node.rad - radius;
+        p.transform.Translate(newRad * Mathf.Sin(angle), 0f, newRad * Mathf.Cos(angle), part.transform);
+        node.xPos = p.transform.localPosition.x;
+        node.zPos = p.transform.localPosition.z;
+        node.prevRFactor = radialFactor;
+    }
+
     public void updateSurfaceNodes()
     {
         foreach (Part p in part.children)
@@ -594,26 +652,7 @@ public class StretchyTanks : PartModule
             foreach (SurfaceNode node in nodeList)
             {
                 if (node.id == p.uid)
-                {
-                    if (node.yPos > 0)
-                    {
-                        p.transform.Translate(0f, (stretchFactor / node.prevFactor) * (node.yPos - node.rad) + node.rad - node.yPos, 0f, part.transform);
-                    }
-                    else
-                    {
-                        p.transform.Translate(0f, (stretchFactor / node.prevFactor) * (node.yPos + node.rad) - node.rad - node.yPos, 0f, part.transform);
-                    }
-                    node.prevFactor = stretchFactor;
-                    node.yPos = p.transform.localPosition.y;
-
-                    float radius = Mathf.Sqrt(node.xPos * node.xPos + node.zPos * node.zPos);
-                    float angle = Mathf.Atan2(node.xPos, node.zPos);
-                    float newRad = (radialFactor / node.prevRFactor) * (radius - node.rad) + node.rad - radius;
-                    p.transform.Translate(newRad * Mathf.Sin(angle), 0f, newRad * Mathf.Cos(angle), part.transform);
-                    node.xPos = p.transform.localPosition.x;
-                    node.zPos = p.transform.localPosition.z;
-                    node.prevRFactor = radialFactor;
-                }
+                    updateSurfaceNode(node, p);
             }
         }
     }
@@ -627,6 +666,7 @@ public class StretchyTanks : PartModule
         public float rad { set; get; }
         public float prevFactor { set; get; }
         public float prevRFactor { set; get; }
+        public float prevTFactor { set; get; }
     }
 
     List<ConfigNode> GetTextures()
@@ -697,7 +737,7 @@ public class StretchyTanks : PartModule
         }
 
         // Apply texture
-        
+
         // get settings
         Vector2 scaleUV = new Vector2(2f, 1f);
         string sides, ends, sidesBump = "";
@@ -762,14 +802,14 @@ public class StretchyTanks : PartModule
             transform.GetChild(0).GetChild(0).GetChild(0).renderer.material.shader = Shader.Find("KSP/Bumped");
         else
             transform.GetChild(0).GetChild(0).GetChild(0).renderer.material.shader = Shader.Find("KSP/Diffuse");
-        
+
         // top is no longer specular ever, just diffuse.
         transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).renderer.material.shader = Shader.Find("KSP/Diffuse");
 
         // set up UVs
         if(autoScale)
         {
-            scaleUV.x = (float)Math.Round(scaleUV.x * radialFactor);
+            scaleUV.x = (float)Math.Round(scaleUV.x * getMappingRadialFactor());
             if (scaleUV.x < 1)
                     scaleUV.x = 1;
             if(autoWidthDivide)
@@ -794,6 +834,8 @@ public class StretchyTanks : PartModule
         }
         transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).renderer.material.SetTexture("_MainTex", secondary);
     }
+
+    public virtual float getMappingRadialFactor() { return radialFactor; }
 
     void OnGUI()
     {
@@ -831,7 +873,22 @@ public class StretchyTanks : PartModule
             }
             GUI.Label(posRes, getResourceNames(), styRes);
             GUI.Label(posMass, "Total Mass: " + Math.Round(part.mass + part.GetResourceMass(), 3) + " tons\nDry Mass: " + part.mass + " tons", styMass);
-            GUI.Label(posSize, "Size: " + Math.Round(radialFactor * origScale.x * 2.5, 3) + "m x " + Math.Round(stretchFactor * origScale.y * 1.875, 3) + "m", styRes);
+            GUI.Label(posSize, "Size: " + getSizeText(), styRes);
+        }
+    }
+
+    public virtual string getSizeText()
+    {
+        return Math.Round(radialFactor * origScale.x * 2.5, 3) + "m x " + Math.Round(stretchFactor * origScale.y * 1.875, 3) + "m";
+    }
+
+    public virtual void updateConterpartSize(StretchyTanks counterpart)
+    {
+        if (counterpart.stretchFactor != stretchFactor || counterpart.radialFactor != radialFactor)
+        {
+            counterpart.stretchFactor = stretchFactor;
+            counterpart.radialFactor = radialFactor;
+            counterpart.triggerUpdate = true;
         }
     }
 
@@ -858,12 +915,7 @@ public class StretchyTanks : PartModule
                 foreach (Part p in part.symmetryCounterparts)
                 {
                     var counterpart = p.Modules.OfType<StretchyTanks>().FirstOrDefault();
-                    if (counterpart.stretchFactor != stretchFactor || counterpart.radialFactor != radialFactor)
-                    {
-                        counterpart.stretchFactor = stretchFactor;
-                        counterpart.radialFactor = radialFactor;
-                        counterpart.triggerUpdate = true;
-                    }
+                    updateConterpartSize(counterpart);
                     if (counterpart.tankType != tankType || counterpart.burnTime != burnTime) // NK SRB
                     {
                         counterpart.tankType = tankType;
@@ -879,11 +931,11 @@ public class StretchyTanks : PartModule
                         counterpart.triggerUpdate = true;
                     }
                 }
-                // SW Added: On first run: Store basemass (already set by ModularFuelTanks) in initialBasemass. 
+                // SW Added: On first run: Store basemass (already set by ModularFuelTanks) in initialBasemass.
                 // All part.mass and basemass calculations will be based on initialBasemass AFTER volume has been determined.
                 if (part.Modules.Contains("ModuleFuelTanks"))
                 {
-                    int vol = (int)Math.Round(initialDryMass * stretchFactor * radialFactor * radialFactor * 1600*10);
+                    int vol = (int)Math.Round(initialDryMass * calcVolumeFactor() * 1600*10);
                     int mVol = (int)Math.Round((float)(part.Modules["ModuleFuelTanks"].Fields.GetValue("volume"))*10);
                     if (mVol != vol)
                     {
@@ -900,7 +952,7 @@ public class StretchyTanks : PartModule
 
     public void OnMouseEnter()
     {
-        if (HighLogic.LoadedSceneIsEditor) 
+        if (HighLogic.LoadedSceneIsEditor)
             GUIon = true;
     }
 
@@ -910,16 +962,21 @@ public class StretchyTanks : PartModule
         {
             // NK update texture scale
             changeTextures();
+            foreach (Part p in part.symmetryCounterparts)
+            {
+                var counterpart = p.Modules.OfType<StretchyTanks>().FirstOrDefault();
+                counterpart.changeTextures();
+            }
             GUIon = false;
             if (triggerRounding && part.Modules.Contains("ModuleFuelTanks"))
             {
                 triggerRounding = false;
-                part.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", (float)Math.Round(initialDryMass * stretchFactor * radialFactor * radialFactor * 1600*10)*.1f);
+                part.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", (float)Math.Round(initialDryMass * calcVolumeFactor() * 1600*10)*.1f);
                 foreach (Part p in part.symmetryCounterparts)
                 {
                     try
                     {
-                        p.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", (float)Math.Round(initialDryMass * stretchFactor * radialFactor * radialFactor * 1600 * 10) * .1f);
+                        p.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", (float)Math.Round(initialDryMass * calcVolumeFactor() * 1600 * 10) * .1f);
                         var counterpart = p.Modules.OfType<StretchyTanks>().FirstOrDefault();
                         counterpart.triggerRounding = false;
                     }
@@ -931,7 +988,7 @@ public class StretchyTanks : PartModule
         }
     }
 
-    public void OnMouseOver()
+    public virtual void OnMouseOver()
     {
         if (HighLogic.LoadedSceneIsEditor)
         {
@@ -962,10 +1019,10 @@ public class StretchyTanks : PartModule
                 {
                     radialFactor = 0.01f;
                 }
-                /*if (radialFactor > 8.0f)
+                if (radialFactor > maxRFactor)
                 {
-                    radialFactor = 8.0f;
-                }*/
+                    radialFactor = maxRFactor;
+                }
                 if (initialValue != radialFactor)
                 {
                     triggerUpdate = true;
