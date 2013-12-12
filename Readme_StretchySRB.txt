@@ -1,8 +1,8 @@
 StretchyTanks is by the great Ancient Gammoner.
 
-This addon is by NathanKell, featuring further textures by Chestburster and Dante80
+This addon is by NathanKell and e-dog, featuring further textures by Chestburster and Dante80
 
-This addon to Stretchy Tanks adds a Stretchable SRB, a new texture system, and some fixes.
+This addon to Stretchy Tanks adds a conic tank, a Stretchable SRB, a new texture system, and some fixes.
 *Node size scales when resizing super-stretchy tanks
 *stock ST texture stays in aspect when stretching tanks
 *will show all resources in tank when you mouseover
@@ -13,8 +13,6 @@ Note: Stretchy SRB is ModularEngines enabled, so your thrust will be corrected w
 
 The new texture system works off confignodes. There is a file in the StretchyTanks/Parts folder called STTextures.cfg that defines the textures. You can create your own textures, place them in any location, and use ModuleManager to add the appropriate nodes to the STRETCHYTANKTEXTURES node. All documentation on the node syntax is in the STTextures.cfg file.
 
-This release includes five new textures by Chestburster in addition to the three new textures by NathanKell
-
 Note: this SUPERCEDES any prior Stretchy Tanks-related work by either NathanKell or Starwaster.
 
 INSTALL:
@@ -24,6 +22,11 @@ You may also find, in the StretchyTanks/Parts folder, a Template file with the g
 License remains CC-BY-SA 3.0 Unported
 
 Changelog
+v7 == \/ ==
+*Fixed balloon tank to no-surf-attach, lowered crash tolerance
+*Added Service Module super-stretchy
+*Added new conic tank by e-dog
+
 v6 == \/ ==
 *Added height and width display
 *Changed scaling steps (slightly finer control). Hold LeftShift for 10x speed.
