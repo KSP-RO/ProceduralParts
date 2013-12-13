@@ -38,6 +38,9 @@ public class StretchyTanks : PartModule
     public bool stretchSRB = false; // NK
 
     [KSPField]
+    public float srbNozzleLength = 0;
+
+    [KSPField]
     public float topPosition;
 
     [KSPField]
@@ -94,12 +97,19 @@ public class StretchyTanks : PartModule
     [KSPField]
     public Vector3 origScale = new Vector3(-1, -1, -1); // NK, for changed way parts resize
 
+    [KSPField]
+    public float nodeSizeScalar = 1.0f; // for setting node size for superstretchies
+
     public float maxRFactor = 0;
 
     public virtual void updateMaxRFactor()
     {
         if (!superStretch) return;
-
+        if (HighLogic.CurrentGame.Mode != Game.Modes.CAREER)
+        {
+            maxRFactor = 100;
+            return;
+        }
         maxRFactor=0.01f;
         foreach (ConfigNode tech in GameDatabase.Instance.GetConfigNodes("STRETCHYTANKMAXRAD"))
             for (int i = 0; i < tech.values.Count; i++)
@@ -107,7 +117,7 @@ public class StretchyTanks : PartModule
                 var value=tech.values[i];
                 float r=float.Parse(value.value);
                 if (r<maxRFactor) continue;
-                if (ResearchAndDevelopment.GetTechnologyState(value.name)!=RDTech.State.Available) continue;
+                if (ResearchAndDevelopment.GetTechnologyState(value.name) != RDTech.State.Available) continue;
                 maxRFactor=r;
             }
 
@@ -151,7 +161,7 @@ public class StretchyTanks : PartModule
     {
         if (superStretch)
         {
-            if(stretchSRB)
+            if (stretchSRB)
                 return "While mousing over the tank:\n* Hold '" + stretchKey + "' then move the mouse up or down to stretch its length." +
                 "\n* Hold '" + radialKey + "' then move the mouse side to side to stretch its width." +
                 "\n* Press 'g' to change its burn time." +
@@ -159,8 +169,8 @@ public class StretchyTanks : PartModule
             else
                 return "While mousing over the tank:\n* Hold '" + stretchKey + "' then move the mouse up or down to stretch its length." +
                 "\n* Hold '" + radialKey + "' then move the mouse side to side to stretch its width." +
-                "\n* Press 'g' to change its fuel type." +
-                "\n* Press 't' to change its texture.";
+                "\n* Press 't' to change its texture." +
+                ((!part.Modules.Contains("ModuleFuelTanks")) ? "\n* Press 'g' to change its fuel type." : "\n* Go to Action Editor and select tank to edit fuels.");
         }
         else
         {
@@ -344,7 +354,11 @@ public class StretchyTanks : PartModule
             PartModule mEC = part.Modules["ModuleEngineConfigs"];
             if (mEC != null)
             {
-                mEC.SendMessage("ChangeThrust", mThrust);
+                //mEC.SendMessage("ChangeThrust", mThrust);
+                // thanks to ferram
+                Type engineType = mEC.GetType();
+                engineType.GetMethod("ChangeThrust").Invoke(null, new object[] { mThrust });
+
                 /*List<ConfigNode> configs = (List<ConfigNode>)mEC.Fields.GetValue("configs");
                 ConfigNode cfg = configs.Find(c => c.GetValue("name").Equals("Normal"));
                 cfg.SetValue("maxThrust", mThrust.ToString());
@@ -357,8 +371,8 @@ public class StretchyTanks : PartModule
     public virtual void rescaleModel()
     {
         //transform.GetChild(0).GetChild(0).GetChild(0).localScale = new Vector3(radialFactor, radialFactor, stretchFactor);
-        if (origScale.x < 0)
-            origScale = transform.GetChild(0).GetChild(0).localScale;
+        /*if (origScale.x < 0)
+            origScale = transform.GetChild(0).GetChild(0).localScale;*/
         Vector3 scale = new Vector3(radialFactor, stretchFactor, radialFactor);
         scale.Scale(origScale);
         transform.GetChild(0).GetChild(0).localScale = scale;
@@ -372,54 +386,26 @@ public class StretchyTanks : PartModule
 
             rescaleModel();
 
-            float srbHeight = 1f;
-            float srbOffset = 0.0f;
-            float newsrbNodeOffset = 0.0f;
             if (stretchSRB)
             {
-                srbOffset = -0.18f;
-                if (stretchFactor < 1f)
-                {
-                    srbHeight = stretchFactor;
-                    srbOffset *= srbHeight;
-                }
-                else
-                {
-                    if (radialFactor > 1f)
-                    {
-                        srbHeight = Math.Min(radialFactor, stretchFactor);
-                    }
-                    if (srbHeight > 1f)
-                    {
-                        srbOffset += ((bottomPosition - srbOffset) - (bottomPosition - srbOffset) * srbHeight);
-                    }
-                    srbOffset += bottomPosition * stretchFactor - bottomPosition;
-                }
-                transform.GetChild(0).GetChild(1).localScale = new Vector3(radialFactor * 1.1f, srbHeight * 0.8f, radialFactor * 1.1f);
-                transform.GetChild(0).GetChild(1).localPosition = new Vector3(0f, srbOffset, 0f);
-                newsrbNodeOffset = -1.25127f * 0.802f * srbHeight + srbOffset - (bottomPosition * stretchFactor);
-                /*if (srbHeight < 1f)
-                    newsrbNodeOffset -= srbOffset + srbOffset / (srbHeight * srbHeight);*/
-                if (srbNodeOffset == 0f)
-                    srbNodeOffset = newsrbNodeOffset;
+                transform.GetChild(0).GetChild(1).localScale = new Vector3(radialFactor, radialFactor, radialFactor);
+                transform.GetChild(0).GetChild(1).localPosition = new Vector3(0f, bottomPosition * stretchFactor, 0f);
             }
-            if (HighLogic.LoadedSceneIsEditor)
+            if (part.attachMode == AttachModes.SRF_ATTACH && superStretch == true)
             {
-                if (triggerUpdate)
-                {
-                if (part.attachMode == AttachModes.SRF_ATTACH && superStretch == true)
-                {
-                    var diff = attach * getAttachFactor() - part.srfAttachNode.position.x;
-                    var x = part.transform.localPosition.x;
-                    var z = part.transform.localPosition.z;
-                    var angle = Mathf.Atan2(x, z);
+                var diff = attach * getAttachFactor() - part.srfAttachNode.position.x;
+                var x = part.transform.localPosition.x;
+                var z = part.transform.localPosition.z;
+                var angle = Mathf.Atan2(x, z);
+                if (HighLogic.LoadedSceneIsEditor && triggerUpdate)
                     part.transform.Translate(diff * Mathf.Sin(angle), 0f, diff * Mathf.Cos(angle), part.parent.transform);
-                }
-                float length = topPosition - bottomPosition;
-                part.findAttachNode("top").position.y = topPosition * stretchFactor;
+            }
+            part.findAttachNode("top").position.y = topPosition * stretchFactor;
+            float stretchDifference = part.findAttachNode("top").position.y - topPosition;
+            if (HighLogic.LoadedSceneIsEditor && triggerUpdate)
+            {
                 if (part.findAttachNode("top").attachedPart != null)
                 {
-                    float stretchDifference = (stretchFactor - 1f) / 2f * length;
                     if (topCheck)
                     {
                         topStretchPosition = stretchDifference;
@@ -427,6 +413,7 @@ public class StretchyTanks : PartModule
                     }
                     if (part.findAttachNode("top").attachedPart == part.parent)
                     {
+
                         var p = EditorLogic.SortedShipList[0];
                         if (part.symmetryCounterparts != null)
                         {
@@ -454,10 +441,13 @@ public class StretchyTanks : PartModule
                 {
                     topCheck = true;
                 }
-                part.findAttachNode("bottom").position.y = bottomPosition * stretchFactor + newsrbNodeOffset; // NK
+            }
+            part.findAttachNode("bottom").position.y = bottomPosition * stretchFactor - radialFactor * srbNozzleLength;
+            stretchDifference = part.findAttachNode("bottom").position.y - bottomPosition + srbNozzleLength;
+            if (HighLogic.LoadedSceneIsEditor && triggerUpdate)
+            {
                 if (part.findAttachNode("bottom").attachedPart != null)
                 {
-                    float stretchDifference = (stretchFactor - 1f) / 2f * length + newsrbNodeOffset - srbNodeOffset;
                     if (bottomCheck)
                     {
                         bottomStretchPosition = stretchDifference;
@@ -473,18 +463,18 @@ public class StretchyTanks : PartModule
                             {
                                 count += 1f;
                             }
-                            p.transform.Translate(0f, (-stretchDifference + bottomStretchPosition) / count, 0f, part.transform);
-                            part.transform.Translate(0f, -(-stretchDifference + bottomStretchPosition), 0f);
+                            p.transform.Translate(0f, (stretchDifference - bottomStretchPosition) / count, 0f, part.transform);
+                            part.transform.Translate(0f, -(stretchDifference - bottomStretchPosition), 0f);
                         }
                         else
                         {
-                            p.transform.Translate(0f, -stretchDifference + bottomStretchPosition, 0f, part.transform);
-                            part.transform.Translate(0f, -(-stretchDifference + bottomStretchPosition), 0f);
+                            p.transform.Translate(0f, stretchDifference - bottomStretchPosition, 0f, part.transform);
+                            part.transform.Translate(0f, -(stretchDifference - bottomStretchPosition), 0f);
                         }
                     }
                     else
                     {
-                        part.findAttachNode("bottom").attachedPart.transform.Translate(0f, -stretchDifference + bottomStretchPosition, 0f, part.transform);
+                        part.findAttachNode("bottom").attachedPart.transform.Translate(0f, stretchDifference - bottomStretchPosition, 0f, part.transform);
                     }
                     bottomStretchPosition = stretchDifference;
                 }
@@ -498,14 +488,13 @@ public class StretchyTanks : PartModule
                 part.srfAttachNode.position.x = attach * getAttachFactor();
                 refreshSrfAttachNodes();
                 // NK rescale attach nodes
-                part.findAttachNode("top").size = (int)Math.Round((getTopFactor() - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
-                part.findAttachNode("bottom").size = (int)Math.Round((radialFactor - 0.07) * 2f * (stretchSRB ? 0.5f : 1f));
+                part.findAttachNode("top").size = (int)Math.Round(getTopFactor() * 2f * nodeSizeScalar-0.01);
+                part.findAttachNode("bottom").size = (int)Math.Round(radialFactor * 2f * nodeSizeScalar-0.01);
             }
-            }
-            srbNodeOffset = newsrbNodeOffset; // NK
         }
-        catch
+        catch (Exception e)
         {
+            print("*ST* UpdateScale caught: " + e.Message);
         }
     }
 
@@ -903,8 +892,9 @@ public class StretchyTanks : PartModule
                 addSurfaceNodes();
                 triggerUpdate = true;
             }
-            if (newAttachTop || newAttachBottom || triggerUpdate)
+            if (triggerUpdate || newAttachTop || newAttachBottom)
             {
+                //triggerUpdate = true; // NK TEST
                 updateScale();
             }
             if (triggerUpdate)
@@ -935,14 +925,21 @@ public class StretchyTanks : PartModule
                 // All part.mass and basemass calculations will be based on initialBasemass AFTER volume has been determined.
                 if (part.Modules.Contains("ModuleFuelTanks"))
                 {
-                    int vol = (int)Math.Round(initialDryMass * calcVolumeFactor() * 1600*10);
-                    int mVol = (int)Math.Round((float)(part.Modules["ModuleFuelTanks"].Fields.GetValue("volume"))*10);
-                    if (mVol != vol)
+                    try
                     {
-                        part.Modules["ModuleFuelTanks"].SendMessage("RoundOn", false);
-                        part.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", ((float)vol) * 0.1f);
-                        part.Modules["ModuleFuelTanks"].SendMessage("RoundOn", true);
-                        triggerRounding = true;
+                        int vol = (int)Math.Round(initialDryMass * calcVolumeFactor() * 1600 * 10);
+                        int mVol = (int)Math.Round((float)(part.Modules["ModuleFuelTanks"].Fields.GetValue("volume")) * 10);
+                        if (mVol != vol)
+                        {
+                            part.Modules["ModuleFuelTanks"].SendMessage("RoundOn", false);
+                            part.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", ((float)vol) * 0.1f);
+                            part.Modules["ModuleFuelTanks"].SendMessage("RoundOn", true);
+                            triggerRounding = true;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        print("*ST* changing volume, caught: " + e.Message);
                     }
                 }
                 triggerUpdate = false;

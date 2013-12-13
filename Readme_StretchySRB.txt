@@ -26,6 +26,7 @@ v7 == \/ ==
 *Fixed balloon tank to no-surf-attach, lowered crash tolerance
 *Added Service Module super-stretchy
 *Added new conic tank by e-dog
+*Fixed node issue
 
 v6 == \/ ==
 *Added height and width display
