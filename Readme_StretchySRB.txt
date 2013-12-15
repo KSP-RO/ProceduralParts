@@ -1,8 +1,8 @@
 StretchyTanks is by the great Ancient Gammoner.
 
-This addon is by NathanKell and e-dog, featuring further textures by Chestburster and Dante80
+This addon is by NathanKell and e-dog, featuring models by Tiberion and further textures by Chestburster and Dante80.
 
-This addon to Stretchy Tanks adds a conic tank, a Stretchable SRB, a new texture system, and some fixes.
+This addon to Stretchy Tanks adds a conic tank, two Stretchable SRBs, a new texture system, and some fixes.
 *Node size scales when resizing super-stretchy tanks
 *stock ST texture stays in aspect when stretching tanks
 *will show all resources in tank when you mouseover
@@ -26,7 +26,11 @@ v7 == \/ ==
 *Fixed balloon tank to no-surf-attach, lowered crash tolerance
 *Added Service Module super-stretchy
 *Added new conic tank by e-dog
-*Fixed node issue
+*Added technode-based radius limits by e-dog
+*Added nodeSizeScalar to support Realism Overhaul
+*Fixed node issue, where it was not set properly on load (affected procedural fairings and KJR).
+*No longer changes shader when KerbPaint present
+*Added new nozzles for the Stretchy SRBs by Tiberion
 
 v6 == \/ ==
 *Added height and width display

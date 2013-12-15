@@ -100,26 +100,27 @@ public class StretchyTanks : PartModule
     [KSPField]
     public float nodeSizeScalar = 1.0f; // for setting node size for superstretchies
 
-    public float maxRFactor = 0;
+    public float maxRFactor = 100f;
 
     public virtual void updateMaxRFactor()
     {
         if (!superStretch) return;
-        if (HighLogic.CurrentGame.Mode != Game.Modes.CAREER)
-        {
-            maxRFactor = 100;
+        maxRFactor = 100f;
+        if (HighLogic.CurrentGame == null || HighLogic.CurrentGame.Mode != Game.Modes.CAREER)
             return;
-        }
-        maxRFactor=0.01f;
+
         foreach (ConfigNode tech in GameDatabase.Instance.GetConfigNodes("STRETCHYTANKMAXRAD"))
+        {
+            maxRFactor = 0.01f;
             for (int i = 0; i < tech.values.Count; i++)
             {
-                var value=tech.values[i];
-                float r=float.Parse(value.value);
-                if (r<maxRFactor) continue;
+                var value = tech.values[i];
+                float r = float.Parse(value.value);
+                if (r < maxRFactor) continue;
                 if (ResearchAndDevelopment.GetTechnologyState(value.name) != RDTech.State.Available) continue;
-                maxRFactor=r;
+                maxRFactor = r;
             }
+        }
 
         if (radialFactor>maxRFactor) radialFactor=maxRFactor;
     }
@@ -217,6 +218,8 @@ public class StretchyTanks : PartModule
         }
         nodeList.Clear();
         updateScale(); // NK TEST
+        if (stretchSRB)
+            changeThrust();
     }
 
     public string getResourceNames()
@@ -344,28 +347,35 @@ public class StretchyTanks : PartModule
 
     public void changeThrust()
     {
-        ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
-        float mThrust = (float)Math.Round(mE.atmosphereCurve.Evaluate(0) * part.Resources["SolidFuel"].maxAmount * part.Resources["SolidFuel"].info.density * 9.81f / burnTime, 2);
-        mE.maxThrust = mThrust;
-        mE.heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((burnTime + 20f), 0.75f))*0.5f);
-        if (part.Modules.Contains("ModuleEngineConfigs"))
+        try
         {
-
-            PartModule mEC = part.Modules["ModuleEngineConfigs"];
-            if (mEC != null)
+            ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
+            float mThrust = (float)Math.Round(mE.atmosphereCurve.Evaluate(0) * part.Resources["SolidFuel"].maxAmount * part.Resources["SolidFuel"].info.density * 9.81f / burnTime, 2);
+            mE.maxThrust = mThrust;
+            mE.heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((burnTime + 20f), 0.75f)) * 0.5f);
+            if (part.Modules.Contains("ModuleEngineConfigs"))
             {
-                //mEC.SendMessage("ChangeThrust", mThrust);
-                // thanks to ferram
-                Type engineType = mEC.GetType();
-                engineType.GetMethod("ChangeThrust").Invoke(null, new object[] { mThrust });
 
-                /*List<ConfigNode> configs = (List<ConfigNode>)mEC.Fields.GetValue("configs");
-                ConfigNode cfg = configs.Find(c => c.GetValue("name").Equals("Normal"));
-                cfg.SetValue("maxThrust", mThrust.ToString());
-                mEC.GetType().GetField("configs").SetValue(mEC, configs);*/
+                var mEC = part.Modules["ModuleEngineConfigs"];
+                if (mEC != null)
+                {
+                    //mEC.SendMessage("ChangeThrust", mThrust);
+                    // thanks to ferram
+                    Type engineType = mEC.GetType();
+                    engineType.GetMethod("ChangeThrust").Invoke(mEC, new object[] { mThrust });
+                    // unneeded - engineType.GetMethod("SetConfiguration").Invoke(mEC, new object[] { null });
+
+                    /*List<ConfigNode> configs = (List<ConfigNode>)mEC.Fields.GetValue("configs");
+                    ConfigNode cfg = configs.Find(c => c.GetValue("name").Equals("Normal"));
+                    cfg.SetValue("maxThrust", mThrust.ToString());
+                    mEC.GetType().GetField("configs").SetValue(mEC, configs);*/
+                }
             }
         }
-
+        catch (Exception e)
+        {
+            print("*ST* ChangeThrust, caught " + e.Message);
+        }
     }
 
     public virtual void rescaleModel()
@@ -786,14 +796,19 @@ public class StretchyTanks : PartModule
             return;
         }
 
-        // Set shaders
-        if(bump != null)
-            transform.GetChild(0).GetChild(0).GetChild(0).renderer.material.shader = Shader.Find("KSP/Bumped");
-        else
-            transform.GetChild(0).GetChild(0).GetChild(0).renderer.material.shader = Shader.Find("KSP/Diffuse");
+        Transform tankModel = transform.GetChild(0).GetChild(0).GetChild(0);
 
-        // top is no longer specular ever, just diffuse.
-        transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).renderer.material.shader = Shader.Find("KSP/Diffuse");
+        // Set shaders
+        if (!part.Modules.Contains("ModulePaintable"))
+        {
+            if (bump != null)
+                tankModel.renderer.material.shader = Shader.Find("KSP/Bumped");
+            else
+                tankModel.renderer.material.shader = Shader.Find("KSP/Diffuse");
+
+            // top is no longer specular ever, just diffuse.
+            tankModel.GetChild(0).renderer.material.shader = Shader.Find("KSP/Diffuse");
+        }
 
         // set up UVs
         if(autoScale)
@@ -814,14 +829,15 @@ public class StretchyTanks : PartModule
             }
         }
 
-        transform.GetChild(0).GetChild(0).GetChild(0).renderer.material.mainTextureScale = scaleUV;
-        transform.GetChild(0).GetChild(0).GetChild(0).renderer.material.SetTexture("_MainTex", main);
+        // apply
+        tankModel.renderer.material.mainTextureScale = scaleUV;
+        tankModel.renderer.material.SetTexture("_MainTex", main);
         if (bump != null)
         {
-            transform.GetChild(0).GetChild(0).GetChild(0).renderer.material.SetTextureScale("_BumpMap", scaleUV);
-            transform.GetChild(0).GetChild(0).GetChild(0).renderer.material.SetTexture("_BumpMap", bump);
+            tankModel.renderer.material.SetTextureScale("_BumpMap", scaleUV);
+            tankModel.renderer.material.SetTexture("_BumpMap", bump);
         }
-        transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).renderer.material.SetTexture("_MainTex", secondary);
+        tankModel.GetChild(0).renderer.material.SetTexture("_MainTex", secondary);
     }
 
     public virtual float getMappingRadialFactor() { return radialFactor; }
