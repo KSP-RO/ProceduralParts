@@ -6,10 +6,10 @@ This addon to Stretchy Tanks adds a conic tank, two Stretchable SRBs, a new text
 *Node size scales when resizing super-stretchy tanks
 *stock ST texture stays in aspect when stretching tanks
 *will show all resources in tank when you mouseover
-*Proper integration with Modular Fuels (REQUIRES MFS Continued v3.1 or above!) - when done stretching, go into MFS tank setup and update each fuel amount the desired amount to get your final amount. Note that becuase of how MFS rounds, your ratio may become screwed up; if so, remove the affected tanks and auto-add tanks of the approrpiate ratio.
+*Proper integration with Modular Fuel Tanks or Real Fuels (REQUIRES MFT v4/RF v4 or above!) - when done stretching, go into action editor->tank setup and update each fuel amount the desired amount to get your final amount.
 *and a few other misc logic tweaks
 
-Note: Stretchy SRB is ModularEngines enabled, so your thrust will be corrected when not in vacuum. Tanks automatically work with or without MFS. It is also techlevel enabled, although only Isp will change (not casing mass).
+Note: Stretchy SRB is ModularEngines enabled, so your thrust will be corrected when not in vacuum if you have Real Fuels. Tanks automatically work with or without MFT/RF. It is also techlevel enabled, although only Isp will change (not casing mass).
 
 The new texture system works off confignodes. There is a file in the StretchyTanks/Parts folder called STTextures.cfg that defines the textures. You can create your own textures, place them in any location, and use ModuleManager to add the appropriate nodes to the STRETCHYTANKTEXTURES node. All documentation on the node syntax is in the STTextures.cfg file.
 
@@ -22,6 +22,11 @@ You may also find, in the StretchyTanks/Parts folder, a Template file with the g
 License remains CC-BY-SA 3.0 Unported
 
 Changelog
+v8 == \/ ==
+*0.23 compatibility
+*Fixed StretchySRB issue with thrust reverting.
+*Fixed to work with MFT v4 or RF v4.
+
 v7 == \/ ==
 *Fixed balloon tank to no-surf-attach, lowered crash tolerance
 *Added Service Module super-stretchy

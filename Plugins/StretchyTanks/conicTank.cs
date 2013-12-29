@@ -103,7 +103,7 @@ public class StretchyConicTank : StretchyTanks
       pp=p;
     }
 
-    return (float)volume*stretchFactor;
+    return (float)volume * stretchFactor * volMultiplier;
   }
 
 
