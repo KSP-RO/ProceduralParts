@@ -301,8 +301,22 @@ public class StretchyTanks : PartModule
         {
             if(stretchSRB)
                 tankType = 4; // NK
+
+            // remove resources
+            List<PartResource> res = new List<PartResource>();
+            foreach (PartResource r in part.GetComponents<PartResource>())
+                res.Add(r);
+            while (res.Count > 0)
+            {
+                DestroyImmediate(res[0]);
+                res.RemoveAt(0);
+            }
             part.Resources.list.Clear();
+
+            // find volume
             float volume = initialDryMass * 9.203885f * calcVolumeFactor();
+
+            // add resources
             if (tankType == 0)
             {
                 ConfigNode nodeF = new ConfigNode("RESOURCE");

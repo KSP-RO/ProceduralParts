@@ -9,7 +9,7 @@ This addon to Stretchy Tanks adds a conic tank, two Stretchable SRBs, a new text
 *Proper integration with Modular Fuel Tanks or Real Fuels (REQUIRES MFT v4/RF v4 or above!) - when done stretching, go into action editor->tank setup and update each fuel amount the desired amount to get your final amount.
 *and a few other misc logic tweaks
 
-Note: Stretchy SRB is ModularEngines enabled, so your thrust will be corrected when not in vacuum if you have Real Fuels. Tanks automatically work with or without MFT/RF. It is also techlevel enabled, although only Isp will change (not casing mass).
+Note when using with Real Fuels: Stretchy SRB is ModularEngines enabled, so your thrust will be corrected when not in vacuum. It is also techlevel enabled, although only Isp will change (not casing mass).
 
 The new texture system works off confignodes. There is a file in the StretchyTanks/Parts folder called STTextures.cfg that defines the textures. You can create your own textures, place them in any location, and use ModuleManager to add the appropriate nodes to the STRETCHYTANKTEXTURES node. All documentation on the node syntax is in the STTextures.cfg file.
 
@@ -23,9 +23,10 @@ License remains CC-BY-SA 3.0 Unported
 
 Changelog
 v8 == \/ ==
-*0.23 compatibility
-*Fixed StretchySRB issue with thrust reverting.
+*0.23 compatibility.
+*Fixed StretchySRB issue with thrust reverting due to .23 issues.
 *Fixed to work with MFT v4 or RF v4.
+*Should work properly for non-MFT/RF users again (finally!)
 
 v7 == \/ ==
 *Fixed balloon tank to no-surf-attach, lowered crash tolerance
