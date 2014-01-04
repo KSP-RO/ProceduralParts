@@ -16,8 +16,15 @@ public class StretchyTanks : PartModule
     [KSPField(isPersistant = true)]
     public bool flightStarted = false;
 
+    public const int TANK_MIXED = 0;
+    public const int TANK_LIQUID_FUEL = 1;
+    public const int TANK_MONOPROP = 2;
+    public const int TANK_OXIDIZER = 3;
+    public const int TANK_SOLID = 4;
+    public const int TANK_STRUCTURAL = 5;
+
     [KSPField(isPersistant = true)]
-    public int tankType = 0;
+    public int tankType = TANK_MIXED;
 
     [KSPField(isPersistant = true)]
     public int textureType = -1;
@@ -81,12 +88,6 @@ public class StretchyTanks : PartModule
     public bool attachTop = false;
 
     public bool attachBottom = false;
-
-    public bool newAttachTop = false;
-
-    public bool newAttachBottom = false;
-
-    public bool newAttachSurface = false;
 
     public bool triggerUpdate = false; // NK
 
@@ -198,32 +199,33 @@ public class StretchyTanks : PartModule
     {
         if (part.Modules.Contains("ModuleFuelTanks"))
             return;
-        if (tankType == 0)
-        {
-            part.mass = Mathf.Round(initialDryMass * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
-        }
-        else if (tankType == 1)
-        {
-            part.mass = Mathf.Round(initialDryMass * 0.575f * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
-        }
-        else if (tankType == 2)
-        {
-            part.mass = Mathf.Round(initialDryMass * 1f * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
-        }
-        else if (tankType == 3)
-        {
-            part.mass = Mathf.Round(initialDryMass * 0.75f * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
-        }
-        // NK add solid fuel, dry mass = 0.0015 per unit, or 1:6 given SF's mass of 0.0075t per unit
-        else if (tankType == 4)
-        {
-            part.mass = Mathf.Round(initialDryMass * 1.5f * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
+        switch(tankType) {
+            case TANK_MIXED:
+                part.mass = Mathf.Round(initialDryMass * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
+                break;
+            case TANK_LIQUID_FUEL:
+                part.mass = Mathf.Round(initialDryMass * 0.575f * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
+                break;
+            case TANK_MONOPROP:
+                part.mass = Mathf.Round(initialDryMass * 1f * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
+                break;
+            case TANK_OXIDIZER:
+                part.mass = Mathf.Round(initialDryMass * 0.75f * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
+                break;
+            case TANK_SOLID:
+                // NK add solid fuel, dry mass = 0.0015 per unit, or 1:6 given SF's mass of 0.0075t per unit
+                part.mass = Mathf.Round(initialDryMass * 1.5f * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
+                break;
+            case TANK_STRUCTURAL:
+                // Structural Fuselage / Dry Mass FL-T400
+                part.mass = Mathf.Round(initialDryMass * 0.8f * calcVolumeFactor() * 1000f / volMultiplier) / 1000f;
+                break;
         }
     }
 
     public override void OnLoad(ConfigNode node)
     {
-        if (HighLogic.LoadedSceneIsFlight && tankType != 0)
+        if (HighLogic.LoadedSceneIsFlight && tankType != TANK_MIXED)
         {
             part.Resources.list.Clear();
         }
@@ -238,46 +240,12 @@ public class StretchyTanks : PartModule
         String total = "";
         foreach (PartResource resource in part.Resources)
         {
-            /*if (resource.resourceName == "LiquidFuel")
-            {
-                total = "LiquidFuel: " + resource.amount;
-            }
-            if (resource.resourceName == "Oxidizer")
-            {
-                if (total == "")
-                {
-                    total = "Oxidizer: " + resource.amount;
-                }
-                else
-                {
-                    total += "\nOxidizer: " + resource.amount;
-                }
-            }
-            if (resource.resourceName == "MonoPropellant")
-            {
-                if (total == "")
-                {
-                    total = "MonoPropellent: " + resource.amount;
-                }
-                else
-                {
-                    total += "\nMonoPropellent: " + resource.amount;
-                }
-            }*/
             if (total != "")
                 total += "\n";
             total += resource.resourceName + ": " + resource.amount;
             //NK Add Solid Fuel
             if (resource.resourceName == "SolidFuel")
             {
-                /*if (total == "")
-                {
-                    total = "SolidFuel: " + resource.amount;
-                }
-                else
-                {
-                    total += "\nSolidFuel: " + resource.amount;
-                }*/
                 if (stretchSRB)
                 {
                     total += "\nThrust: " + Math.Round(((ModuleEngines)part.Modules["ModuleEngines"]).maxThrust,2);
@@ -300,72 +268,81 @@ public class StretchyTanks : PartModule
         if (!part.Modules.Contains("ModuleFuelTanks"))
         {
             if(stretchSRB)
-                tankType = 4; // NK
+                tankType = TANK_SOLID; // NK
 
             // remove resources
-            List<PartResource> res = new List<PartResource>();
-            foreach (PartResource r in part.GetComponents<PartResource>())
-                res.Add(r);
-            while (res.Count > 0)
-            {
-                DestroyImmediate(res[0]);
-                res.RemoveAt(0);
-            }
+            foreach(PartResource res in part.GetComponents<PartResource>())
+                DestroyImmediate(res);
             part.Resources.list.Clear();
 
             // find volume
             float volume = initialDryMass * 9.203885f * calcVolumeFactor();
 
             // add resources
-            if (tankType == 0)
+            switch (tankType)
             {
-                ConfigNode nodeF = new ConfigNode("RESOURCE");
-                nodeF.AddValue("amount", Math.Round(78.22784d * volume, 2));
-                nodeF.AddValue("maxAmount", Math.Round(78.22784d * volume, 2));
-                nodeF.AddValue("name", "LiquidFuel");
-                part.AddResource(nodeF);
-                ConfigNode nodeO = new ConfigNode("RESOURCE");
-                nodeO.AddValue("amount", Math.Round(95.6118d * volume, 2));
-                nodeO.AddValue("maxAmount", Math.Round(95.6118d * volume, 2));
-                nodeO.AddValue("name", "Oxidizer");
-                part.AddResource(nodeO);
-            }
-            if (tankType == 1)
-            {
-                ConfigNode node = new ConfigNode("RESOURCE");
-                node.AddValue("amount", Math.Round(49.9789d * volume, 2));
-                node.AddValue("maxAmount", Math.Round(49.9789d * volume, 2));
-                node.AddValue("name", "LiquidFuel");
-                part.AddResource(node);
-            }
-            if (tankType == 2)
-            {
-                ConfigNode node = new ConfigNode("RESOURCE");
-                node.AddValue("amount", Math.Round(203.718d * volume, 2));
-                node.AddValue("maxAmount", Math.Round(203.718d * volume, 2));
-                node.AddValue("name", "MonoPropellant");
-                part.AddResource(node);
-            }
-            if (tankType == 3)
-            {
-                ConfigNode node = new ConfigNode("RESOURCE");
-                node.AddValue("amount", Math.Round(81.4873d * volume, 2));
-                node.AddValue("maxAmount", Math.Round(81.4873d * volume, 2));
-                node.AddValue("name", "Oxidizer");
-                part.AddResource(node);
-            }
-            // NK add Solid Fuel
-            // Yields 850 for 1.5t dry mass, like BACC (because dry mass = 1.5 LF/Ox dry mass)
-            // But the RT-10 has way better dry:wet ratio, so pick something inbetween: 1.2794x BACC
-            if (tankType == 4)
-            {
-                ConfigNode node = new ConfigNode("RESOURCE");
-                node.AddValue("amount", Math.Round(192f * volume, 2));
-                node.AddValue("maxAmount", Math.Round(192f * volume, 2));
-                node.AddValue("name", "SolidFuel");
-                part.AddResource(node);
-                if (stretchSRB)
-                    changeThrust();
+                case TANK_MIXED:
+                    {
+                        ConfigNode nodeF = new ConfigNode("RESOURCE");
+                        nodeF.AddValue("amount", Math.Round(78.22784d * volume, 2));
+                        nodeF.AddValue("maxAmount", Math.Round(78.22784d * volume, 2));
+                        nodeF.AddValue("name", "LiquidFuel");
+                        part.AddResource(nodeF);
+                        ConfigNode nodeO = new ConfigNode("RESOURCE");
+                        nodeO.AddValue("amount", Math.Round(95.6118d * volume, 2));
+                        nodeO.AddValue("maxAmount", Math.Round(95.6118d * volume, 2));
+                        nodeO.AddValue("name", "Oxidizer");
+                        part.AddResource(nodeO);
+                        break;
+                    }
+                case TANK_LIQUID_FUEL:
+                    {
+                        ConfigNode node = new ConfigNode("RESOURCE");
+                        node.AddValue("amount", Math.Round(49.9789d * volume, 2));
+                        node.AddValue("maxAmount", Math.Round(49.9789d * volume, 2));
+                        node.AddValue("name", "LiquidFuel");
+                        part.AddResource(node);
+                        break;
+                    }
+                case TANK_MONOPROP:
+                    {
+                        ConfigNode node = new ConfigNode("RESOURCE");
+                        node.AddValue("amount", Math.Round(203.718d * volume, 2));
+                        node.AddValue("maxAmount", Math.Round(203.718d * volume, 2));
+                        node.AddValue("name", "MonoPropellant");
+                        part.AddResource(node);
+                        break;
+                    }
+                case TANK_OXIDIZER:
+                    {
+                        ConfigNode node = new ConfigNode("RESOURCE");
+                        node.AddValue("amount", Math.Round(81.4873d * volume, 2));
+                        node.AddValue("maxAmount", Math.Round(81.4873d * volume, 2));
+                        node.AddValue("name", "Oxidizer");
+                        part.AddResource(node);
+                        break;
+                    }
+                case TANK_SOLID:
+                    {
+                        // NK add Solid Fuel
+                        // Yields 850 for 1.5t dry mass, like BACC (because dry mass = 1.5 LF/Ox dry mass)
+                        // But the RT-10 has way better dry:wet ratio, so pick something inbetween: 1.2794x BACC
+                        ConfigNode node = new ConfigNode("RESOURCE");
+                        node.AddValue("amount", Math.Round(192f * volume, 2));
+                        node.AddValue("maxAmount", Math.Round(192f * volume, 2));
+                        node.AddValue("name", "SolidFuel");
+                        part.AddResource(node);
+                        if (stretchSRB)
+                            changeThrust();
+                        break;
+                    }
+                case TANK_STRUCTURAL:
+                    {
+                        break;
+                    }
+                default:
+                    print("*ST*: Unknown tank type " + tankType);
+                    break;
             }
         }
     }
@@ -387,7 +364,7 @@ public class StretchyTanks : PartModule
                     //mEC.SendMessage("ChangeThrust", mThrust);
                     // thanks to ferram
                     Type engineType = mEC.GetType();
-                    //print("*ST*: Changing " + part.name + " thrust to " + mThrust);
+                    //
                     engineType.GetMethod("ChangeThrust").Invoke(mEC, new object[] { mThrust });
 
                     // unneeded - engineType.GetMethod("SetConfiguration").Invoke(mEC, new object[] { null });
@@ -450,23 +427,12 @@ public class StretchyTanks : PartModule
                     }
                     if (part.findAttachNode("top").attachedPart == part.parent)
                     {
-
                         var p = EditorLogic.SortedShipList[0];
-                        if (part.symmetryCounterparts != null)
-                        {
-                            float count = 1f;
-                            foreach (Part P in part.symmetryCounterparts)
-                            {
-                                count += 1f;
-                            }
-                            p.transform.Translate(0f, (stretchDifference - topStretchPosition) / count, 0f, part.transform);
-                            part.transform.Translate(0f, -(stretchDifference - topStretchPosition), 0f);
-                        }
-                        else
-                        {
-                            p.transform.Translate(0f, stretchDifference - topStretchPosition, 0f, part.transform);
-                            part.transform.Translate(0f, -(stretchDifference - topStretchPosition), 0f);
-                        }
+                        float count = 1;
+                        if(part.symmetryCounterparts != null)
+                            count += part.symmetryCounterparts.Count;
+                        p.transform.Translate(0f, (stretchDifference - topStretchPosition) / count, 0f, part.transform);
+                        part.transform.Translate(0f, -(stretchDifference - topStretchPosition), 0f);
                     }
                     else
                     {
@@ -493,21 +459,11 @@ public class StretchyTanks : PartModule
                     if (part.findAttachNode("bottom").attachedPart == part.parent)
                     {
                         var p = EditorLogic.SortedShipList[0];
+                        float count = 1;
                         if (part.symmetryCounterparts != null)
-                        {
-                            float count = 1f;
-                            foreach (Part P in part.symmetryCounterparts)
-                            {
-                                count += 1f;
-                            }
-                            p.transform.Translate(0f, (stretchDifference - bottomStretchPosition) / count, 0f, part.transform);
-                            part.transform.Translate(0f, -(stretchDifference - bottomStretchPosition), 0f);
-                        }
-                        else
-                        {
-                            p.transform.Translate(0f, stretchDifference - bottomStretchPosition, 0f, part.transform);
-                            part.transform.Translate(0f, -(stretchDifference - bottomStretchPosition), 0f);
-                        }
+                            count += part.symmetryCounterparts.Count;
+                        p.transform.Translate(0f, (stretchDifference - bottomStretchPosition) / count, 0f, part.transform);
+                        part.transform.Translate(0f, -(stretchDifference - bottomStretchPosition), 0f);
                     }
                     else
                     {
@@ -538,89 +494,50 @@ public class StretchyTanks : PartModule
     public virtual float getTopFactor() { return radialFactor; }
     public virtual float getAttachFactor() { return radialFactor; }
 
-    public void detectNewAttach()
+    public bool detectNewAttach()
     {
+        bool detected = false;
         if (part.findAttachNode("top").attachedPart != null)
         {
             if (attachTop == false)
             {
-                newAttachTop = true;
                 attachTop = true;
-            }
-            else
-            {
-                newAttachTop = false;
+                detected = true;
             }
         }
         else
         {
             attachTop = false;
-            newAttachTop = false;
         }
         if (part.findAttachNode("bottom").attachedPart != null)
         {
             if (attachBottom == false)
             {
-                newAttachBottom = true;
                 attachBottom = true;
-            }
-            else
-            {
-                newAttachBottom = false;
+                detected = true;
             }
         }
         else
         {
             attachBottom = false;
-            newAttachBottom = false;
         }
-        foreach (Part p in part.children)
-        {
-            if (p.attachMode == AttachModes.SRF_ATTACH)
-            {
-                if (nodeList.Count == 0)
-                {
-                    newAttachSurface = true;
-                }
-                else if (!nodeList.Exists(x => x.id == p.uid))
-                {
-                    newAttachSurface = true;
-                }
-            }
-        }
-    }
 
-    public void updateNodeList()
-    {
-        for (int i = 0; i < nodeList.Count; i++)
-        {
-            bool stillAttached = false;
-            foreach (Part p in part.children)
-            {
-                if (nodeList[i].id == p.uid)
-                {
-                    stillAttached = true;
-                }
-            }
-            if (stillAttached == false)
-            {
-                nodeList.RemoveAt(i);
-            }
-        }
-    }
-
-    public void addSurfaceNodes()
-    {
+        // update node list
+        nodeList.RemoveAll(n => !part.children.Exists(p => p.uid == n.id));
         foreach (Part p in part.children)
         {
             if (p.attachMode == AttachModes.SRF_ATTACH)
             {
                 if (!nodeList.Exists(x => x.id == p.uid))
+                {
                     nodeList.Add(newSurfaceNode(p));
+                    detected = true;
+                }
             }
         }
-        newAttachSurface = false;
+        return detected;
     }
+
 
     public virtual SurfaceNode newSurfaceNode(Part p)
     {
@@ -882,29 +799,34 @@ public class StretchyTanks : PartModule
             styMass.alignment = TextAnchor.MiddleCenter;
             styRes.alignment = TextAnchor.MiddleCenter;
             styMass.normal.textColor = Color.black;
-            if (tankType == 0)
+            switch (tankType)
             {
-                styRes.normal.textColor = Color.blue;
+                case TANK_MIXED:
+                    styRes.normal.textColor = Color.blue;
+                    break;
+                case TANK_LIQUID_FUEL:
+                    styRes.normal.textColor = Color.green;
+                    break;
+                case TANK_MONOPROP:
+                    styRes.normal.textColor = Color.yellow;
+                    break;
+                case TANK_OXIDIZER:
+                    styRes.normal.textColor = Color.cyan;
+                    break;
+                case TANK_SOLID:
+                    styRes.normal.textColor = Color.red;
+                    break;
             }
-            if (tankType == 1)
+            if (tankType != TANK_STRUCTURAL)
             {
-                styRes.normal.textColor = Color.green;
+                GUI.Label(posRes, getResourceNames(), styRes);
+                GUI.Label(posMass, "Total Mass: " + Math.Round(part.mass + part.GetResourceMass(), 3) + " tons\nDry Mass: " + part.mass + " tons", styMass);
             }
-            if (tankType == 2)
+            else
             {
-                styRes.normal.textColor = Color.yellow;
+                GUI.Label(posRes, "Structural Fuselage", styRes);
+                GUI.Label(posMass, "Mass: " + part.mass + " tons", styMass);
             }
-            if (tankType == 3)
-            {
-                styRes.normal.textColor = Color.cyan;
-            }
-            // NK add Solid Fuel
-            if (tankType == 4)
-            {
-                styRes.normal.textColor = Color.red;
-            }
-            GUI.Label(posRes, getResourceNames(), styRes);
-            GUI.Label(posMass, "Total Mass: " + Math.Round(part.mass + part.GetResourceMass(), 3) + " tons\nDry Mass: " + part.mass + " tons", styMass);
             GUI.Label(posSize, "Size: " + getSizeText(), styRes);
         }
     }
@@ -928,14 +850,9 @@ public class StretchyTanks : PartModule
     {
         if (HighLogic.LoadedSceneIsEditor)
         {
-            detectNewAttach();
-            updateNodeList();
-            if (newAttachSurface)
-            {
-                addSurfaceNodes();
-                triggerUpdate = true;
-            }
-            if (triggerUpdate || newAttachTop || newAttachBottom)
+            bool newTopBottom = detectNewAttach();
+
+            if (triggerUpdate || newTopBottom)
             {
                 //triggerUpdate = true; // NK TEST
                 updateScale();
@@ -1069,10 +986,24 @@ public class StretchyTanks : PartModule
             }
             if (!stretchSRB && Input.GetKeyDown(tankTypeKey) && !part.Modules.Contains("ModuleFuelTanks"))
             {
-                tankType++;
-                if (tankType == 5) // NK add solid fuel
+                switch (tankType)
                 {
-                    tankType = 0;
+                    case TANK_MIXED:
+                        tankType = TANK_LIQUID_FUEL;
+                        break;
+                    case TANK_LIQUID_FUEL:
+                        tankType = TANK_OXIDIZER;
+                        break;
+                    case TANK_MONOPROP:
+                        tankType = TANK_STRUCTURAL;
+                        break;
+                    case TANK_OXIDIZER:
+                        tankType = TANK_MONOPROP;
+                        break;
+                    case TANK_STRUCTURAL:
+                        tankType = TANK_MIXED;
+                        break;
+
                 }
                 triggerUpdate = true;
             }
