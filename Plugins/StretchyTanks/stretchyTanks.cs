@@ -127,6 +127,13 @@ public class StretchyTanks : PartModule
         if (radialFactor > maxRFactor) radialFactor = maxRFactor;
     }
 
+    public override void OnInitialize()
+    {
+        base.OnInitialize();
+        if (stretchSRB && part.Modules.Contains("ModuleFuelTanks"))
+            changeThrust();
+    }
+   
     public override void OnStart(StartState state)
     {
         nodeList.Clear();
@@ -212,6 +219,8 @@ public class StretchyTanks : PartModule
     public override void OnLoad(ConfigNode node)
     {
         updateScale();
+        if (stretchSRB && part.Modules.Contains("ModuleFuelTanks"))
+            changeThrust();
     }
 
     public string getResourceNames()
