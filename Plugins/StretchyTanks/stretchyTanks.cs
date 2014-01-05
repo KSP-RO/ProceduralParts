@@ -230,7 +230,7 @@ public class StretchyTanks : PartModule
         {
             if (total != "")
                 total += "\n";
-            total += resource.resourceName + ": " + resource.amount;
+            total += resource.resourceName + ": " + resource.maxAmount.ToString("0.##");
             //NK Add Solid Fuel
             if (resource.resourceName == "SolidFuel")
             {
@@ -259,11 +259,6 @@ public class StretchyTanks : PartModule
         if(stretchSRB)
             tankType = TANK_SOLID; // NK
 
-        // remove resources
-        foreach(PartResource res in part.GetComponents<PartResource>())
-            DestroyImmediate(res);
-        part.Resources.list.Clear();
-
         // find volume
         float volume = initialDryMass * 9.203885f * calcVolumeFactor();
 
@@ -271,69 +266,58 @@ public class StretchyTanks : PartModule
         switch (tankType)
         {
             case TANK_MIXED:
-                {
-                    ConfigNode nodeF = new ConfigNode("RESOURCE");
-                    nodeF.AddValue("amount", Math.Round(78.22784d * volume, 2));
-                    nodeF.AddValue("maxAmount", Math.Round(78.22784d * volume, 2));
-                    nodeF.AddValue("name", "LiquidFuel");
-                    part.AddResource(nodeF);
-                    ConfigNode nodeO = new ConfigNode("RESOURCE");
-                    nodeO.AddValue("amount", Math.Round(95.6118d * volume, 2));
-                    nodeO.AddValue("maxAmount", Math.Round(95.6118d * volume, 2));
-                    nodeO.AddValue("name", "Oxidizer");
-                    part.AddResource(nodeO);
-                    break;
-                }
+                changeResource("LiquidFuel", 78.22784f * volume);
+                changeResource("Oxidizer", 95.6118f * volume);
+                break;
             case TANK_LIQUID_FUEL:
-                {
-                    ConfigNode node = new ConfigNode("RESOURCE");
-                    node.AddValue("amount", Math.Round(49.9789d * volume, 2));
-                    node.AddValue("maxAmount", Math.Round(49.9789d * volume, 2));
-                    node.AddValue("name", "LiquidFuel");
-                    part.AddResource(node);
-                    break;
-                }
+                changeResource("LiquidFuel", 49.9789f * volume);
+                break;
             case TANK_MONOPROP:
-                {
-                    ConfigNode node = new ConfigNode("RESOURCE");
-                    node.AddValue("amount", Math.Round(203.718d * volume, 2));
-                    node.AddValue("maxAmount", Math.Round(203.718d * volume, 2));
-                    node.AddValue("name", "MonoPropellant");
-                    part.AddResource(node);
-                    break;
-                }
+                changeResource("MonoPropellant", 203.718f * volume);
+                break;
             case TANK_OXIDIZER:
-                {
-                    ConfigNode node = new ConfigNode("RESOURCE");
-                    node.AddValue("amount", Math.Round(81.4873d * volume, 2));
-                    node.AddValue("maxAmount", Math.Round(81.4873d * volume, 2));
-                    node.AddValue("name", "Oxidizer");
-                    part.AddResource(node);
-                    break;
-                }
+                changeResource("Oxidizer", 81.4873f * volume);
+                break;
             case TANK_SOLID:
-                {
-                    // NK add Solid Fuel
-                    // Yields 850 for 1.5t dry mass, like BACC (because dry mass = 1.5 LF/Ox dry mass)
-                    // But the RT-10 has way better dry:wet ratio, so pick something inbetween: 1.2794x BACC
-                    ConfigNode node = new ConfigNode("RESOURCE");
-                    node.AddValue("amount", Math.Round(192f * volume, 2));
-                    node.AddValue("maxAmount", Math.Round(192f * volume, 2));
-                    node.AddValue("name", "SolidFuel");
-                    node.AddValue("isTweakable", false);
-                    part.AddResource(node);
-                    if (stretchSRB)
-                        changeThrust();
-                    break;
-                }
+                // NK add Solid Fuel
+                // Yields 850 for 1.5t dry mass, like BACC (because dry mass = 1.5 LF/Ox dry mass)
+                // But the RT-10 has way better dry:wet ratio, so pick something inbetween: 1.2794x BACC
+                changeResource("SolidFuel", 192f * volume, false);
+                if (stretchSRB)
+                    changeThrust();
+                break;
             case TANK_STRUCTURAL:
-                {
-                    break;
-                }
+                break;
             default:
                 print("*ST*: Unknown tank type " + tankType);
                 break;
         }
+
+        // remove additional resources
+        cleanResources();
+
+    }
+
+    private void changeResource(string resName, float amount, bool isTweakable = true)
+    {
+        double fillFraction = 1.0d;
+        int idx = part.Resources.list.FindIndex(res => res.resourceName == resName);
+        if(idx >= 0) {
+            PartResource oldRes = part.Resources.list[idx];
+            part.Resources.list.RemoveAt(idx);
+            fillFraction = oldRes.amount / oldRes.maxAmount;
+
+            PartResource compRes = part.GetComponents<PartResource>().FirstOrDefault(compRes => compRes.resourceName == oldRes.resourceName);
+            if(compRes != null)
+                DestroyImmediate(compRes);
+        }
+
+        ConfigNode node = new ConfigNode("RESOURCE");
+        node.AddValue("name", resName);
+        node.AddValue("amount", Math.Round(amount * fillFraction, 2));
+        node.AddValue("maxAmount", Math.Round(amount, 2));
+        node.AddValue("isTweakable", isTweakable);
+        part.AddResource(node);
     }
 
     public void cleanResources()
