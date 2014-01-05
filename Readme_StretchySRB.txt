@@ -22,6 +22,11 @@ You may also find, in the StretchyTanks/Parts folder, a Template file with the g
 License remains CC-BY-SA 3.0 Unported
 
 Changelog
+v8.1 =\/=
+*Fixed fuels being re-added at launch for non-MFT/RF users.
+*Fixed BlueSides repeating
+*Fixed sea level SRB nozzle giving blackscreens
+
 v8 == \/ ==
 *0.23 compatibility.
 *Fixed StretchySRB issue with thrust reverting due to .23 issues.

@@ -130,7 +130,7 @@ public class StretchyTanks : PartModule
     public override void OnInitialize()
     {
         base.OnInitialize();
-        if (stretchSRB && part.Modules.Contains("ModuleFuelTanks"))
+        if (stretchSRB && part.Modules.Contains("ModuleEngineConfigs"))
             changeThrust();
     }
    
@@ -219,7 +219,7 @@ public class StretchyTanks : PartModule
     public override void OnLoad(ConfigNode node)
     {
         updateScale();
-        if (stretchSRB && part.Modules.Contains("ModuleFuelTanks"))
+        if (stretchSRB && part.Modules.Contains("ModuleEngineConfigs"))
             changeThrust();
     }
 
@@ -427,6 +427,8 @@ public class StretchyTanks : PartModule
             {
                 transform.GetChild(0).GetChild(1).localScale = new Vector3(radialFactor, radialFactor, radialFactor);
                 transform.GetChild(0).GetChild(1).localPosition = new Vector3(0f, bottomPosition * stretchFactor, 0f);
+                //foreach (MeshCollider c in transform.GetComponentsInChildren<MeshCollider>().ToList())
+                    //c.convex = true;
             }
             if (part.attachMode == AttachModes.SRF_ATTACH && superStretch == true)
             {
