@@ -13,9 +13,6 @@ public class StretchyTanks : PartModule
     [KSPField(isPersistant = true)]
     public float radialFactor = 1f;
 
-    [KSPField(isPersistant = true)]
-    public bool flightStarted = false;
-
     public const int TANK_MIXED = 0;
     public const int TANK_LIQUID_FUEL = 1;
     public const int TANK_MONOPROP = 2;
@@ -127,14 +124,7 @@ public class StretchyTanks : PartModule
             }
         }
 
-        if (radialFactor>maxRFactor) radialFactor=maxRFactor;
-    }
-
-    public override void OnInitialize()
-    {
-        base.OnInitialize();
-        if (stretchSRB)
-            changeThrust();
+        if (radialFactor > maxRFactor) radialFactor = maxRFactor;
     }
 
     public override void OnStart(StartState state)
@@ -153,14 +143,10 @@ public class StretchyTanks : PartModule
         }
         if (HighLogic.LoadedSceneIsFlight)
         {
-            if (flightStarted != true)
+            if (!part.Modules.Contains("ModuleFuelTanks"))
             {
-                if (!part.Modules.Contains("ModuleFuelTanks"))
-                {
-                    updateMass();
-                    changeResources();
-                }
-                flightStarted = true;
+                updateMass();
+                cleanResources();
             }
             changeTextures();
             updateScale();
@@ -225,14 +211,7 @@ public class StretchyTanks : PartModule
 
     public override void OnLoad(ConfigNode node)
     {
-        if (HighLogic.LoadedSceneIsFlight && tankType != TANK_MIXED)
-        {
-            part.Resources.list.Clear();
-        }
-        nodeList.Clear();
-        updateScale(); // NK TEST
-        if (stretchSRB)
-            changeThrust();
+        updateScale();
     }
 
     public string getResourceNames()
@@ -265,86 +244,121 @@ public class StretchyTanks : PartModule
 
     public void changeResources()
     {
-        if (!part.Modules.Contains("ModuleFuelTanks"))
+        if (part.Modules.Contains("ModuleFuelTanks"))
+            return;
+
+        if(stretchSRB)
+            tankType = TANK_SOLID; // NK
+
+        // remove resources
+        foreach(PartResource res in part.GetComponents<PartResource>())
+            DestroyImmediate(res);
+        part.Resources.list.Clear();
+
+        // find volume
+        float volume = initialDryMass * 9.203885f * calcVolumeFactor();
+
+        // add resources
+        switch (tankType)
         {
-            if(stretchSRB)
-                tankType = TANK_SOLID; // NK
-
-            // remove resources
-            foreach(PartResource res in part.GetComponents<PartResource>())
-                DestroyImmediate(res);
-            part.Resources.list.Clear();
-
-            // find volume
-            float volume = initialDryMass * 9.203885f * calcVolumeFactor();
-
-            // add resources
-            switch (tankType)
-            {
-                case TANK_MIXED:
-                    {
-                        ConfigNode nodeF = new ConfigNode("RESOURCE");
-                        nodeF.AddValue("amount", Math.Round(78.22784d * volume, 2));
-                        nodeF.AddValue("maxAmount", Math.Round(78.22784d * volume, 2));
-                        nodeF.AddValue("name", "LiquidFuel");
-                        part.AddResource(nodeF);
-                        ConfigNode nodeO = new ConfigNode("RESOURCE");
-                        nodeO.AddValue("amount", Math.Round(95.6118d * volume, 2));
-                        nodeO.AddValue("maxAmount", Math.Round(95.6118d * volume, 2));
-                        nodeO.AddValue("name", "Oxidizer");
-                        part.AddResource(nodeO);
-                        break;
-                    }
-                case TANK_LIQUID_FUEL:
-                    {
-                        ConfigNode node = new ConfigNode("RESOURCE");
-                        node.AddValue("amount", Math.Round(49.9789d * volume, 2));
-                        node.AddValue("maxAmount", Math.Round(49.9789d * volume, 2));
-                        node.AddValue("name", "LiquidFuel");
-                        part.AddResource(node);
-                        break;
-                    }
-                case TANK_MONOPROP:
-                    {
-                        ConfigNode node = new ConfigNode("RESOURCE");
-                        node.AddValue("amount", Math.Round(203.718d * volume, 2));
-                        node.AddValue("maxAmount", Math.Round(203.718d * volume, 2));
-                        node.AddValue("name", "MonoPropellant");
-                        part.AddResource(node);
-                        break;
-                    }
-                case TANK_OXIDIZER:
-                    {
-                        ConfigNode node = new ConfigNode("RESOURCE");
-                        node.AddValue("amount", Math.Round(81.4873d * volume, 2));
-                        node.AddValue("maxAmount", Math.Round(81.4873d * volume, 2));
-                        node.AddValue("name", "Oxidizer");
-                        part.AddResource(node);
-                        break;
-                    }
-                case TANK_SOLID:
-                    {
-                        // NK add Solid Fuel
-                        // Yields 850 for 1.5t dry mass, like BACC (because dry mass = 1.5 LF/Ox dry mass)
-                        // But the RT-10 has way better dry:wet ratio, so pick something inbetween: 1.2794x BACC
-                        ConfigNode node = new ConfigNode("RESOURCE");
-                        node.AddValue("amount", Math.Round(192f * volume, 2));
-                        node.AddValue("maxAmount", Math.Round(192f * volume, 2));
-                        node.AddValue("name", "SolidFuel");
-                        part.AddResource(node);
-                        if (stretchSRB)
-                            changeThrust();
-                        break;
-                    }
-                case TANK_STRUCTURAL:
-                    {
-                        break;
-                    }
-                default:
-                    print("*ST*: Unknown tank type " + tankType);
+            case TANK_MIXED:
+                {
+                    ConfigNode nodeF = new ConfigNode("RESOURCE");
+                    nodeF.AddValue("amount", Math.Round(78.22784d * volume, 2));
+                    nodeF.AddValue("maxAmount", Math.Round(78.22784d * volume, 2));
+                    nodeF.AddValue("name", "LiquidFuel");
+                    part.AddResource(nodeF);
+                    ConfigNode nodeO = new ConfigNode("RESOURCE");
+                    nodeO.AddValue("amount", Math.Round(95.6118d * volume, 2));
+                    nodeO.AddValue("maxAmount", Math.Round(95.6118d * volume, 2));
+                    nodeO.AddValue("name", "Oxidizer");
+                    part.AddResource(nodeO);
                     break;
-            }
+                }
+            case TANK_LIQUID_FUEL:
+                {
+                    ConfigNode node = new ConfigNode("RESOURCE");
+                    node.AddValue("amount", Math.Round(49.9789d * volume, 2));
+                    node.AddValue("maxAmount", Math.Round(49.9789d * volume, 2));
+                    node.AddValue("name", "LiquidFuel");
+                    part.AddResource(node);
+                    break;
+                }
+            case TANK_MONOPROP:
+                {
+                    ConfigNode node = new ConfigNode("RESOURCE");
+                    node.AddValue("amount", Math.Round(203.718d * volume, 2));
+                    node.AddValue("maxAmount", Math.Round(203.718d * volume, 2));
+                    node.AddValue("name", "MonoPropellant");
+                    part.AddResource(node);
+                    break;
+                }
+            case TANK_OXIDIZER:
+                {
+                    ConfigNode node = new ConfigNode("RESOURCE");
+                    node.AddValue("amount", Math.Round(81.4873d * volume, 2));
+                    node.AddValue("maxAmount", Math.Round(81.4873d * volume, 2));
+                    node.AddValue("name", "Oxidizer");
+                    part.AddResource(node);
+                    break;
+                }
+            case TANK_SOLID:
+                {
+                    // NK add Solid Fuel
+                    // Yields 850 for 1.5t dry mass, like BACC (because dry mass = 1.5 LF/Ox dry mass)
+                    // But the RT-10 has way better dry:wet ratio, so pick something inbetween: 1.2794x BACC
+                    ConfigNode node = new ConfigNode("RESOURCE");
+                    node.AddValue("amount", Math.Round(192f * volume, 2));
+                    node.AddValue("maxAmount", Math.Round(192f * volume, 2));
+                    node.AddValue("name", "SolidFuel");
+                    node.AddValue("isTweakable", false);
+                    part.AddResource(node);
+                    if (stretchSRB)
+                        changeThrust();
+                    break;
+                }
+            case TANK_STRUCTURAL:
+                {
+                    break;
+                }
+            default:
+                print("*ST*: Unknown tank type " + tankType);
+                break;
         }
+    }
+
+    public void cleanResources()
+    {
+        if (part.Modules.Contains("ModuleFuelTanks"))
+            return;
+        Predicate<PartResource> match;
+        switch (tankType)
+        {
+            case TANK_MIXED:
+                match = (res => (res.resourceName != "LiquidFuel" && res.resourceName != "Oxidizer"));
+                break;
+            case TANK_LIQUID_FUEL:
+                match = (res => (res.resourceName != "LiquidFuel"));
+                break;
+            case TANK_MONOPROP:
+                match = (res => (res.resourceName != "MonoPropellant"));
+                break;
+            case TANK_OXIDIZER:
+                match = (res => (res.resourceName != "Oxidizer"));
+                break;
+            case TANK_SOLID:
+                match = (res => (res.resourceName != "SolidFuel"));
+                break;
+            case TANK_STRUCTURAL:
+                match = (res => true);
+                break;
+            default:
+                return;
+        }
+        foreach (PartResource res in part.GetComponents<PartResource>())
+            if(match(res))
+                DestroyImmediate(res);
+        part.Resources.list.RemoveAll(match);
     }
 
     public void changeThrust()
@@ -848,59 +862,57 @@ public class StretchyTanks : PartModule
 
     public void Update()
     {
-        if (HighLogic.LoadedSceneIsEditor)
-        {
-            bool newTopBottom = detectNewAttach();
+        if (!HighLogic.LoadedSceneIsEditor)
+            return;
+        bool newTopBottom = detectNewAttach();
 
-            if (triggerUpdate || newTopBottom)
+        if (triggerUpdate || newTopBottom)
+        {
+            updateScale();
+        }
+        if (triggerUpdate)
+        {
+            updateMass();
+            changeResources();
+            updateSurfaceNodes();
+            foreach (Part p in part.symmetryCounterparts)
             {
-                //triggerUpdate = true; // NK TEST
-                updateScale();
-            }
-            if (triggerUpdate)
-            {
-                updateMass();
-                changeResources();
-                updateSurfaceNodes();
-                foreach (Part p in part.symmetryCounterparts)
+                var counterpart = p.Modules.OfType<StretchyTanks>().FirstOrDefault();
+                updateConterpartSize(counterpart);
+                if (counterpart.tankType != tankType || counterpart.burnTime != burnTime) // NK SRB
                 {
-                    var counterpart = p.Modules.OfType<StretchyTanks>().FirstOrDefault();
-                    updateConterpartSize(counterpart);
-                    if (counterpart.tankType != tankType || counterpart.burnTime != burnTime) // NK SRB
+                    counterpart.tankType = tankType;
+                    counterpart.burnTime = burnTime;
+                    counterpart.changeResources();
+                    counterpart.triggerUpdate = true;
+                }
+                if (!counterpart.textureSet.Equals(textureSet))
+                {
+                    counterpart.textureSet = textureSet;
+                    counterpart.textureType = -1;
+                    counterpart.changeTextures();
+                    counterpart.triggerUpdate = true;
+                }
+            }
+            // update MFS
+            if (part.Modules.Contains("ModuleFuelTanks"))
+            {
+                try
+                {
+                    float curVolume = initialDryMass * calcVolumeFactor() * 1600;
+                    const float DELTA = 0.01f;
+                    float mVol = (float)(part.Modules["ModuleFuelTanks"].Fields.GetValue("volume"));
+                    if (mVol > curVolume + DELTA || mVol < curVolume - DELTA)
                     {
-                        counterpart.tankType = tankType;
-                        counterpart.burnTime = burnTime;
-                        counterpart.changeResources();
-                        counterpart.triggerUpdate = true;
-                    }
-                    if (!counterpart.textureSet.Equals(textureSet))
-                    {
-                        counterpart.textureSet = textureSet;
-                        counterpart.textureType = -1;
-                        counterpart.changeTextures();
-                        counterpart.triggerUpdate = true;
+                        part.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", (curVolume));
                     }
                 }
-                // update MFS
-                if (part.Modules.Contains("ModuleFuelTanks"))
+                catch (Exception e)
                 {
-                    try
-                    {
-                        float curVolume = initialDryMass * calcVolumeFactor() * 1600;
-                        const float DELTA = 0.01f;
-                        float mVol = (float)(part.Modules["ModuleFuelTanks"].Fields.GetValue("volume"));
-                        if (mVol > curVolume + DELTA || mVol < curVolume - DELTA)
-                        {
-                            part.Modules["ModuleFuelTanks"].SendMessage("ChangeVolume", (curVolume));
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        print("*ST* changing volume, caught: " + e.Message);
-                    }
+                    print("*ST* changing volume, caught: " + e.Message);
                 }
-                triggerUpdate = false;
             }
+            triggerUpdate = false;
         }
     }
 
