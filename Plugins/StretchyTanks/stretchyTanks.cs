@@ -307,11 +307,6 @@ public class StretchyTanks : PartModule
             part.Resources.list.RemoveAt(idx);
             fillFraction = oldRes.amount / oldRes.maxAmount;
             DestroyImmediate(oldRes);
-
-            // CW: I'm not entirely sure this does anything / is required.
-            PartResource compRes = part.GetComponents<PartResource>().FirstOrDefault(r => r.resourceName == resName);
-            if (compRes != null)
-                DestroyImmediate(compRes);
         }
 
         ConfigNode node = new ConfigNode("RESOURCE");
@@ -356,11 +351,6 @@ public class StretchyTanks : PartModule
                 part.Resources.list.RemoveAt(i);                
             }
         }
-
-        // CW: I'm not entirely sure this does anything or is required.
-        foreach (PartResource res in part.GetComponents<PartResource>())
-            if(match(res))
-                DestroyImmediate(res);
     }
 
     public void changeThrust()
