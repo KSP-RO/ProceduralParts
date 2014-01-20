@@ -1,6 +1,6 @@
 StretchyTanks is by the great Ancient Gammoner.
 
-This addon is by NathanKell, e-dog, and swamp_ig, featuring models by Tiberion and further textures by Chestburster and Dante80.
+This addon is by NathanKell and e-dog, featuring models by Tiberion and further textures by Chestburster and Dante80.
 
 This addon to Stretchy Tanks adds a conic tank, two Stretchable SRBs, a new texture system, and some fixes.
 *Node size scales when resizing super-stretchy tanks
@@ -22,13 +22,6 @@ You may also find, in the StretchyTanks/Parts folder, a Template file with the g
 License remains CC-BY-SA 3.0 Unported
 
 Changelog
-v8.1 =\/=
-*Fixed fuels being re-added at launch for non-MFT/RF users.
-*Fixed BlueSides repeating
-*Fixed sea level SRB nozzle giving blackscreens (thanks to DYJ and swamp_ig)
-*swamp_ig: support tweakables, add structural tanks, refactor code
-
-
 v8 == \/ ==
 *0.23 compatibility.
 *Fixed StretchySRB issue with thrust reverting due to .23 issues.
