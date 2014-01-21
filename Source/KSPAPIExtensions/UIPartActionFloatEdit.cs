@@ -32,16 +32,16 @@ public class UIPartActionFloatEdit : UIPartActionFieldItem
             return;
         }
 
-        if(UIPartActionController.Instance.fieldPrefabs.Find(item => item.GetType() == typeof(UI_FloatEdit)) != null)
+        if(UIPartActionController.Instance.fieldPrefabs.Find(item => item.GetType() == typeof(UIPartActionFloatEdit)) != null)
             return;
 
-        print("Registering template...");
+        print("Registering template..."); 
 
         // Create the control
         GameObject editGo = new GameObject("UIPartActionFloatEdit", typeof(UIPartActionFloatEdit));
         UIPartActionFloatEdit edit = editGo.GetComponent<UIPartActionFloatEdit>();
         editGo.SetActive(false);
-
+        
         // TODO: since I don't have access to EZE GUI, I'm copying out bits from other existing GUIs 
         // if someone does have access, they could do this better although really it works pretty well.
         UIPartActionButton evtp = UIPartActionController.Instance.eventItemPrefab;
@@ -153,8 +153,6 @@ public class UIPartActionFloatEdit : UIPartActionFieldItem
     public override void Setup(UIPartActionWindow window, Part part, PartModule partModule, UI_Scene scene, UI_Control control, BaseField field)
     {
         base.Setup(window, part, partModule, scene, control, field);
-
-        print(new System.Diagnostics.StackTrace());
         incLargeDown.SetValueChangedDelegate(obj => IncrementValue(false, fieldInfo.incrementLarge));
         incSmallDown.SetValueChangedDelegate(obj => IncrementValue(false, fieldInfo.incrementSmall));
         incSmallUp.SetValueChangedDelegate(obj => IncrementValue(true, fieldInfo.incrementSmall));
@@ -168,15 +166,17 @@ public class UIPartActionFloatEdit : UIPartActionFieldItem
         float newValue;
         if (up)
         {
-            newValue = value - excess + increment;
+            if(increment - excess < fieldInfo.incrementSlide / 2)
+                newValue = value - excess + increment * 2;
+            else 
+                newValue = value - excess + increment;
         }
-        else if(excess < fieldInfo.incrementSlide)
+        else 
         {
-            newValue = value - excess - increment;
-        }
-        else
-        {
-            newValue = value - excess;
+            if(excess < fieldInfo.incrementSlide / 2)
+                newValue = value - excess - increment;
+            else
+                newValue = value - excess;
         }
         SetNewValue(newValue);
     }

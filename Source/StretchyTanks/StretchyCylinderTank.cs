@@ -101,6 +101,8 @@ public class StretchyCylinderTank : AbstractStretchyTank
         if (diameter == oldDiameter && length == oldLength)
             return;
 
+        print("*ST* Updating volume");
+
         tankVolume = length * diameter * diameter * (float)(Math.PI / 4.0d);
 
         // TODO: rebuild the mesh rather than just transforming it.

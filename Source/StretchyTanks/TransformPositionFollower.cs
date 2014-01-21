@@ -12,6 +12,26 @@ public class TransformPositionFollower : MonoBehaviour
     private Quaternion oldParentRotation; 
     private bool hasParent = false;
 
+    public void Start()
+    {
+        if (hasParent != (transform.parent != null))
+        {
+            if (hasParent)
+            {
+                // have lost the parent
+                hasParent = false;
+                oldOffset = transform.position;
+            }
+            else
+            {
+                // have gained the parent
+                hasParent = true;
+                oldOffset = transform.position - transform.parent.position;
+                oldParentRotation = transform.parent.rotation;
+            }
+        }
+    }
+
     public void Update()
     {
         if (hasParent != (transform.parent != null))
@@ -45,7 +65,7 @@ public class TransformPositionFollower : MonoBehaviour
 
             if (offset == oldOffset)
                 return;
-            
+
             trans = offset - oldOffset;
             oldOffset = offset;
         }
@@ -58,6 +78,7 @@ public class TransformPositionFollower : MonoBehaviour
             oldOffset = transform.position;
         }
 
+        print("Translate: " + trans);
         if (!Translate(trans))
             Destroy(gameObject);
     }
