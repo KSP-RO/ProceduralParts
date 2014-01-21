@@ -674,7 +674,11 @@ public abstract class AbstractStretchyTank : PartModule
         foreach (AttachNode node in part.attachNodes)
         {
             Vector3 position = transform.position + transform.TransformDirection(node.position);
-
+            addTankOrBellAttachment(position, (translate => { node.position += transform.InverseTransformDirection(translate); return true; }));
+        }
+        if(part.attachRules.allowSrfAttach) {
+            AttachNode node = part.srfAttachNode;
+            Vector3 position = transform.position + transform.TransformDirection(node.position);
             addTankOrBellAttachment(position, (translate => { node.position += transform.InverseTransformDirection(translate); return true; }));
         }
     }
