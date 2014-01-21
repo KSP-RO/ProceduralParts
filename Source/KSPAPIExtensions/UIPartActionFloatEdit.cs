@@ -32,7 +32,7 @@ public class UIPartActionFloatEdit : UIPartActionFieldItem
             return;
         }
 
-        if(UIPartActionController.Instance.fieldPrefabs.Find(item => item.GetType() == typeof(UI_FloatEdit)))
+        if(UIPartActionController.Instance.fieldPrefabs.Find(item => item.GetType() == typeof(UI_FloatEdit)) != null)
             return;
 
         print("Registering template...");
