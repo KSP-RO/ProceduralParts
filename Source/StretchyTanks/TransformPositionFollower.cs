@@ -78,7 +78,6 @@ public class TransformPositionFollower : MonoBehaviour
             oldOffset = transform.position;
         }
 
-        print("Translate: " + trans);
         if (!Translate(trans))
             Destroy(gameObject);
     }

@@ -56,21 +56,24 @@ public abstract class AbstractStretchyTank : PartModule
 
     public override void OnStart(PartModule.StartState state)
     {
-        print("*ST* Initializing state in OnStart");
-        try
+        // Update internal state
+
+        // Note: need to be quite careful about the order or initialization / attaching things on loading up
+        // 1. Pieces internal to the part (eg attach nodes and the bell) are not stored in the config file, so they need to be attached 
+        //    in OnStart
+        // 2. After the attachments are created, TransformPositionFollower.OnStart needs to run so they know where they are in relation 
+        //    to the parent, so we can't rescale the model in OnStart.
+        // 3. The initial rescaling of the model (plus moving of the now attached pieces) can then happen in the first call to Update 
+        // 4. Child and parent part positions are stored in the config, so they need to be reattached *after* the initial rescale of 
+        //    the model, so updateAttachments needs to be called in the first Update. The order of this doesn't matter with respect 
+        //    to rescaling the model, since TransformPositionFollower.OnStart won't yet be called.
+
+        initializeTextureSet();
+        initializeSRB();
+        if (HighLogic.LoadedSceneIsEditor)
         {
-            // Update internal state
-            if (HighLogic.LoadedSceneIsEditor)
-                initializeMaxDimensions();
-            initializeTextureSet();
-            initializeSRB();
+            initializeMaxDimensions();
             initializeNodes();
-        }
-        catch (Exception ex)
-        {
-            print("OnStart exception: " + ex);
-            print(ex.StackTrace);
-            throw ex;
         }
     }
 
@@ -79,7 +82,9 @@ public abstract class AbstractStretchyTank : PartModule
         updateTexture();
         updateMass();
         updateSRB();
-        updateAttachments();
+
+
+        updatePartsAttached();
     }
 
     #endregion
@@ -465,6 +470,8 @@ public abstract class AbstractStretchyTank : PartModule
     {
         if (isStructural || tankType == TANK_STRUCTURAL)
         {
+            print("Initialize structural");
+
             tankType = TANK_STRUCTURAL;
             isStructural = true;
             isSRB = false;
@@ -473,9 +480,10 @@ public abstract class AbstractStretchyTank : PartModule
             Fields["tankType"].guiActiveEditor = false;
             Fields["tankVolume"].guiActiveEditor = false;
         }
-
-        if (isSRB || tankType == TANK_SOLID)
+        else if (isSRB || tankType == TANK_SOLID)
         {
+            print("Initialize SRB");
+
             tankType = TANK_SOLID;
             isStructural = false;
             isSRB = true;
@@ -483,25 +491,23 @@ public abstract class AbstractStretchyTank : PartModule
             // Can't change the tank type if it's an SRB
             Fields["tankType"].guiActiveEditor = false;
 
-            if (srbBellName == null)
-            {
-                ModuleEngines engines = (ModuleEngines)part.Modules["ModuleEngines"];
-                srbBellName = engines.thrustVectorTransformName;
-            }
-
             _srbBell = part.FindModelTransform(srbBellName);
             if (srbBell == null)
-                print("*ST* Unable to find thrust transform");
+                print("*ST* Unable to find SRB Bell");
+
+            print("*ST* attaching bell");
+            addTankAttachment(TransformPositionFollower.createFollower(_srbBell));
         }
         else
         {
+            print("Initialize fuel");
+            
             // Disable all the SRB related controls.
             Fields["srbBurnTime"].guiActiveEditor = false;
             Fields["srbThrust"].guiActiveEditor = false;
             Fields["srbHeatProduction"].guiActiveEditor = false;
             oldSRBBurnTime = srbBurnTime = 0.0f;
         }
-
     }
 
     private void updateSRB()
@@ -521,12 +527,14 @@ public abstract class AbstractStretchyTank : PartModule
 
     private void changeThrust()
     {
-        if (!isSRB || !part.Modules.Contains("ModuleEngine"))
+        if (!isSRB)
             return;
 
         try
         {
             ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
+            PartResource solidFuel = part.Resources["SolidFuel"];
+            mE.DumpObjectFields();
             srbThrust = mE.maxThrust = (float)Math.Round(mE.atmosphereCurve.Evaluate(0) * part.Resources["SolidFuel"].maxAmount * part.Resources["SolidFuel"].info.density * 9.81f / srbBurnTime, 2);
             srbHeatProduction = mE.heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((srbBurnTime + 20f), 0.75f)) * 0.5f);
 
@@ -559,19 +567,10 @@ public abstract class AbstractStretchyTank : PartModule
 
     [KSPField(isPersistant = true, guiActive=false, guiActiveEditor=true, guiName="Tank Type"), UI_FloatRange(minValue=0f, maxValue=3f, scene=UI_Scene.Editor, stepIncrement=1f)]
     public float tankType = TANK_MIXED;
-    private float oldTankType = -1;
+    private float oldTankType = -100;
 
-    public bool isStructural
-    {
-        set
-        {
-            tankType = value ? TANK_STRUCTURAL : TANK_MIXED;
-        }
-        get
-        {
-            return tankType == TANK_STRUCTURAL;
-        }
-    }
+    [KSPField]
+    public bool isStructural = false;
 
     private void updateResources()
     {
@@ -674,35 +673,35 @@ public abstract class AbstractStretchyTank : PartModule
         foreach (AttachNode node in part.attachNodes)
         {
             Vector3 position = transform.position + transform.TransformDirection(node.position);
-            addTankOrBellAttachment(position, (translate => { node.position += transform.InverseTransformDirection(translate); return true; }));
+            PartAttachment att = addTankOrBellAttachment(position, (translate => { node.position += transform.InverseTransformDirection(translate); return true; }));
         }
         if(part.attachRules.allowSrfAttach) {
             AttachNode node = part.srfAttachNode;
             Vector3 position = transform.position + transform.TransformDirection(node.position);
-            addTankOrBellAttachment(position, (translate => { node.position += transform.InverseTransformDirection(translate); return true; }));
+            PartAttachment att = addTankOrBellAttachment(position, (translate => { node.position += transform.InverseTransformDirection(translate); return true; }));
         }
     }
 
-    private class SurfaceAttachment
+    private class PartAttachment
     {
         public Part child;
         public Transform follower;
+        public Transform srbFollower;
         public object data;
-        public bool isOnSRB = false;
 
-        public SurfaceAttachment(Transform follower, object data, bool isOnSRB)
+        public PartAttachment(Transform follower, Transform srbFollower, object data)
         {
             this.follower = follower;
+            this.srbFollower = srbFollower;
             this.data = data;
-            this.isOnSRB = isOnSRB;
         }
     }
 
 
-    private SurfaceAttachment parentAttachment = null;
-    private LinkedList<SurfaceAttachment> childAttachments = new LinkedList<SurfaceAttachment>();
+    private PartAttachment parentAttachment = null;
+    private LinkedList<PartAttachment> childAttachments = new LinkedList<PartAttachment>();
 
-    private void updateAttachments()
+    private void updatePartsAttached()
     {
         // Update parent attachements.
         // Explain logic: 
@@ -744,9 +743,9 @@ public abstract class AbstractStretchyTank : PartModule
                 Vector3 position = transform.position + transform.TransformDirection(childToParent.position);
                 Part root = EditorLogic.SortedShipList[0];
 
-                int siblings = part.symmetryCounterparts == null ? 1 : part.symmetryCounterparts.Count;
+                int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
 
-                // we need to ourselves down so that when the translation from the parent reaches here it ends in the right spot
+                // we need to translate this part down so that when the translation from the parent reaches here it ends in the right spot
                 parentAttachment = addTankOrBellAttachment(position, trans =>
                 {
                     root.transform.Translate(trans, Space.World);
@@ -757,7 +756,7 @@ public abstract class AbstractStretchyTank : PartModule
             }
         }
 
-        LinkedListNode<SurfaceAttachment> node = childAttachments.First;
+        LinkedListNode<PartAttachment> node = childAttachments.First;
         foreach (Part child in part.children)
         {
             while (node != null && node.Value.child != child)
@@ -781,9 +780,9 @@ public abstract class AbstractStretchyTank : PartModule
         }
     }
 
-    private void removeChildPartAttachment(ref LinkedListNode<SurfaceAttachment> node)
+    private void removeChildPartAttachment(ref LinkedListNode<PartAttachment> node)
     {
-        LinkedListNode<SurfaceAttachment> delete = node;
+        LinkedListNode<PartAttachment> delete = node;
         node = node.Next;
 
         removeTankOrBellAttachment(delete.Value);
@@ -791,7 +790,7 @@ public abstract class AbstractStretchyTank : PartModule
         print("*ST* Child part removed: " + delete.Value.child);
     }
 
-    private SurfaceAttachment addChildPartAttachment(Part child)
+    private PartAttachment addChildPartAttachment(Part child)
     {
         AttachNode node = child.findAttachNodeByPart(part);
 
@@ -804,7 +803,7 @@ public abstract class AbstractStretchyTank : PartModule
         print("*ST* Attaching child part: " + child.transform + " from child node " + node.id);
 
         Vector3 offset = child.transform.TransformDirection(node.position);
-        SurfaceAttachment attach = addTankOrBellAttachment(child.transform.position + offset, TransformPositionFollower.createFollowerTranslate(child.transform));
+        PartAttachment attach = addTankOrBellAttachment(child.transform.position + offset, TransformPositionFollower.createFollowerTranslate(child.transform));
         attach.child = child;
 
         childAttachments.AddLast(attach); 
@@ -812,43 +811,45 @@ public abstract class AbstractStretchyTank : PartModule
         return attach;
     }
 
-    private SurfaceAttachment addTankOrBellAttachment(Vector3 position, Predicate<Vector3> Translate)
+    private PartAttachment addTankOrBellAttachment(Vector3 position, Predicate<Vector3> Translate)
     {
-        bool isOnSRB = false;
+        Transform srbFollower = null;
         if (isSRB)
         {
             // Check if attached to tank or to SRB nozzle
             Vector3 childPos = position - transform.position;
             Vector3 thrustPos = srbBell.position - transform.position;
-            Vector3 thrustVector = srbBell.forward;
+            Vector3 thrustVector = srbBell.up;
 
             float thrustFromOrigin = Vector3.Dot(thrustVector, childPos);
             float attachFromOrigin = Vector3.Dot(thrustVector, thrustPos);
 
-            isOnSRB = attachFromOrigin > thrustFromOrigin;
+            if (attachFromOrigin > thrustFromOrigin)
+            {
+                // If we have an SRB attachment, we need to account for both the movement with respect to the tank
+                // and also the movement with respect to the SRB.
+
+                // put the srb follower at the actual position.
+                srbFollower = TransformPositionFollower.createFollower(position, Translate);
+                srbFollower.transform.parent = srbBell;
+                
+                // The follower for the tank part is in the position of the srb attachment
+                position = srbBell.position;
+            }
         }
 
-        object data;
         Transform follower = TransformPositionFollower.createFollower(position, Translate);
+        object data = addTankAttachment(follower);
 
-        if (isOnSRB)
-        {
-            follower.transform.parent = srbBell;
-            data = follower;
-        }
-        else
-        {
-            data = addTankAttachment(follower);
-        }
-
-        return new SurfaceAttachment(follower, data, isOnSRB);
+        return new PartAttachment(follower, srbFollower, data);
     }
 
-    private void removeTankOrBellAttachment(SurfaceAttachment delete)
+    private void removeTankOrBellAttachment(PartAttachment delete)
     {
-        if (!delete.isOnSRB)
-            removeTankAttachment(delete.data);
+        removeTankAttachment(delete.data);
         Destroy(delete.follower.gameObject);
+        if (delete.srbFollower != null)
+            Destroy(delete.srbFollower.gameObject);
     }
 
     /// <summary>

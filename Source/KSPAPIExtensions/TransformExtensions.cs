@@ -7,7 +7,7 @@ using UnityEngine;
 
 public static class TransformExtensions
 {
-    public static void DumpTree(this Transform t, DumpTreeOption options = DumpTreeOption.Active)
+    public static void DumpTree(this Transform t, DumpTreeOption options = DumpTreeOption.Default)
     {
         DumpTree(t, options, 0);
     }
@@ -115,6 +115,8 @@ public static class TransformExtensions
 [Flags]
 public enum DumpTreeOption
 {
+    None = 0x0,
+    Default = 0x0,
     Active = 0x1,
     Materials = 0x2,
     Components = 0x4,
