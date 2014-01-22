@@ -20,7 +20,6 @@ public class StretchyCylinderTank : AbstractStretchyTank
 
     public override void OnStart(PartModule.StartState state)
     {
-        print("*ST* On Start");
         try
         {
             UIPartActionFloatEdit.RegisterTemplate();
@@ -30,26 +29,33 @@ public class StretchyCylinderTank : AbstractStretchyTank
             print(ex.ToString());
         }
 
-        tankModel = part.FindModelTransform(tankModelName);
+        try { 
+            tankModel = part.FindModelTransform(tankModelName);
         
-        Transform sides = part.FindModelTransform(sidesName);
-        Transform ends = part.FindModelTransform(endsName);
+            Transform sides = part.FindModelTransform(sidesName);
+            Transform ends = part.FindModelTransform(endsName);
 
-        sidesMaterial = sides.renderer.material;
-        endsMaterial = ends.renderer.material;
- 
-        base.OnStart(state);
-    }
+            sidesMaterial = sides.renderer.material;
+            endsMaterial = ends.renderer.material;
 
-    public override void OnInitialize()
-    {
-        base.OnInitialize();
+            base.OnStart(state);
+        }
+        catch (Exception ex)
+        {
+            print("OnStart exception: " + ex);
+        }
     }
 
     public override void Update()
     {
-        updateVolume();
-        base.Update();
+        try { 
+            updateVolume();
+            base.Update();
+        }
+        catch (Exception ex)
+        {
+            print("Update exception: " + ex);
+        }
     }
 
     public override void GetMaterialsAndScale(out Material sidesMaterial, out Material endsMaterial, out Vector2 sideScale)
@@ -106,6 +112,7 @@ public class StretchyCylinderTank : AbstractStretchyTank
         tankVolume = length * diameter * diameter * (float)(Math.PI / 4.0d);
 
         // TODO: rebuild the mesh rather than just transforming it.
+        print("*ST* Rescale model");
         tankModel.localScale = new Vector3(diameter, length, diameter);
 
         oldDiameter = diameter;
