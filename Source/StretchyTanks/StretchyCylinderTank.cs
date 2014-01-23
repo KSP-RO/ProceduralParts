@@ -31,7 +31,7 @@ public class StretchyCylinderTank : AbstractStretchyTank
 
         try { 
             tankModel = part.FindModelTransform(tankModelName);
-        
+
             Transform sides = part.FindModelTransform(sidesName);
             Transform ends = part.FindModelTransform(endsName);
 
@@ -39,6 +39,8 @@ public class StretchyCylinderTank : AbstractStretchyTank
             endsMaterial = ends.renderer.material;
 
             base.OnStart(state);
+
+            updateVolume();
         }
         catch (Exception ex)
         {
@@ -46,11 +48,21 @@ public class StretchyCylinderTank : AbstractStretchyTank
         }
     }
 
+    bool skipNextUpdate = false;
+
     public override void Update()
     {
+        if (skipNextUpdate)
+        {
+            skipNextUpdate = false;
+            return;
+        }
+
         try { 
-            updateVolume();
             base.Update();
+
+            if(HighLogic.LoadedSceneIsEditor)
+                updateVolume();
         }
         catch (Exception ex)
         {
@@ -68,15 +80,15 @@ public class StretchyCylinderTank : AbstractStretchyTank
         sideScale.y = length;
     }
 
-    public override object addTankAttachment(Transform attach)
+    public override object addTankAttachment(TransformPositionFollower attach)
     {
-        attach.parent = tankModel.transform;
+        attach.SetParent(tankModel.transform);
         return attach;
     }
 
     public override void removeTankAttachment(object data)
     {
-        ((Transform)data).parent = null;
+        ((TransformPositionFollower)data).SetParent(null);
     }
 
     private Transform tankModel;
@@ -107,16 +119,19 @@ public class StretchyCylinderTank : AbstractStretchyTank
         if (diameter == oldDiameter && length == oldLength)
             return;
 
-        print("*ST* Updating volume");
-
         tankVolume = length * diameter * diameter * (float)(Math.PI / 4.0d);
 
         // TODO: rebuild the mesh rather than just transforming it.
-        print("*ST* Rescale model");
         tankModel.localScale = new Vector3(diameter, length, diameter);
+
+        if(isSRB)
+            srbBell.localScale = new Vector3(diameter*0.8f, diameter*0.8f, diameter*0.8f);
 
         oldDiameter = diameter;
         oldLength = length;
+        
+        // We need to skip the next update so attached TransformPositionFollowers can settle into position.
+        skipNextUpdate = true;
 
         foreach (Part sym in part.symmetryCounterparts)
         {
