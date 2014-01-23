@@ -12,23 +12,20 @@ public class TransformPositionFollower : MonoBehaviour
     private Quaternion oldParentRotation; 
     private bool hasParent = false;
 
-    public void Start()
+    public void SetParent(Transform newParent)
     {
-        if (hasParent != (transform.parent != null))
+        if (newParent == null)
         {
-            if (hasParent)
-            {
-                // have lost the parent
-                hasParent = false;
-                oldOffset = transform.position;
-            }
-            else
-            {
-                // have gained the parent
-                hasParent = true;
-                oldOffset = transform.position - transform.parent.position;
-                oldParentRotation = transform.parent.rotation;
-            }
+            hasParent = false;
+            transform.parent = null;
+            oldOffset = transform.position;
+        }
+        else
+        {
+            hasParent = true;
+            transform.parent = newParent;
+            oldOffset = transform.position - newParent.position;
+            oldParentRotation = transform.parent.rotation;
         }
     }
 
@@ -36,19 +33,7 @@ public class TransformPositionFollower : MonoBehaviour
     {
         if (hasParent != (transform.parent != null))
         {
-            if (hasParent)
-            {
-                // have lost the parent
-                hasParent = false;
-                oldOffset = transform.position;
-            }
-            else
-            {
-                // have gained the parent
-                hasParent = true;
-                oldOffset = transform.position - transform.parent.position;
-                oldParentRotation = transform.parent.rotation;
-            }
+            SetParent(transform.parent);
             return;
         }
 
@@ -93,20 +78,35 @@ public class TransformPositionFollower : MonoBehaviour
     }
 
 
-    public static Transform createFollower(Transform attached)
+    public static TransformPositionFollower createFollower(Transform attached)
     {
-        return createFollower(attached.position, createFollowerTranslate(attached));
+        return createFollower(null, attached.position, createFollowerTranslate(attached));
     }
 
-    public static Transform createFollower(Transform attached, Vector3 offset, Space offsetSpace = Space.Self)
+    public static TransformPositionFollower createFollower(Transform parent, Transform attached)
+    {
+        return createFollower(parent, attached.position, createFollowerTranslate(attached));
+    }
+
+    public static TransformPositionFollower createFollower(Transform attached, Vector3 offset, Space offsetSpace = Space.Self)
+    {
+        return createFollower(null, attached, offset, offsetSpace);
+    }
+
+    public static TransformPositionFollower createFollower(Transform parent, Transform attached, Vector3 offset, Space offsetSpace = Space.Self)
     {
         if (offsetSpace == Space.Self)
             offset = attached.TransformDirection(offset);
 
-        return createFollower(attached.position+offset, createFollowerTranslate(attached));
+        return createFollower(parent, attached.position + offset, createFollowerTranslate(attached));
     }
 
-    public static Transform createFollower(Vector3 position, Predicate<Vector3> Translate)
+    public static TransformPositionFollower createFollower(Vector3 position, Predicate<Vector3> Translate)
+    {
+        return createFollower(null, position, Translate);
+    }
+
+    public static TransformPositionFollower createFollower(Transform parent, Vector3 position, Predicate<Vector3> Translate)
     {
         GameObject go = new GameObject("childPart", typeof(TransformPositionFollower));
         TransformPositionFollower loc = go.GetComponent<TransformPositionFollower>();
@@ -115,8 +115,9 @@ public class TransformPositionFollower : MonoBehaviour
 
         go.transform.position = position;
         loc.oldOffset = position;
+        loc.SetParent(parent);
 
-        return go.transform;
+        return loc;
     }
 
     public static Predicate<Vector3> createFollowerTranslate(Transform attached)
