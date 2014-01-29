@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
-
+using KSPAPIExtensions;
 
 public abstract class AbstractStretchyTank : PartModule
 {    
@@ -169,19 +169,19 @@ public abstract class AbstractStretchyTank : PartModule
     {
         get
         {
-            switch ((int)tankType)
+            switch (tankType)
             {
-                case TANK_MIXED:
-                case TANK_MONOPROP:
+                case "*Mixed":
+                case "MonoPropellant":
                     return 0.1089f;
-                case TANK_LIQUID_FUEL:
+                case "LiquidFuel":
                     return 0.0450f;
-                case TANK_OXIDIZER:
+                case "Oxidizer":
                     return 0.0815f;
-                case TANK_SOLID:
+                case "SolidFuel":
                     // NK add solid fuel, dry mass = 0.0015 per unit, or 1:6 given SF's mass of 0.0075t per unit
                     return 1.5f;
-                case TANK_STRUCTURAL:
+                case "*Structural":
                     // Dry mass of "Structural Fuselage" divided by volume gives us a mass higher than anything
                     // This really doesn't make any sense as you could just empty out a liquid fuel tank. 
                     return 0.0400f; //0.1738f;
@@ -227,13 +227,8 @@ public abstract class AbstractStretchyTank : PartModule
 
     #region Texture Sets
 
-    [KSPField(guiName = "Texture Set", guiActive = false, guiActiveEditor = true, isPersistant = false), UI_FloatRange(minValue = 1f, maxValue = 1f, stepIncrement = 1f)]
-    public float textureSetIdx = 1;
-    private float oldTextureSetIdx = -1;
-
-
-    [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true)]
-    public string textureSet = "*****";
+    [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption()]
+    public string textureSet;
     private string oldTextureSet = "*****";
 
     private class TextureSet
@@ -253,6 +248,7 @@ public abstract class AbstractStretchyTank : PartModule
         public string sidesBumpName;
     }
     private static List<TextureSet> loadedTextureSets;
+    private static string[] loadedTextureSetNames;
 
     public static void loadTextureSets()
     {
@@ -272,6 +268,10 @@ public abstract class AbstractStretchyTank : PartModule
 
         if(loadedTextureSets.Count == 0)
             print("*ST* No Texturesets found!");
+
+        loadedTextureSetNames = new string[loadedTextureSets.Count];
+        for (int i = 0; i < loadedTextureSets.Count; ++i)
+            loadedTextureSetNames[i] = loadedTextureSets[i].name;
     }
 
     private static TextureSet loadTextureSet(ConfigNode texInfo) 
@@ -340,9 +340,12 @@ public abstract class AbstractStretchyTank : PartModule
 
     public void initializeTextureSet()
     {
-        BaseField field = Fields["textureSetIdx"];
-        UI_FloatRange range = (UI_FloatRange)field.uiControlEditor;
-        range.maxValue = loadedTextureSets.Count;
+        BaseField field = Fields["textureSet"];
+        UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
+
+        range.options = loadedTextureSetNames;
+        if(textureSet == null || !loadedTextureSetNames.Contains(textureSet))
+            textureSet = loadedTextureSetNames[0];
     }
 
     /// <summary>
@@ -350,48 +353,31 @@ public abstract class AbstractStretchyTank : PartModule
     /// </summary>
     public void rescaleTexture()
     {
-        oldTextureSetIdx = -1;
+        oldTextureSet = null;
         updateTexture();
     }
 
     private void updateTexture()
     {
-        if (textureSet != oldTextureSet)
-        {
-            int newIdx = loadedTextureSets.FindIndex(set => set.name == textureSet);
-            if(newIdx < 0) {
-                print("*ST* Unable to find texture set: " + textureSet);
-                textureSet = oldTextureSet;
-                return;
-            }
-            textureSetIdx = oldTextureSetIdx = newIdx + 1;
-            oldTextureSet = textureSet;
+        if (textureSet == oldTextureSet)
+            return;
+
+        int newIdx = loadedTextureSets.FindIndex(set => set.name == textureSet);
+        if(newIdx < 0) {
+            print("*ST* Unable to find texture set: " + textureSet);
+            textureSet = oldTextureSet;
+            return;
         }
-        else if(textureSetIdx != oldTextureSetIdx)
-        {
-            if (textureSetIdx > loadedTextureSets.Count)
-            {
-                print("*ST* Texture set index out of range: " + textureSetIdx);
-                textureSetIdx = oldTextureSetIdx;
-                return;
-            }
-            textureSet = oldTextureSet = loadedTextureSets[(int)textureSetIdx - 1].name;
-            oldTextureSetIdx = textureSetIdx;
-        }
-        else
-        {
-            return; 
-        }
+        oldTextureSet = textureSet;
 
         // Update symmetry counterparts
         foreach (Part sym in part.symmetryCounterparts)
         {
             AbstractStretchyTank counterpart = sym.Modules.OfType<AbstractStretchyTank>().FirstOrDefault();
-            counterpart.textureSetIdx = textureSetIdx;
+            counterpart.textureSet = textureSet;
         }
 
-
-        TextureSet tex = loadedTextureSets[(int)textureSetIdx - 1];
+        TextureSet tex = loadedTextureSets[newIdx];
 
         Material sidesMaterial;
         Material endsMaterial;
@@ -410,6 +396,11 @@ public abstract class AbstractStretchyTank : PartModule
             endsMaterial.shader = Shader.Find("KSP/Diffuse");
         }
 
+        // TODO: shove into config file.
+        float scale = 0.93f;
+        float offset = (1f/scale - 1f)/2f;
+        endsMaterial.mainTextureScale = new Vector2(scale, scale);
+        endsMaterial.mainTextureOffset = new Vector2(offset, offset);
         // set up UVs
         Vector2 scaleUV = tex.scale;
         if (tex.autoScale)
@@ -473,9 +464,9 @@ public abstract class AbstractStretchyTank : PartModule
 
     private void initializeSRB()
     {
-        if (isStructural || tankType == TANK_STRUCTURAL)
+        if (isStructural || tankType == "*Structural")
         {
-            tankType = TANK_STRUCTURAL;
+            tankType = "*Structural";
             isStructural = true;
             isSRB = false;
 
@@ -483,9 +474,9 @@ public abstract class AbstractStretchyTank : PartModule
             Fields["tankType"].guiActiveEditor = false;
             Fields["tankVolume"].guiActiveEditor = false;
         }
-        else if (isSRB || tankType == TANK_SOLID)
+        else if (isSRB || tankType == "SolidFuel")
         {
-            tankType = TANK_SOLID;
+            tankType = "SolidFuel";
             isStructural = false;
             isSRB = true;
 
@@ -505,6 +496,13 @@ public abstract class AbstractStretchyTank : PartModule
             Fields["srbThrust"].guiActiveEditor = false;
             Fields["srbHeatProduction"].guiActiveEditor = false;
             oldSRBBurnTime = srbBurnTime = 0.0f;
+
+            UI_ChooseOption opts = (UI_ChooseOption)Fields["tankType"].uiControlEditor;
+            opts.options = new string[] { "*Mixed", "LiquidFuel", "Oxidizer", "MonoPropellant" };
+            opts.display = new string[] { "Mixed", "Liquid Fuel", "Oxidizer", "MonoPropellant" };
+
+            if (tankType == null || tankType == "")
+                tankType = opts.options[0];
         }
     }
 
@@ -553,19 +551,12 @@ public abstract class AbstractStretchyTank : PartModule
         }
     }
     #endregion
-
+    
     #region Resources
 
-    public const int TANK_MIXED = 0;
-    public const int TANK_LIQUID_FUEL = 1;
-    public const int TANK_OXIDIZER = 2;
-    public const int TANK_MONOPROP = 3;
-    public const int TANK_SOLID = -1;
-    public const int TANK_STRUCTURAL = -2;
-
-    [KSPField(isPersistant = true, guiActive=false, guiActiveEditor=true, guiName="Tank Type"), UI_FloatRange(minValue=0f, maxValue=3f, scene=UI_Scene.Editor, stepIncrement=1f)]
-    public float tankType = TANK_MIXED;
-    private float oldTankType = -100;
+    [KSPField(isPersistant = true, guiActive=false, guiActiveEditor=true, guiName="Tank Type"), UI_ChooseOption]
+    public string tankType;
+    private string oldTankType = "******";
 
     [KSPField]
     public bool isStructural = false;
@@ -576,29 +567,29 @@ public abstract class AbstractStretchyTank : PartModule
             return;
 
         // add resources
-        switch ((int)tankType)
+        switch (tankType)
         {
-            case TANK_MIXED:
+            case "*Mixed":
                 changeResource("LiquidFuel", 78.22784f * tankVolume);
                 changeResource("Oxidizer", 95.6118f * tankVolume);
                 break;
-            case TANK_LIQUID_FUEL:
+            case "LiquidFuel":
                 changeResource("LiquidFuel", 49.9789f * tankVolume);
                 break;
-            case TANK_MONOPROP:
+            case "MonoPropellant":
                 changeResource("MonoPropellant", 203.718f * tankVolume);
                 break;
-            case TANK_OXIDIZER:
+            case "Oxidizer":
                 changeResource("Oxidizer", 81.4873f * tankVolume);
                 break;
-            case TANK_SOLID:
+            case "SolidFuel":
                 // NK add Solid Fuel
                 // Yields 850 for 1.5t dry mass, like BACC (because dry mass = 1.5 LF/Ox dry mass)
                 // But the RT-10 has way better dry:wet ratio, so pick something inbetween: 1.2794x BACC
                 changeResource("SolidFuel", 192f * tankVolume, false);
                 changeThrust();
                 break;
-            case TANK_STRUCTURAL:
+            case "*Structural":
                 break;
             default:
                 print("*ST*: Unknown tank type " + tankType);
@@ -632,24 +623,18 @@ public abstract class AbstractStretchyTank : PartModule
     public void cleanResources()
     {
         Predicate<PartResource> match;
-        switch ((int)tankType)
+        switch (tankType)
         {
-            case TANK_MIXED:
+            case "*Mixed":
                 match = (res => (res.resourceName != "LiquidFuel" && res.resourceName != "Oxidizer"));
                 break;
-            case TANK_LIQUID_FUEL:
-                match = (res => (res.resourceName != "LiquidFuel"));
+            case "LiquidFuel":
+            case "MonoPropellant":
+            case "Oxidizer":
+            case "SolidFuel":
+                match = (res => (res.resourceName != tankType));
                 break;
-            case TANK_MONOPROP:
-                match = (res => (res.resourceName != "MonoPropellant"));
-                break;
-            case TANK_OXIDIZER:
-                match = (res => (res.resourceName != "Oxidizer"));
-                break;
-            case TANK_SOLID:
-                match = (res => (res.resourceName != "SolidFuel"));
-                break;
-            case TANK_STRUCTURAL:
+            case "*Structural":
                 match = (res => true);
                 break;
             default:

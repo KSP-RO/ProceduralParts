@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{BB7C12FE-8189-4A56-B058-58C1B7366E60}</ProjectGuid>
+    <ProjectGuid>{A8D22039-E1CB-4353-9EDA-7B14211D7E8F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>StretchyTanks</RootNamespace>
-    <AssemblyName>StretchyTanks</AssemblyName>
+    <AssemblyName>StretchyTanksDeprecated</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
@@ -44,22 +44,14 @@
       <HintPath>..\..\..\..\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="System, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e, processorArchitecture=MSIL" />
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\KSP_Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AbstractStretchyTank.cs" />
-    <Compile Include="StretchyCylinderTank.cs" />
-    <Compile Include="TransformPositionFollower.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\KSPAPIExtensions\KSPAPIExtensions.csproj">
-      <Project>{4282b0da-c314-4524-9c32-edab2c9666a9}</Project>
-      <Name>KSPAPIExtensions</Name>
-    </ProjectReference>
+    <Compile Include="stretchyTanks.cs" />
+    <Compile Include="conicTank.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
