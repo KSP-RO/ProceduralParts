@@ -34,6 +34,8 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TransformExtensions.cs" />
+    <Compile Include="UIPartActionChooseOption.cs" />
+    <Compile Include="RegistrationAddon.cs" />
     <Compile Include="UIPartActionFloatEdit.cs" />
   </ItemGroup>
   <ItemGroup>
