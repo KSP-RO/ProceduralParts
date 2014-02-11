@@ -152,6 +152,14 @@ namespace KSPAPIExtensions
                 MonoBehaviour.print("Different fields: " + field.FieldType.Name + " " + field.Name + (Equals(thisValue, thatValue) ? "(compute equal)" : (" " + thisValue + " != " + thatValue)));
             }
         }
+
+        public static string ToStringAngleAxis(this Quaternion q)
+        {
+            Vector3 axis;
+            float angle;
+            q.ToAngleAxis(out angle, out axis);
+            return "(axis:" + axis.ToString("F3") + " angle: " + angle.ToString("F3") + ")";
+        }
     }
 
     [Flags]

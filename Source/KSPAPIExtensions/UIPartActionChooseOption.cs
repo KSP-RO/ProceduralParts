@@ -117,6 +117,8 @@ namespace KSPAPIExtensions
             {
                 selectedValue = fieldInfo.options[selectedIdx];
                 field.SetValue(selectedValue, field.host);
+                if (scene == UI_Scene.Editor)
+                    SetSymCounterpartValue(selectedValue);
             }
             UpdateControls();
         }
