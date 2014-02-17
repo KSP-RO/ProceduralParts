@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 using KSPAPIExtensions;
 
@@ -26,15 +24,10 @@ public class TankContentSwitcher : PartModule
 {
     #region Callbacks
 
-    public override void OnStart(PartModule.StartState state)
+    public override void OnAwake()
     {
-        InitializeTankType();
-    }
-
-    public void Update()
-    {
-        if (HighLogic.LoadedSceneIsEditor)
-            UpdateTankType();
+        if(HighLogic.LoadedSceneIsEditor)
+            InitializeTankType();
     }
 
     public override void OnLoad(ConfigNode node)
@@ -52,29 +45,19 @@ public class TankContentSwitcher : PartModule
 
         // Unity for some daft reason, and not as according to it's own documentation, won't clone 
         // serializable member fields. Lets DIY.
-        MemoryStream stream = new MemoryStream();
-        using (stream)
-        {
-            BinaryFormatter fmt = new BinaryFormatter();
-            fmt.Serialize(stream, tankTypeOptions);
-        }
-        tankTypeOptionsSerialized = stream.ToArray();
+        tankTypeOptionsSerialized = ObjectSerializer.Serialize(tankTypeOptions);
     }
 
-    public override void OnAwake()
+    public override void OnStart(PartModule.StartState state)
     {
-        // Unity for some daft reason, and not as according to it's own documentation, won't clone 
-        // serializable member fields. Lets DIY.
-        if (tankTypeOptionsSerialized != null)
-        {
-            using (MemoryStream stream = new MemoryStream(tankTypeOptionsSerialized))
-            {
-                BinaryFormatter fmt = new BinaryFormatter();
-                tankTypeOptions = (List<TankTypeOption>)fmt.Deserialize(stream);
-            }
-        }
+        isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
     }
 
+    public void Update()
+    {
+        if (HighLogic.LoadedSceneIsEditor)
+            UpdateTankType();
+    }
 
     #endregion
 
@@ -92,11 +75,20 @@ public class TankContentSwitcher : PartModule
     [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Dry Mass", guiFormat = "F2", guiUnits = "t")]
     public float dryMass = 0.0f;
 
+    [KSPField]
+    public bool useVolume = false;
+
     /// <summary>
-    /// Message sent from ProceduralTankShape when it updates.
+    /// Message sent from ProceduralAbstractShape when it updates.
     /// </summary>
     public void UpdateTankVolume(float tankVolume)
     {
+        if (!useVolume)
+        {
+            Debug.LogError("Updating tank volume when this is not expected. Set useVolume = true in config file");
+            return;
+        }
+
         if (tankVolume <= 0f)
             throw new ArgumentOutOfRangeException("tankVolume");
 
@@ -150,6 +142,8 @@ public class TankContentSwitcher : PartModule
         [Persistent]
         public float unitsPerKL;
         [Persistent]
+        public float unitsPerT;
+        [Persistent]
         public bool isTweakable = true;
 
         public void Load(ConfigNode node)
@@ -164,6 +158,13 @@ public class TankContentSwitcher : PartModule
 
     private void InitializeTankType()
     {
+        // Have to DIY to get the tank options deserialized
+        if (tankTypeOptionsSerialized != null)
+            ObjectSerializer.Deserialize(tankTypeOptionsSerialized, out tankTypeOptions);
+
+        Fields["tankVolume"].guiActiveEditor = useVolume;
+        Fields["dryMass"].guiActiveEditor = useVolume;
+
         if (tankTypeOptions == null || tankTypeOptions.Count == 0)
             throw new InvalidOperationException("No tank type options available");
 
@@ -182,6 +183,8 @@ public class TankContentSwitcher : PartModule
     {
         if (tankTypeOptions == null || ( selectedTankType != null && selectedTankType.optionName == tankType))
             return;
+
+        Debug.LogWarning("UpdateTankType()");
 
         TankTypeOption oldTankType = selectedTankType;
 
@@ -218,16 +221,20 @@ public class TankContentSwitcher : PartModule
         // Wait for the first update...
         if (selectedTankType == null)
             return;
+        Debug.LogWarning("UpdateMassAndResources(" + typeChanged + ")");
 
-        dryMass = part.mass = Mathf.Round(selectedTankType.dryDensity * tankVolume * volMultiplier * 1000f) / 1000f;
+        if (useVolume)
+        {
+            dryMass = part.mass = Mathf.Round(selectedTankType.dryDensity * tankVolume * volMultiplier * 1000f) / 1000f;
 
-        // TODO: breaking force
-        //part.breakingForce = 50f;
-        //part.breakingTorque = 50f;
+            // TODO: breaking force
+            //part.breakingForce = 50f;
+            //part.breakingTorque = 50f;
 
-        // TODO: do we really want to update the breaking force?
-        //childAttachment.breakingForce = 969.47f * Mathf.Pow(massFactor, 0.3684f);
-        //childAttachment.breakingTorque = 969.47f * Mathf.Pow(massFactor, 0.3684f);
+            // TODO: do we really want to update the breaking force?
+            //childAttachment.breakingForce = 969.47f * Mathf.Pow(massFactor, 0.3684f);
+            //childAttachment.breakingTorque = 969.47f * Mathf.Pow(massFactor, 0.3684f);
+        }
 
 
         // Update the resources list.
@@ -255,13 +262,13 @@ public class TankContentSwitcher : PartModule
                     goto reinitialize;
                 }
 
-                double amount = (float)Math.Round(tankVolume * volMultiplier * tankRes.unitsPerKL, 2);
+                double amount = (float)Math.Round(tankVolume * volMultiplier * tankRes.unitsPerKL + dryMass * tankRes.unitsPerT , 2);
                 double oldFillFraction = partRes.amount / partRes.maxAmount;
 
                 partRes.maxAmount = amount;
-                partRes.amount = amount * oldFillFraction;
+                partRes.amount = double.IsNaN(oldFillFraction)?amount:Math.Round(amount * oldFillFraction, 2);
 
-                if (!UpdateWindow(window, partRes))
+                if (partRes.isTweakable && !UpdateWindow(window, partRes))
                     goto reinitialize;
             }
             gameObject.SendMessage("UpdateTankResources");
@@ -280,7 +287,7 @@ public class TankContentSwitcher : PartModule
         // the sliders that affect tank contents properly cos they get recreated underneith you and the drag dies.
         foreach (TankResource res in selectedTankType.resources)
         {
-            double amount = (double)Math.Round(tankVolume * volMultiplier * res.unitsPerKL, 2);
+            double amount = (double)Math.Round(tankVolume * volMultiplier * res.unitsPerKL + dryMass * res.unitsPerT, 2);
 
             ConfigNode node = new ConfigNode("RESOURCE");
             node.AddValue("name", res.resourceName);
@@ -301,8 +308,6 @@ public class TankContentSwitcher : PartModule
     #region Nasty Reflection Code
 
     private FieldInfo windowListField;
-    private FieldInfo actionItemListField;
-
     private UIPartActionWindow FindWindow()
     {
         // We need to do quite a bit of piss-farting about with reflection to 
@@ -332,6 +337,7 @@ public class TankContentSwitcher : PartModule
         return null;
     }
 
+    private FieldInfo actionItemListField;
     private bool UpdateWindow(UIPartActionWindow window, PartResource res)
     {
         if (actionItemListField == null)
@@ -368,8 +374,8 @@ public class TankContentSwitcher : PartModule
     foundEditor:
 
         // Fortunatly as we're keeping proportions, we don't need to update the slider.
-        editor.resourceMax.Text = res.maxAmount.ToString("F2");
-        editor.resourceAmnt.Text = res.amount.ToString("F2");
+        editor.resourceMax.Text = res.maxAmount.ToString("F1");
+        editor.resourceAmnt.Text = res.amount.ToString("F1");
 
         return true;
     }

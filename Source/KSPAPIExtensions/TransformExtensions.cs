@@ -160,6 +160,19 @@ namespace KSPAPIExtensions
             q.ToAngleAxis(out angle, out axis);
             return "(axis:" + axis.ToString("F3") + " angle: " + angle.ToString("F3") + ")";
         }
+
+        public static string PathToDecendant(this Transform parent, Transform child)
+        {
+            List<string> inBetween = new List<string>();
+            for (Transform track = child; track != parent; track = track.parent)
+            {
+                inBetween.Add(track.name);
+                if (track.parent == null)
+                    throw new ArgumentException("Passed transform is not a child of this part");
+            }
+            inBetween.Reverse();
+            return string.Join("/", inBetween.ToArray());
+        }
     }
 
     [Flags]
