@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProceduralTanks", "ProceduralTanks.csproj", "{BB7C12FE-8189-4A56-B058-58C1B7366E60}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProceduralParts", "ProceduralParts.csproj", "{BB7C12FE-8189-4A56-B058-58C1B7366E60}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KSPAPIExtensions", "..\KSPAPIExtensions\KSPAPIExtensions.csproj", "{4282B0DA-C314-4524-9C32-EDAB2C9666A9}"
 EndProject
