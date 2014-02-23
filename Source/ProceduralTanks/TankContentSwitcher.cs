@@ -24,12 +24,6 @@ public class TankContentSwitcher : PartModule
 {
     #region Callbacks
 
-    public override void OnAwake()
-    {
-        if(HighLogic.LoadedSceneIsEditor)
-            InitializeTankType();
-    }
-
     public override void OnLoad(ConfigNode node)
     {
         if (HighLogic.LoadedScene != GameScenes.LOADING)
@@ -48,8 +42,17 @@ public class TankContentSwitcher : PartModule
         tankTypeOptionsSerialized = ObjectSerializer.Serialize(tankTypeOptions);
     }
 
+    public override void OnSave(ConfigNode node)
+    {
+        // Force saved value for enabled to be true.
+        node.SetValue("isEnabled", "True");
+    }
+
     public override void OnStart(PartModule.StartState state)
     {
+        InitializeTankType();
+        if (tankVolume != 0)
+            UpdateTankType();
         isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
     }
 
@@ -69,7 +72,7 @@ public class TankContentSwitcher : PartModule
     /// <summary>
     /// Volume of tank in kilolitres. 
     /// </summary>
-    [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Volume", guiFormat = "F3", guiUnits = "kL")]
+    [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Volume", guiFormat = "F3", guiUnits = "kL")]
     public float tankVolume = 0.0f;
 
     [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Dry Mass", guiFormat = "F2", guiUnits = "t")]
@@ -100,7 +103,7 @@ public class TankContentSwitcher : PartModule
 
     #region Tank Type
 
-    [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Tank Type"), UI_ChooseOption]
+    [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Tank Type"), UI_ChooseOption(scene=UI_Scene.Editor)]
     public string tankType;
 
     private TankTypeOption selectedTankType;
@@ -166,7 +169,10 @@ public class TankContentSwitcher : PartModule
         Fields["dryMass"].guiActiveEditor = useVolume;
 
         if (tankTypeOptions == null || tankTypeOptions.Count == 0)
-            throw new InvalidOperationException("No tank type options available");
+        {
+            Debug.LogError("*TCS* No tank type options available");
+            return;
+        }
 
         BaseField field = Fields["tankType"];
         UI_ChooseOption options = (UI_ChooseOption)field.uiControlEditor;
@@ -183,8 +189,6 @@ public class TankContentSwitcher : PartModule
     {
         if (tankTypeOptions == null || ( selectedTankType != null && selectedTankType.optionName == tankType))
             return;
-
-        Debug.LogWarning("UpdateTankType()");
 
         TankTypeOption oldTankType = selectedTankType;
 
@@ -221,21 +225,13 @@ public class TankContentSwitcher : PartModule
         // Wait for the first update...
         if (selectedTankType == null)
             return;
-        Debug.LogWarning("UpdateMassAndResources(" + typeChanged + ")");
-
+        
         if (useVolume)
-        {
             dryMass = part.mass = Mathf.Round(selectedTankType.dryDensity * tankVolume * volMultiplier * 1000f) / 1000f;
 
-            // TODO: breaking force
-            //part.breakingForce = 50f;
-            //part.breakingTorque = 50f;
-
-            // TODO: do we really want to update the breaking force?
-            //childAttachment.breakingForce = 969.47f * Mathf.Pow(massFactor, 0.3684f);
-            //childAttachment.breakingTorque = 969.47f * Mathf.Pow(massFactor, 0.3684f);
-        }
-
+        // Never update resources once flying
+        if (HighLogic.LoadedSceneIsFlight)
+            return;
 
         // Update the resources list.
         UIPartActionWindow window = FindWindow();
@@ -271,7 +267,7 @@ public class TankContentSwitcher : PartModule
                 if (partRes.isTweakable && !UpdateWindow(window, partRes))
                     goto reinitialize;
             }
-            gameObject.SendMessage("UpdateTankResources");
+            part.SendPartMessage("UpdateTankResources");
             return;
         }
 
@@ -300,7 +296,7 @@ public class TankContentSwitcher : PartModule
         if (window != null)
             window.displayDirty = true;
 
-        gameObject.SendMessage("UpdateTankResources");
+        part.SendPartMessage("UpdateTankResources");
     }
 
     #endregion

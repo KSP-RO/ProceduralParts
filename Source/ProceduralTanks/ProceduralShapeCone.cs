@@ -8,15 +8,18 @@ using KSPAPIExtensions;
 public class ProceduralShapeCone : ProceduralAbstractSoRShape
 {
 
-    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3"), UI_FloatEdit(minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
+    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3"),
+     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
     public float topDiameter = 1.25f;
     private float oldTopDiameter;
 
-    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3"), UI_FloatEdit(minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
+    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3"),
+     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
     public float bottomDiameter = 1.25f;
     private float oldBottomDiameter;
 
-    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3"), UI_FloatEdit(minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
+    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3"),
+     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.00f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
     public float length = 1f;
     private float oldLength;
 
@@ -28,20 +31,28 @@ public class ProceduralShapeCone : ProceduralAbstractSoRShape
         UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
         lengthEdit.maxValue = tank.lengthMax;
         lengthEdit.minValue = tank.lengthMin;
+        lengthEdit.incrementLarge = tank.lengthLargeStep;
+        lengthEdit.incrementSmall = tank.lengthSmallStep;
 
         UI_FloatEdit topDiameterEdit = (UI_FloatEdit)Fields["topDiameter"].uiControlEditor;
         topDiameterEdit.maxValue = tank.diameterMax;
         topDiameterEdit.minValue = tank.diameterMin;
+        topDiameterEdit.incrementLarge = tank.diameterLargeStep;
+        topDiameterEdit.incrementSmall = tank.diameterSmallStep;
 
         UI_FloatEdit bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
         bottomDiameterEdit.maxValue = tank.diameterMax;
         bottomDiameterEdit.minValue = tank.diameterMin;
+        bottomDiameterEdit.incrementLarge = tank.diameterLargeStep;
+        bottomDiameterEdit.incrementSmall = tank.diameterSmallStep;
     }
 
     protected override void UpdateShape(bool force)
     {
         if (!force && oldTopDiameter == topDiameter && oldBottomDiameter == bottomDiameter && oldLength == length)
             return;
+
+        //Debug.LogWarning("Cone.UpdateShape");
 
         {
             // Maxmin the volume.
@@ -86,8 +97,6 @@ public class ProceduralShapeCone : ProceduralAbstractSoRShape
             new ProfilePoint(topDiameter, 0.5f * length, 0f, norm),
             new ProfilePoint(bottomDiameter, -0.5f * length, 1f, norm)
             );
-
-        gameObject.SendMessage("UpdateSRBScale", bottomDiameter);
 
         oldTopDiameter = topDiameter;
         oldBottomDiameter = bottomDiameter;

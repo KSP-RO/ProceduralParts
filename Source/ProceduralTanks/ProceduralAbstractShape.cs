@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using KSPAPIExtensions;
 
 public abstract class ProceduralAbstractShape : PartModule
 {
@@ -73,33 +74,23 @@ public abstract class ProceduralAbstractShape : PartModule
 
     #region Callbacks
 
-    private bool skipNextUpdate = false;
     private bool forceNextUpdate = true;
-
-    public void SkipNextUpdate()
-    {
-        if (skipNextUpdate)
-            return;
-
-        skipNextUpdate = true;
-        tank.SkipNextUpdate();
-    }
 
     public void ForceNextUpdate()
     {
         this.forceNextUpdate = true;
     }
 
+    public override void OnSave(ConfigNode node)
+    {
+        // Force saved value for enabled to be true.
+        node.SetValue("isEnabled", "True");
+    }
+
     public void Update()
     {
         try
         {
-            if (skipNextUpdate)
-            {
-                skipNextUpdate = false;
-                return;
-            }
-
             bool wasForce = forceNextUpdate;
             forceNextUpdate = false;
 
@@ -107,13 +98,13 @@ public abstract class ProceduralAbstractShape : PartModule
 
             if (tankVolumeChanged || wasForce)
             {
-                gameObject.SendMessage("UpdateTankVolume", tankVolume);
+                part.SendPartMessage("UpdateTankVolume", tankVolume);
                 tankVolumeChanged = false;
             }
 
             if (tankTextureScaleChanged || wasForce)
             {
-                gameObject.SendMessage("UpdateTankTextureScale", tankTextureScale);
+                part.SendPartMessage("UpdateTankTextureScale", tankTextureScale);
                 tankTextureScaleChanged = false;
             }
         }
