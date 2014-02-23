@@ -8,8 +8,8 @@
     <ProjectGuid>{BB7C12FE-8189-4A56-B058-58C1B7366E60}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ProceduralTanks</RootNamespace>
-    <AssemblyName>ProceduralTanks</AssemblyName>
+    <RootNamespace>ProceduralParts</RootNamespace>
+    <AssemblyName>ProceduralParts</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
@@ -20,8 +20,8 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <BaseIntermediateOutputPath>..\..\..\..\Build\ProceduralTanks\obj\</BaseIntermediateOutputPath>
-    <OutputPath>..\..\..\..\Build\ProceduralTanks\Debug\</OutputPath>
+    <BaseIntermediateOutputPath>..\..\..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
+    <OutputPath>..\..\..\..\Build\ProceduralParts\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -30,8 +30,8 @@
     <PlatformTarget>x86</PlatformTarget>
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
-    <BaseIntermediateOutputPath>..\..\..\..\Build\ProceduralTanks\obj\</BaseIntermediateOutputPath>
-    <OutputPath>..\..\..\..\Build\ProceduralTanks\Debug\</OutputPath>
+    <BaseIntermediateOutputPath>..\..\..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
+    <OutputPath>..\..\..\..\Build\ProceduralParts\Debug\</OutputPath>
     <DefineConstants>
     </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
