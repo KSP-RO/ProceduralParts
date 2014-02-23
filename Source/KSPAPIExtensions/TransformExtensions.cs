@@ -10,28 +10,48 @@ namespace KSPAPIExtensions
 
     public static class APIExtensions
     {
-        public static void DumpTree(this Transform t, DumpTreeOption options = DumpTreeOption.Default)
+        #region Debugging dumpage
+
+        [Flags]
+        public enum DumpTreeOption
         {
-            DumpTree(t, options, 0);
+            None = 0x0,
+            Default = 0x0,
+
+            Active = 0x1,
+            TransformPosition = 0x2,
+            TransformRotation = 0x4,
+
+            // Optons that require iterating through components should have the 0x10 bit set.
+            Components = 0x30,
+            Materials = 0x50,
+            Mesh = 0x90,
         }
 
-        private static void DumpTree(Transform t, DumpTreeOption options, int level)
+        public static string DumpTree(this Transform t, DumpTreeOption options = DumpTreeOption.Default)
+        {
+            StringBuilder sb = new StringBuilder();
+            DumpTree(t, options, 0, sb);
+            return sb.ToString();
+        }
+
+        private static void DumpTree(Transform t, DumpTreeOption options, int level, StringBuilder sb)
         {
             string space = "";
             for (int i = 0; i < level; ++i)
                 space += '-';
-            MonoBehaviour.print(space + t.name);
+            sb.AppendLine(space + t.name);
             if ((options & DumpTreeOption.Active) != 0)
             {
-                MonoBehaviour.print(space + "+ activeSelf=" + t.gameObject.activeSelf + " activeInHeirachy=" + t.gameObject.activeInHierarchy);
+                sb.AppendLine(space + "+ activeSelf=" + t.gameObject.activeSelf + " activeInHeirachy=" + t.gameObject.activeInHierarchy);
             }
             if ((options & DumpTreeOption.TransformPosition) != 0)
             {
-                MonoBehaviour.print(space + "+ position: " + t.position + " localPosition: " + t.localPosition);
+                sb.AppendLine(space + "+ position: " + t.position + " localPosition: " + t.localPosition);
             }
             if ((options & DumpTreeOption.TransformRotation) != 0)
             {
-                MonoBehaviour.print(space + "+ rotation: " + t.rotation + " localRotation: " + t.localRotation);
+                sb.AppendLine(space + "+ rotation: " + t.rotation + " localRotation: " + t.localRotation);
             }
 
             if ((((int)options & 0x10) == 0))
@@ -41,33 +61,33 @@ namespace KSPAPIExtensions
             {
 
                 if (!typeof(Transform).IsInstanceOfType(c) && ((options & DumpTreeOption.Components) != 0))
-                    MonoBehaviour.print(space + "+ component:" + c.GetType());
+                    sb.AppendLine(space + "+ component:" + c.GetType());
 
                 if (typeof(Renderer).IsInstanceOfType(c) && (options & DumpTreeOption.Materials) != 0)
                     foreach (Material m in t.renderer.sharedMaterials)
-                        MonoBehaviour.print(space + "+ mat:" + m.name);
+                        sb.AppendLine(space + "+ mat:" + m.name);
 
                 if (typeof(MeshFilter).IsInstanceOfType(c) && (options & DumpTreeOption.Mesh) != 0)
                 {
                     MeshFilter filter = (MeshFilter)c;
                     if (filter != null)
-                        MonoBehaviour.print(space + "+ mesh:" + ((filter.sharedMesh == null) ? "*null*" : (filter.sharedMesh.name + " verts:" + filter.sharedMesh.vertexCount)));
+                        sb.AppendLine(space + "+ mesh:" + ((filter.sharedMesh == null) ? "*null*" : (filter.sharedMesh.name + " verts:" + filter.sharedMesh.vertexCount)));
                 }
 
                 if (typeof(MeshCollider).IsInstanceOfType(c) && (options & DumpTreeOption.Mesh) != 0)
                 {
                     MeshCollider collider = (MeshCollider)c;
                     if (collider != null)
-                        MonoBehaviour.print(space + "+ mesh:" + ((collider.sharedMesh == null) ? "*null*" : (collider.sharedMesh.name + " verts:" + collider.sharedMesh.vertexCount)));
+                        sb.AppendLine(space + "+ mesh:" + ((collider.sharedMesh == null) ? "*null*" : (collider.sharedMesh.name + " verts:" + collider.sharedMesh.vertexCount)));
                 }
             }
 
         skipComponents:
             for (int i = 0; i < t.childCount; ++i)
-                DumpTree(t.GetChild(i), options, level + 1);
+                DumpTree(t.GetChild(i), options, level + 1, sb);
         }
 
-        public static void DumpMesh(this Mesh mesh)
+        public static string DumpMesh(this Mesh mesh)
         {
             Vector3[] verticies = mesh.vertices;
             Vector3[] normals = mesh.normals;
@@ -94,7 +114,55 @@ namespace KSPAPIExtensions
                     .Append(mesh.triangles[i + 2]).AppendLine();
             }
 
-            MonoBehaviour.print(sb);
+           return sb.ToString();
+        }
+
+        public static string DumpObjectFields(this object obj, BindingFlags flags = BindingFlags.Default)
+        {
+            StringBuilder sb = new StringBuilder();
+            Type type = obj.GetType();
+
+            foreach (FieldInfo field in type.GetFields(flags))
+            {
+                object value = field.GetValue(obj);
+                if (value == null)
+                    sb.AppendLine(field.FieldType.Name + " " + field.Name + "is null");
+                else
+                    sb.AppendLine(field.FieldType.Name + " " + field.Name + " = " + value);
+            }
+            return sb.ToString();
+        }
+
+        public static string DumpNotEqualFields<T>(this T obj, T that, BindingFlags flags = BindingFlags.Default)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (ReferenceEquals(obj, that))
+                sb.AppendLine("Same object");
+
+            Type type = typeof(T);
+
+            foreach (FieldInfo field in type.GetFields(flags))
+            {
+                object thisValue = field.GetValue(obj);
+                object thatValue = field.GetValue(that);
+
+                if (field.FieldType.IsPrimitive && Equals(thisValue, thatValue))
+                    continue;
+                if (ReferenceEquals(thisValue, thatValue))
+                    continue;
+                sb.AppendLine("Different fields: " + field.FieldType.Name + " " + field.Name + (Equals(thisValue, thatValue) ? "(compute equal)" : (" " + thisValue + " != " + thatValue)));
+            }
+            return sb.ToString();
+        }
+        #endregion
+
+        #region transforms and geometry
+        public static string ToStringAngleAxis(this Quaternion q)
+        {
+            Vector3 axis;
+            float angle;
+            q.ToAngleAxis(out angle, out axis);
+            return "(axis:" + axis.ToString("F3") + " angle: " + angle.ToString("F3") + ")";
         }
 
         public static Transform FindDecendant(this Transform t, string name, bool activeOnly = false)
@@ -119,48 +187,6 @@ namespace KSPAPIExtensions
             return ret;
         }
 
-        public static void DumpObjectFields(this object obj, BindingFlags flags = BindingFlags.Default)
-        {
-            Type type = obj.GetType();
-
-            foreach (FieldInfo field in type.GetFields(flags))
-            {
-                object value = field.GetValue(obj);
-                if (value == null)
-                    MonoBehaviour.print(field.FieldType.Name + " " + field.Name + "is null");
-                else
-                    MonoBehaviour.print(field.FieldType.Name + " " + field.Name + " = " + value);
-            }
-        }
-
-        public static void DumpNotEqualFields<T>(this T obj, T that, BindingFlags flags = BindingFlags.Default)
-        {
-            if (ReferenceEquals(obj, that))
-                MonoBehaviour.print("Same object");
-
-            Type type = typeof(T);
-
-            foreach (FieldInfo field in type.GetFields(flags))
-            {
-                object thisValue = field.GetValue(obj);
-                object thatValue = field.GetValue(that);
-
-                if (field.FieldType.IsPrimitive && Equals(thisValue, thatValue))
-                    continue;
-                if (ReferenceEquals(thisValue, thatValue))
-                    continue;
-                MonoBehaviour.print("Different fields: " + field.FieldType.Name + " " + field.Name + (Equals(thisValue, thatValue) ? "(compute equal)" : (" " + thisValue + " != " + thatValue)));
-            }
-        }
-
-        public static string ToStringAngleAxis(this Quaternion q)
-        {
-            Vector3 axis;
-            float angle;
-            q.ToAngleAxis(out angle, out axis);
-            return "(axis:" + axis.ToString("F3") + " angle: " + angle.ToString("F3") + ")";
-        }
-
         public static string PathToDecendant(this Transform parent, Transform child)
         {
             List<string> inBetween = new List<string>();
@@ -173,24 +199,45 @@ namespace KSPAPIExtensions
             inBetween.Reverse();
             return string.Join("/", inBetween.ToArray());
         }
+        #endregion
+
+        #region Message passing 
+
+        /// <summary>
+        /// Invoke a method on the part and all enabled modules attached to the part. This is similar in scope to
+        /// the SendMessage method on GameObject.
+        /// </summary>
+        /// <param name="part">the part</param>
+        /// <param name="messageName">Name of the method to invoke</param>
+        /// <param name="args">parameters</param>
+        public static void SendPartMessage(this Part part, string messageName, params object[] args)
+        {
+            if(part.enabled)
+                SendPartMessageInternal(part, messageName, args);
+            foreach(PartModule module in part.Modules)
+                if(module.enabled && module.isEnabled)
+                    SendPartMessageInternal(module, messageName, args);
+        }
+
+        private static void SendPartMessageInternal(object target, string message, object[] args)
+        {
+            Type t = target.GetType();
+            foreach(MethodInfo m in t.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+                if (m.Name == message)
+                {
+                    // Just invoke it and deal with the consequences, rather than stuff around trying to match parameters
+                    // MethodInfo does all the parameter checking anyhow.
+                    try
+                    {
+                        m.Invoke(target, args);
+                    }
+                    catch (ArgumentException) { }
+                    catch (TargetParameterCountException) { }
+                }
+        }
+
+        #endregion
     }
-
-    [Flags]
-    public enum DumpTreeOption
-    {
-        None = 0x0,
-        Default = 0x0,
-
-        Active = 0x1,
-        TransformPosition = 0x2,
-        TransformRotation = 0x4,
-
-        // Optons that require iterating through components should have the 0x10 bit set.
-        Components = 0x30,
-        Materials = 0x50,
-        Mesh = 0x90,
-    }
-
 
     /// <summary>
     /// 
@@ -238,7 +285,7 @@ namespace KSPAPIExtensions
             return mesh;
         }
 
-        public void DumpMesh()
+        public string DumpMesh()
         {
             StringBuilder sb = new StringBuilder().AppendLine();
             for (int i = 0; i < verticies.Length; ++i)
@@ -260,7 +307,7 @@ namespace KSPAPIExtensions
                     .Append(triangles[i + 2]).AppendLine();
             }
 
-            MonoBehaviour.print(sb);
+            return sb.ToString();
         }
     }
 

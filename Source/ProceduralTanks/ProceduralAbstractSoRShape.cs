@@ -93,7 +93,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
             if (Mathf.Abs(phi) > Mathf.Abs(tbPhi))
             {
-                ret.uv = new Vector2(position.x / topBot.dia * 2f, position.z / topBot.dia * 2f);
+                ret.uv = new Vector2(position.x / topBot.dia * 2f + 0.5f, position.z / topBot.dia * 2f + 0.5f);
                 if (phi > 0)
                 {
                     ret.location = Location.Top;
@@ -106,7 +106,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                     ret.node = bottomAttachments.AddLast(ret);
                     ret.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.down, Vector3.left));
                 }
-                Debug.LogWarning("Adding non-normalized attachment to position=" + position + " location=" + ret.location + " uv=" + ret.uv + " attach=" + attach.name);
+                //Debug.LogWarning("Adding non-normalized attachment to position=" + position + " location=" + ret.location + " uv=" + ret.uv + " attach=" + attach.name);
                 return ret;
             }
         }
@@ -158,7 +158,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             ret.follower.SetLocalRotationReference(rot);
 
             AddSideAttachment(ret);
-            Debug.LogWarning("Adding non-normalized attachment to position=" + position + " location=" + ret.location + " uv=" + ret.uv + " attach=" + attach.name);
+            //Debug.LogWarning("Adding non-normalized attachment to position=" + position + " location=" + ret.location + " uv=" + ret.uv + " attach=" + attach.name);
             return ret;
         }
 
@@ -174,19 +174,23 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         Vector3 position = attach.transform.localPosition;
 
         // This is easy, just get the UV and location correctly and force an update.
-        if (position.y == 0.5f)
+        // as the position might be after some rotation and translation, it might not be exactly +/- 0.5
+        if (Mathf.Abs(Mathf.Abs(position.y) - 0.5f) < 1e-5f)
         {
-            ret.location = Location.Top;
-            ret.uv = new Vector2(position.x, position.z);
-            ret.node = topAttachments.AddLast(ret);
-            ret.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.up, Vector3.right));
-        }
-        else if (position.y == -0.5f)
-        {
-            ret.location = Location.Bottom;
-            ret.uv = new Vector2(position.x, position.z);
-            ret.node = bottomAttachments.AddLast(ret);
-            ret.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.down, Vector3.left));
+            if (position.y > 0)
+            {
+                ret.location = Location.Top;
+                ret.uv = new Vector2(position.x + 0.5f, position.z + 0.5f);
+                ret.node = topAttachments.AddLast(ret);
+                ret.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.up, Vector3.right));
+            }
+            else if (position.y < 0)
+            {
+                ret.location = Location.Bottom;
+                ret.uv = new Vector2(position.x + 0.5f, position.z + 0.5f);
+                ret.node = bottomAttachments.AddLast(ret);
+                ret.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.down, Vector3.left));
+            }
         }
         else
         {
@@ -203,7 +207,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         }
         ForceNextUpdate();
 
-        Debug.LogWarning("Adding normalized attachment to position=" + position + " location=" + ret.location + " uv=" + ret.uv + " attach=" + attach.name);
+        //Debug.LogWarning("Adding normalized attachment to position=" + position + " location=" + ret.location + " uv=" + ret.uv + " attach=" + attach.name);
         return ret;
     }
 
@@ -216,11 +220,12 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         foreach (Attachment a in topAttachments)
         {
             Vector3 pos = new Vector3(
-                a.uv[0] * top.dia * 0.5f,
+                (a.uv[0] - 0.5f) * top.dia * 0.5f,
                 top.y,
-                a.uv[1] * top.dia * 0.5f);
-            //print("Moving attachment:" + a + " to:" + pos);
+                (a.uv[1] - 0.5f) * top.dia * 0.5f);
+            //Debug.LogWarning("Moving attachment:" + a + " to:" + pos);
             a.follower.transform.localPosition = pos;
+            a.follower.Update();
         }
 
         // bottom points
@@ -228,11 +233,11 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         foreach (Attachment a in bottomAttachments)
         {
             Vector3 pos = new Vector3(
-                a.uv[0] * bot.dia * 0.5f,
+                (a.uv[0] - 0.5f) * bot.dia * 0.5f,
                 bot.y,
-                a.uv[1] * bot.dia * 0.5f);
-            //Debug.LogWarning("Moving attachment:" + a + " to:" + pos);
+                (a.uv[1] - 0.5f) * bot.dia * 0.5f);
             a.follower.transform.localPosition = pos;
+            a.follower.Update();
         }
 
         // sides
@@ -275,6 +280,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             //print("Moving to orientation: normal: " + normal.ToString("F3") + " theta:" + (theta * 180f / Mathf.PI) + rot.ToStringAngleAxis());
 
             a.follower.transform.localRotation = rot;
+            a.follower.Update();
         }
     }
 
@@ -303,12 +309,12 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             case Location.Top:
                 topAttachments.Remove(attach.node);
                 if (normalize)
-                    attach.follower.transform.localPosition = new Vector3(attach.uv[0], 0.5f, attach.uv[1]);
+                    attach.follower.transform.localPosition = new Vector3(attach.uv[0]-0.5f, 0.5f, attach.uv[1]-0.5f);
                 break;
             case Location.Bottom:
                 bottomAttachments.Remove(attach.node);
                 if (normalize)
-                    attach.follower.transform.localPosition = new Vector3(attach.uv[0], -0.5f, attach.uv[1]);
+                    attach.follower.transform.localPosition = new Vector3(attach.uv[0]-0.5f, -0.5f, attach.uv[1]-0.5f);
                 break;
             case Location.Side:
                 sideAttachments.Remove(attach.node);
@@ -530,6 +536,9 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         if (node == null)
             return;
         node.size = Math.Min((int)(pt.dia / tank.diameterLargeStep), 3);
+
+        // Breaking force and torque scales with the area of the surface (node size).
+        node.breakingTorque = node.breakingForce = Mathf.Max(50 * node.size * node.size, 50);
     }
 
     #endregion

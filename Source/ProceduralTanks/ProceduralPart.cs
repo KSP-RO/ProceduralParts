@@ -9,10 +9,8 @@ public class ProceduralPart : PartModule
 {    
     #region Initialization
 
-    public void Awake()
+    public override void OnAwake()
     {
-        InitializeObjects();
-
         if (HighLogic.LoadedScene == GameScenes.LOADING)
             LoadTextureSets();
         InitializeTextureSet();
@@ -33,6 +31,12 @@ public class ProceduralPart : PartModule
         }
     }
 
+    public override void OnSave(ConfigNode node)
+    {
+        // Force saved value for enabled to be true.
+        node.SetValue("isEnabled", "True");
+    }
+
     [SerializeField]
     private bool symmetryClone = false;
 
@@ -41,20 +45,25 @@ public class ProceduralPart : PartModule
         // Update internal state
         try
         {
+            InitializeObjects();
+
             InitializeTechLimits();
             InitializeShapes();
 
-            if (HighLogic.LoadedSceneIsEditor)
-                InitializeNodes();
-
-            symmetryClone = true;
+            InitializeNodes();
 
             if (!HighLogic.LoadedSceneIsEditor)
             {
                 // Force the first update, then disable.
-                Update();
+                shape.ForceNextUpdate();
+                shape.Update();
+
+                UpdateTexture();
+
                 isEnabled = enabled = false;
             }
+
+            symmetryClone = true;
         }
         catch (Exception ex)
         {
@@ -65,6 +74,9 @@ public class ProceduralPart : PartModule
 
     public virtual void Update()
     {
+        if (!HighLogic.LoadedSceneIsEditor)
+            return;
+
         if (skipNextUpdate)
         {
             skipNextUpdate = false;
@@ -85,15 +97,6 @@ public class ProceduralPart : PartModule
     }
 
     private bool skipNextUpdate = false;
-
-    public void SkipNextUpdate()
-    {
-        if (skipNextUpdate)
-            return;
-
-        skipNextUpdate = true;
-        shape.SkipNextUpdate();
-    }
 
     #endregion
 
@@ -363,7 +366,7 @@ public class ProceduralPart : PartModule
 
     #region Texture Sets
 
-    [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption()]
+    [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene=UI_Scene.Editor)]
     public string textureSet;
     private string oldTextureSet = "*****";
 
@@ -392,7 +395,7 @@ public class ProceduralPart : PartModule
             return;
 
         loadedTextureSets = new List<TextureSet>();
-        print("*ST* Loading texture sets");
+        //print("*ST* Loading texture sets");
         foreach (ConfigNode texInfo in GameDatabase.Instance.GetConfigNodes("STRETCHYTANKTEXTURES"))
             for (int i = 0; i < texInfo.nodes.Count; i++)
             {
@@ -403,7 +406,7 @@ public class ProceduralPart : PartModule
             }
 
         if(loadedTextureSets.Count == 0)
-            print("*ST* No Texturesets found!");
+            Debug.LogError("*ST* No Texturesets found!");
 
         loadedTextureSetNames = new string[loadedTextureSets.Count];
         for (int i = 0; i < loadedTextureSets.Count; ++i)
@@ -417,12 +420,12 @@ public class ProceduralPart : PartModule
         // Sanity check
         if (node.GetNode("sides") == null || node.GetNode("ends") == null)
         {
-            print("*ST* Invalid Textureset " + textureSet);
+            Debug.LogError("*ST* Invalid Textureset " + textureSet);
             return null;
         }
         if (!node.GetNode("sides").HasValue("texture") || !node.GetNode("ends").HasValue("texture"))
         {
-            print("*ST* Invalid Textureset " + textureSet);
+            Debug.LogError("*ST* Invalid Textureset " + textureSet);
             return null;
         }
 
@@ -467,7 +470,7 @@ public class ProceduralPart : PartModule
         }
         if (tex.sides == null || tex.ends == null)
         {
-            print("*ST* Textures not found for " + textureSet);
+            Debug.LogError("*ST* Textures not found for " + textureSet);
             return null;
         }
 
@@ -501,7 +504,7 @@ public class ProceduralPart : PartModule
 
         int newIdx = loadedTextureSets.FindIndex(set => set.name == textureSet);
         if(newIdx < 0) {
-            print("*ST* Unable to find texture set: " + textureSet);
+            Debug.LogError("*ST* Unable to find texture set: " + textureSet);
             textureSet = oldTextureSet;
             return;
         }
@@ -590,33 +593,45 @@ public class ProceduralPart : PartModule
         public override void Translate(Vector3 translation)
         {
             translation = part.transform.InverseTransformDirection(translation);
-            node.position += translation;
+            node.originalPosition = node.position += translation;
+            //Debug.LogWarning("Transforming node:" + node.id + " translation=" + translation);
         }
 
         public override void Rotate(Quaternion rotate)
         {
             Vector3 oldWorldOffset = part.transform.TransformDirection(node.position);
             Vector3 newWorldOffset = rotate * oldWorldOffset;
-            node.position = part.transform.InverseTransformDirection(newWorldOffset);
+            node.originalPosition = node.position = part.transform.InverseTransformDirection(newWorldOffset);
 
             Vector3 oldOrientationWorld = part.transform.TransformDirection(node.orientation);
             Vector3 newOrientationWorld = rotate * oldOrientationWorld;
-            node.orientation = part.transform.InverseTransformDirection(newOrientationWorld);
+            node.originalOrientation = node.orientation = part.transform.InverseTransformDirection(newOrientationWorld);
         }
     }
 
     private void InitializeNodes()
     {
-        // When the object is symmetryClone, the nodes will be already in offset, not in standard offset.
+        // Since symmetry clone nodes are already offset, we need to update the 
+        // shape first to allow non-normalized surface attachments
+        if (symmetryClone)
+        {
+            shape.ForceNextUpdate();
+            shape.Update();
+        }
+
         foreach (AttachNode node in part.attachNodes)
             InitializeNode(node);
         if (part.attachRules.allowSrfAttach)
             InitializeNode(part.srfAttachNode);
+
+        // Update the shape to put the nodes into their positions.
+        shape.ForceNextUpdate();
+        shape.Update();
     }
 
     private void InitializeNode(AttachNode node)
     {
-        if (symmetryClone)
+        if (symmetryClone && false)
         {
             // for some reason KSP resets the node positions after deserializing, but *after* start is called. 
             // Will undo this issue.
@@ -625,8 +640,9 @@ public class ProceduralPart : PartModule
         }
         Vector3 position = transform.position + transform.TransformDirection(node.position);
 
-
         TransformFollower follower = TransformFollower.createFollower(partModel, position, new NodeTransformable(part, node));
+
+        // When the object is symmetryClone, the nodes will be already in offset, not in standard offset.
         object data = shape.AddAttachment(follower, !symmetryClone);
 
         nodeAttachments.Add(data);
@@ -674,7 +690,7 @@ public class ProceduralPart : PartModule
         {
             int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
             root.transform.Translate(trans / siblings, Space.World);
-            // we need to translate this childAttachment away so that when the translation from the parent reaches here it ends in the right spot
+            // we need to delta this childAttachment away so that when the translation from the parent reaches here it ends in the right spot
             part.transform.Translate(-trans, Space.World);
         }
 
@@ -727,15 +743,16 @@ public class ProceduralPart : PartModule
                 childToParent = part.findAttachNodeByPart(parent);
                 if (childToParent == null)
                 {
-                    print("*ST* unable to find child node from parent: " + part.transform);
+                    Debug.LogError("*ST* unable to find child node from parent: " + part.transform);
                     return;
                 }
-                print("Attaching new parent: " + parent + " to " + childToParent.id);
 
                 Vector3 position = transform.position + transform.TransformDirection(childToParent.position);
                 Part root = EditorLogic.SortedShipList[0];
 
-                // we need to translate this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
+                //Debug.LogWarning("Attaching new parent: " + parent + " to " + childToParent.id + " position=" + childToParent.position.ToString("G3"));
+
+                // we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
                 parentAttachment = AddPartAttachment(position, new ParentTransformable(root, part, childToParent));
                 parentAttachment.child = parent;
 
@@ -756,6 +773,7 @@ public class ProceduralPart : PartModule
             {
                 // Node has been attached.
                 AddChildPartAttachment(child);
+                shape.ForceNextUpdate();
             }
             else if (node.Value.child == child)
             {
@@ -778,14 +796,14 @@ public class ProceduralPart : PartModule
         //print("*ST* Child childAttachment removed: " + delete.Value.child);
     }
 
-    private PartAttachment AddChildPartAttachment(Part child)
+    private void AddChildPartAttachment(Part child)
     {
         AttachNode node = child.findAttachNodeByPart(part);
 
         if (node == null)
         {
-            print("*ST* unable to find child node for child: " + child.transform);
-            return null;
+            Debug.LogError("*ST* unable to find child node for child: " + child.transform);
+            return;
         }
 
         Vector3 worldOffset = child.transform.TransformDirection(node.position);
@@ -793,9 +811,7 @@ public class ProceduralPart : PartModule
         attach.child = child;
 
         childAttachments.AddLast(attach);
-        print("*ST* Attaching child childAttachment: " + child.transform.name + " from child node " + node.id + " Offset=" + node.position.ToString("F3"));
-        
-        return attach;
+        //Debug.LogWarning("*ST* Attaching child childAttachment: " + child.transform.name + " from child node " + node.id + " Offset=" + part.transform.InverseTransformDirection(child.transform.position + worldOffset));
     }
 
     private PartAttachment AddPartAttachment(Vector3 position, TransformFollower.Transformable target, bool normalized = false)
@@ -867,7 +883,7 @@ public class ProceduralPart : PartModule
 
     #region Tank shape
 
-    [KSPField(isPersistant=true, guiActiveEditor=true, guiActive = false, guiName = "Shape"), UI_ChooseOption()]
+    [KSPField(isPersistant=true, guiActiveEditor=true, guiActive = false, guiName = "Shape"), UI_ChooseOption(scene=UI_Scene.Editor)]
     public string shapeName;
     private string oldShapeName = "****";
 
@@ -881,10 +897,6 @@ public class ProceduralPart : PartModule
         {
             if (!string.IsNullOrEmpty(compShape.techRequired) && ResearchAndDevelopment.GetTechnologyState(compShape.techRequired) != RDTech.State.Available)
                 goto disableShape;
-
-            // Force the first update so that things can get attached.
-            if(HighLogic.LoadedSceneIsEditor)
-                compShape.Update();
 
             availableShapes.Add(compShape.displayName, compShape);
             shapeNames.Add(compShape.displayName);
@@ -923,10 +935,6 @@ public class ProceduralPart : PartModule
             shape = availableShapes[shapeName];
             shape.isEnabled = shape.enabled = true;
         }
-
-        // Force the first update in flight mode since it won't have happened above.
-        if (HighLogic.LoadedSceneIsFlight)
-            shape.Update();
     }
 
     private void UpdateShape()
@@ -937,7 +945,7 @@ public class ProceduralPart : PartModule
         ProceduralAbstractShape newShape;
         if (!availableShapes.TryGetValue(shapeName, out newShape))
         {
-            print("*ST* Unable to find compShape: " + shapeName);
+            Debug.LogError("*ST* Unable to find compShape: " + shapeName);
             shapeName = oldShapeName;
             return;
         }
