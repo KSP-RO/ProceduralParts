@@ -269,6 +269,14 @@ public class ProceduralSRB : PartModule
         BaseField thrustLimiter = GetComponent<ModuleEngines>().Fields["thrustPercentage"];
         thrustLimiter.guiActive = false;
         thrustLimiter.guiActiveEditor = false;
+
+        if (usingME = part.Modules.Contains("ModuleEngineConfigs"))
+        {
+            Fields["thrust"].guiActiveEditor = false;
+            Fields["burnTime"].guiActiveEditor = false;
+            Fields["burnTimeME"].guiActiveEditor = true;
+            Fields["thrustME"].guiActiveEditor = true;
+        }
     }
 
     private void UpdateBell()
@@ -303,13 +311,23 @@ public class ProceduralSRB : PartModule
 
     #region Thrust and heat production
 
+    private bool usingME = false;
+
     [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat="F0", guiUnits="kN"),
      UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 0, incrementSlide = 1f) ]
     public float thrust = 250;
     private float oldThrust;
 
     [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Burn Time")]
-    public string srbBurnTime;
+    public string burnTime;
+
+    [KSPField(isPersistant = true, guiName = "Burn Time", guiActive = false, guiActiveEditor = false, guiFormat = "F2", guiUnits = "s"),
+     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 0, incrementSlide = 1f)]
+    public float burnTimeME = 60;
+    private float oldBurnTimeME;
+
+    [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = false, guiName = "Thrust")]
+    public string thrustME;
 
     [KSPField(isPersistant = false, guiName = "Heat", guiActive = false, guiActiveEditor = true, guiFormat="F2", guiUnits="K/s")]
     public float heatProduction;
@@ -319,7 +337,7 @@ public class ProceduralSRB : PartModule
 
     private void UpdateThrust()
     {
-        if (oldThrust == thrust)
+        if (oldThrust == thrust && burnTimeME == oldBurnTimeME)
             return;
         ChangeThrust();
     }
@@ -330,32 +348,35 @@ public class ProceduralSRB : PartModule
         ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
         PartResource solidFuel = part.Resources["SolidFuel"];
 
-        float srbBurn0 = (float)(mE.atmosphereCurve.Evaluate(0) * solidFuel.maxAmount * solidFuel.info.density * mE.g / thrust);
-        float srbBurn1 = (float)(mE.atmosphereCurve.Evaluate(1) * solidFuel.maxAmount * solidFuel.info.density * mE.g / thrust);
-
-        mE.maxThrust = thrust;
-        srbBurnTime = string.Format("{0:F1}s ({1:F1}s Vac)", srbBurn1, srbBurn0);
-        
-        // The heat production is directly proportional to the thrust. This is what stock KSP uses.
-        heatProduction = mE.heatProduction = thrust * heatPerThrust;
-
-        // Old equation. Not sure where this came from. Doesn't make a lot of physical sense. 
-        //heatProduction = mE.heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((srbBurnTime + 20f), 0.75f)) * 0.5f);
-
-        // Can't use SendPartMessage. Somewhere there's a method ChangeThrust that stuffs things up.
-        //part.SendPartMessage("ChangeThrust", thrust);
-
-        if (part.Modules.Contains("ModuleEngineConfigs"))
+        if (!usingME)
         {
+            float burnTime0 = burnTimeME = (float)(mE.atmosphereCurve.Evaluate(0) * solidFuel.maxAmount * solidFuel.info.density * mE.g / thrust);
+            float burnTime1 = (float)(mE.atmosphereCurve.Evaluate(1) * solidFuel.maxAmount * solidFuel.info.density * mE.g / thrust);
+
+            mE.maxThrust = thrust;
+            burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
+
+            // The heat production is directly proportional to the thrust. This is what stock KSP uses.
+            heatProduction = mE.heatProduction = thrust * heatPerThrust;
+        }
+        else
+        {
+            float thrust0 = thrust = (float)(mE.atmosphereCurve.Evaluate(0) * solidFuel.maxAmount * solidFuel.info.density * mE.g / burnTimeME);
+            float thrust1 = (float)(mE.atmosphereCurve.Evaluate(1) * solidFuel.maxAmount * solidFuel.info.density * mE.g / burnTimeME);
+
+            mE.maxThrust = thrust0;
+            thrustME = string.Format("{0:F1}s ({1:F1}s Vac)", thrust1, thrust0);
+
+            // From original stretchySRBs.
+            heatProduction = mE.heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((burnTimeME + 20f), 0.75f)) * 0.5f);
+
             var mEC = part.Modules["ModuleEngineConfigs"];
-            if (mEC != null)
-            {
-                Type engineType = mEC.GetType();
-                engineType.GetMethod("ChangeThrust").Invoke(mEC, new object[] { thrust });
-            }
+            Type engineType = mEC.GetType();
+            engineType.GetMethod("ChangeThrust").Invoke(mEC, new object[] { thrust });
         }
 
         oldThrust = thrust;
+        oldBurnTimeME = burnTimeME;
     }
 
     #endregion
