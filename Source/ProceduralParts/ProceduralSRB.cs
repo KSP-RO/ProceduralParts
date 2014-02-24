@@ -270,13 +270,12 @@ public class ProceduralSRB : PartModule
         thrustLimiter.guiActive = false;
         thrustLimiter.guiActiveEditor = false;
 
-        if (usingME = part.Modules.Contains("ModuleEngineConfigs"))
-        {
-            Fields["thrust"].guiActiveEditor = false;
-            Fields["burnTime"].guiActiveEditor = false;
-            Fields["burnTimeME"].guiActiveEditor = true;
-            Fields["thrustME"].guiActiveEditor = true;
-        }
+        usingME = part.Modules.Contains("ModuleEngineConfigs");
+
+        Fields["thrust"].guiActiveEditor = !usingME;
+        Fields["burnTime"].guiActiveEditor = !usingME;
+        Fields["burnTimeME"].guiActiveEditor = usingME;
+        Fields["thrustME"].guiActiveEditor = usingME;
     }
 
     private void UpdateBell()
