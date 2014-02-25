@@ -453,28 +453,52 @@ public class ProceduralPart : PartModule
             float.TryParse(node.GetNode("sides").GetValue("autoHeightSteps"), out tex.autoHeightSteps);
 
         Texture[] textures = Resources.FindObjectsOfTypeAll(typeof(Texture)) as Texture[];
-        foreach (Texture t in textures)
+
+        if (!TryFindTexture(textures, ref tex.sidesName, out tex.sides))
         {
-            if (t.name.Equals(tex.sidesName))
-            {
-                tex.sides = t;
-            }
-            else if (t.name.Equals(tex.sidesBumpName))
-            {
-                tex.sidesBump = t;
-            }
-            else if (t.name.Equals(tex.endsName))
-            {
-                tex.ends = t;
-            }
-        }
-        if (tex.sides == null || tex.ends == null)
-        {
-            Debug.LogError("*ST* Textures not found for " + textureSet);
+            Debug.LogError("*ST* Sides textures not found for " + textureSet);
             return null;
         }
 
+        if (!TryFindTexture(textures, ref tex.endsName, out tex.ends))
+        {
+            Debug.LogError("*ST* Ends textures not found for " + textureSet);
+            return null;
+        }
+
+        if (tex.sidesBumpName != null && !TryFindTexture(textures, ref tex.sidesBumpName, out tex.sidesBump))
+        {
+            Debug.LogError("*ST* Side bump textures not found for " + textureSet);
+            return null;
+        }
+
+
         return tex;
+    }
+
+    private static bool TryFindTexture(Texture [] textures, ref string textureName, out Texture tex)
+    {
+        tex = FindTexture(textures, textureName);
+        if (tex != null)
+            return true;
+        if (!textureName.BeginsWith("StretchyTanks"))
+            return false;
+        
+        string substName = "ProceduralParts" + textureName.Substring("StretchyTanks".Length);
+        tex = FindTexture(textures, substName);
+        if (tex == null)
+            return false;
+
+        textureName = substName;
+        return true;
+    }
+
+    private static Texture FindTexture(Texture[] textures, string textureName)
+    {
+        foreach (Texture t in textures)
+            if (t.name == textureName)
+                return t;
+        return null;
     }
 
     private void InitializeTextureSet()
