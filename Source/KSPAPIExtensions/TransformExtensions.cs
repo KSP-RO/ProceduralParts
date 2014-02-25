@@ -239,6 +239,21 @@ namespace KSPAPIExtensions
         #endregion
     }
 
+    public static class UtilityExtensions
+    {
+        public static bool BeginsWith(this string str, string comp)
+        {
+            if (str == null || comp == null || str.Length == comp.Length)
+                return str == comp;
+            if (comp.Length > str.Length)
+                return false;
+            for (int i = 0; i < comp.Length; ++i)
+                if (str[i] != comp[i])
+                    return false;
+            return true;
+        }
+    }
+
     /// <summary>
     /// 
     /// </summary>

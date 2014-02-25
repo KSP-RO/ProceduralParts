@@ -164,7 +164,13 @@ namespace KSPAPIExtensions
             SliderRange(value, out valueLow, out valueHi);
 
             float newValue = Mathf.Lerp(valueLow, valueHi, slider.Value);
-            if (newValue > valueHi - fieldInfo.incrementSlide)
+
+            if (fieldInfo.incrementLarge == 0) 
+            {
+                if (newValue > valueHi)
+                    newValue = valueHi;
+            }
+            else if (newValue > valueHi - fieldInfo.incrementSlide)
                 newValue = valueHi - fieldInfo.incrementSlide;
 
             SetNewValue(newValue);
