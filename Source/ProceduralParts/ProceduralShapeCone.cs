@@ -7,16 +7,15 @@ using KSPAPIExtensions;
 
 public class ProceduralShapeCone : ProceduralAbstractSoRShape
 {
+    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3"),
+     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
+    public float bottomDiameter = 1.25f;
+    private float oldBottomDiameter;
 
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3"),
      UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
     public float topDiameter = 1.25f;
     private float oldTopDiameter;
-
-    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3"),
-     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
-    public float bottomDiameter = 1.25f;
-    private float oldBottomDiameter;
 
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3"),
      UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.00f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
@@ -94,8 +93,8 @@ public class ProceduralShapeCone : ProceduralAbstractSoRShape
         norm.Normalize();
 
         WriteMeshes(
-            new ProfilePoint(topDiameter, 0.5f * length, 0f, norm),
-            new ProfilePoint(bottomDiameter, -0.5f * length, 1f, norm)
+            new ProfilePoint(bottomDiameter, -0.5f * length, 0f, norm),
+            new ProfilePoint(topDiameter, 0.5f * length, 1f, norm)
             );
 
         oldTopDiameter = topDiameter;
