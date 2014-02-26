@@ -367,7 +367,7 @@ public class ProceduralPart : PartModule
     #region Texture Sets
 
     [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene=UI_Scene.Editor)]
-    public string textureSet;
+    public string textureSet = "Original";
     private string oldTextureSet = "*****";
 
     private class TextureSet
@@ -408,9 +408,21 @@ public class ProceduralPart : PartModule
         if(loadedTextureSets.Count == 0)
             Debug.LogError("*ST* No Texturesets found!");
 
+        loadedTextureSets.Sort(TextureSetNameComparison);
+
         loadedTextureSetNames = new string[loadedTextureSets.Count];
         for (int i = 0; i < loadedTextureSets.Count; ++i)
             loadedTextureSetNames[i] = loadedTextureSets[i].name;
+    }
+
+    private static int TextureSetNameComparison(TextureSet s1, TextureSet s2)
+    {
+        bool s1Start = s1.sidesName.StartsWith("ProceduralParts");
+        if (s1Start != s2.sidesName.StartsWith("ProceduralParts"))
+        {
+            return s1Start ? -1 : 1;
+        }
+        return s1.name.CompareTo(s2.name);
     }
 
     private static TextureSet LoadTextureSet(ConfigNode node) 
@@ -466,7 +478,9 @@ public class ProceduralPart : PartModule
             return null;
         }
 
-        if (tex.sidesBumpName != null && !TryFindTexture(textures, ref tex.sidesBumpName, out tex.sidesBump))
+        if (string.IsNullOrEmpty(tex.sidesBumpName))
+            tex.sidesBump = null;
+        else if (!TryFindTexture(textures, ref tex.sidesBumpName, out tex.sidesBump))
         {
             Debug.LogError("*ST* Side bump textures not found for " + textureSet);
             return null;
@@ -562,8 +576,7 @@ public class ProceduralPart : PartModule
         Vector2 scaleUV = tex.scale;
         if (tex.autoScale)
         {
-            // default is to scale x4, will divide out again.
-            scaleUV.x = (float)Math.Round(scaleUV.x * tankTextureScale.x / 4.0f);
+            scaleUV.x = (float)Math.Round(scaleUV.x * tankTextureScale.x / 8f);
             if (scaleUV.x < 1)
                 scaleUV.x = 1;
             if (tex.autoWidthDivide)

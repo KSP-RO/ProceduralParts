@@ -62,8 +62,8 @@ public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
         Vector2 norm = new Vector2(1, 0);
 
         WriteMeshes(
-            new ProfilePoint(diameter, 0.5f * length, 0f, norm),
-            new ProfilePoint(diameter, -0.5f * length, 1f, norm)
+            new ProfilePoint(diameter, -0.5f * length, 0f, norm),
+            new ProfilePoint(diameter, 0.5f * length, 1f, norm)
             );
 
         oldDiameter = diameter;

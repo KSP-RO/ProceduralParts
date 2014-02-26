@@ -86,7 +86,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         // pt or bottom?
         if (phi != 0)
         {
-            ProfilePoint topBot = (phi > 0) ? lastProfile.First.Value : lastProfile.Last.Value;
+            ProfilePoint topBot = (phi < 0) ? lastProfile.First.Value : lastProfile.Last.Value;
 
             float tbR = Mathf.Sqrt(topBot.y * topBot.y + topBot.dia * topBot.dia * 0.25f);
             float tbPhi = Mathf.Asin(topBot.y / tbR);
@@ -426,14 +426,14 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
         {
             ProfilePoint prev = null;
-            int vOff = 0, prevVOff = 0;
+            int off = 0, prevOff = 0;
             int tOff = 0;
             foreach (ProfilePoint pt in pts)
             {
-                pt.circ.WriteVertexes(diameter: pt.dia, y: pt.y, v: pt.v, norm: pt.norm, off: vOff, m: m);
+                pt.circ.WriteVertexes(diameter: pt.dia, y: pt.y, v: pt.v, norm: pt.norm, off: off, m: m);
                 if (prev != null)
                 {
-                    CirclePoints.WriteTriangles(prev.circ, prevVOff, pt.circ, vOff, m.triangles, tOff * 3);
+                    CirclePoints.WriteTriangles(prev.circ, prevOff, pt.circ, off, m.triangles, tOff * 3);
                     tOff += prev.circ.totVertexes + pt.circ.totVertexes;
 
                     // Work out the area of the truncated cone
@@ -443,9 +443,9 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                     // == -1/3 pi (y1-y2) (r1^2+r1*r2+r2^2)                                   Do the calculus
                     // == -1/3 pi (y1-y2) (d1^2/4+d1*d2/4+d2^2/4)                             r = d/2
                     // == -1/12 pi (y1-y2) (d1^2+d1*d2+d2^2)                                  Take out the factor
-                    tankVolume += (Mathf.PI * (prev.y - pt.y) * (prev.dia * prev.dia + prev.dia * pt.dia + pt.dia * pt.dia)) / 12f;
+                    tankVolume += (Mathf.PI * (pt.y - prev.y) * (prev.dia * prev.dia + prev.dia * pt.dia + pt.dia * pt.dia)) / 12f;
 
-                    float dy = (prev.y - pt.y);
+                    float dy = (pt.y - prev.y);
                     float dr = (prev.dia - pt.dia) * 0.5f;
 
                     //print("dy=" + dy + " dr=" + dr + " len=" + Mathf.Sqrt(dy * dy + dr * dr).ToString("F3"));
@@ -456,13 +456,13 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                 }
 
                 prev = pt;
-                prevVOff = vOff;
-                vOff += pt.circ.totVertexes + 1;
+                prevOff = off;
+                off += pt.circ.totVertexes + 1;
             }
         }
 
         // Use the weighted average diameter across segments to set the ULength
-        tankULength = Mathf.PI * sumDiameters / (first.y - last.y);
+        tankULength = Mathf.PI * sumDiameters / (last.y - first.y);
 
         //print("ULength=" + tankULength + " VLength=" + tankVLength);
 
@@ -477,8 +477,8 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         nTri = first.circ.totVertexes - 2 + last.circ.totVertexes - 2;
         m = new UncheckedMesh(nVrt, nTri);
 
-        first.circ.WriteEndcap(first.dia, first.y, true, 0, 0, m);
-        last.circ.WriteEndcap(last.dia, last.y, false, first.circ.totVertexes, (first.circ.totVertexes - 2) * 3, m);
+        first.circ.WriteEndcap(first.dia, first.y, false, 0, 0, m);
+        last.circ.WriteEndcap(last.dia, last.y, true, first.circ.totVertexes, (first.circ.totVertexes - 2) * 3, m);
 
         m.WriteTo(endsMesh);
 
@@ -561,7 +561,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                         CirclePoints ret;
                         do
                         {
-                            ret = new CirclePoints(circlePoints.Count);
+                            ret = new CirclePoints(circlePoints.Count + 3);
                             circlePoints.Add(ret);
                         } while ((ret.maxError * diameter) > maxError);
                         return ret;
@@ -606,7 +606,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                 // calculate the max error.
                 uCoords = new float[] { 0.0f, (float)1 / (float)(subdivCount + 1) / 4.0f };
                 float theta = uCoords[1] * Mathf.PI * 2.0f;
-                xCoords = new float[] { 0.0f, Mathf.Sin(theta) };
+                xCoords = new float[] { 0.0f, -Mathf.Sin(theta) };
                 zCoords = new float[] { 1.0f, Mathf.Cos(theta) };
 
                 float dX = Mathf.Sin(theta / 2.0f) - xCoords[1] / 2.0f;
@@ -640,7 +640,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             {
                 uCoords[i] = (float)i / denom;
                 float theta = uCoords[i] * Mathf.PI * 2.0f;
-                xCoords[i] = Mathf.Sin(theta);
+                xCoords[i] = -Mathf.Sin(theta);
                 zCoords[i] = Mathf.Cos(theta);
             }
 
@@ -666,20 +666,20 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             for (int i = 0; i <= subdivCount; ++i)
             {
                 int o0 = vOff + i;
-                m.uv[o0] = new Vector2((-xCoords[i] + 1f) * 0.5f, (zCoords[i] + 1f) * 0.5f);
+                m.uv[o0] = new Vector2((-xCoords[i] + 1f) * 0.5f, (-zCoords[i] + 1f) * 0.5f);
                 m.verticies[o0] = new Vector3(xCoords[i] * dia * 0.5f, y, zCoords[i] * dia * 0.5f);
 
                 int o1 = vOff + i + subdivCount + 1;
-                m.uv[o1] = new Vector2((-zCoords[i] + 1f) * 0.5f, (-xCoords[i] + 1f) * 0.5f);
-                m.verticies[o1] = new Vector3(zCoords[i] * dia * 0.5f, y, -xCoords[i] * dia * 0.5f);
+                m.uv[o1] = new Vector2((zCoords[i] + 1f) * 0.5f, (-xCoords[i] + 1f) * 0.5f);
+                m.verticies[o1] = new Vector3(-zCoords[i] * dia * 0.5f, y, xCoords[i] * dia * 0.5f);
 
                 int o2 = vOff + i + 2 * (subdivCount + 1);
-                m.uv[o2] = new Vector2((xCoords[i] + 1f) * 0.5f, (-zCoords[i] + 1f) * 0.5f);
+                m.uv[o2] = new Vector2((xCoords[i] + 1f) * 0.5f, (zCoords[i] + 1f) * 0.5f);
                 m.verticies[o2] = new Vector3(-xCoords[i] * dia * 0.5f, y, -zCoords[i] * dia * 0.5f);
 
                 int o3 = vOff + i + 3 * (subdivCount + 1);
-                m.uv[o3] = new Vector2((zCoords[i] + 1f) * 0.5f, (xCoords[i] + 1f) * 0.5f);
-                m.verticies[o3] = new Vector3(-zCoords[i] * dia * 0.5f, y, xCoords[i] * dia * 0.5f);
+                m.uv[o3] = new Vector2((-zCoords[i] + 1f) * 0.5f, (xCoords[i] + 1f) * 0.5f);
+                m.verticies[o3] = new Vector3(zCoords[i] * dia * 0.5f, y, -xCoords[i] * dia * 0.5f);
 
                 m.tangents[o0] = m.tangents[o1] = m.tangents[o2] = m.tangents[o3] = new Vector4(-1, 0, 0, up ? 1 : -1);
                 m.normals[o0] = m.normals[o1] = m.normals[o2] = m.normals[o3] = new Vector3(0, up ? 1 : -1, 0);
@@ -688,8 +688,8 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             for (int i = 1; i < totVertexes - 1; ++i)
             {
                 m.triangles[to++] = vOff;
-                m.triangles[to++] = vOff + i + (up ? 0 : 1);
                 m.triangles[to++] = vOff + i + (up ? 1 : 0);
+                m.triangles[to++] = vOff + i + (up ? 0 : 1);
             }
         }
 
@@ -719,9 +719,9 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
                 int o1 = off + i + subdivCount + 1;
                 m.uv[o1] = new Vector2(uCoords[i] + 0.25f, v);
-                m.verticies[o1] = new Vector3(zCoords[i] * 0.5f * diameter, y, -xCoords[i] * 0.5f * diameter);
-                m.normals[o1] = new Vector3(zCoords[i] * norm.x, norm.y, -xCoords[i] * norm.x);
-                m.tangents[o1] = new Vector4(-xCoords[i], 0, -zCoords[i], 1.0f);
+                m.verticies[o1] = new Vector3(-zCoords[i] * 0.5f * diameter, y, xCoords[i] * 0.5f * diameter);
+                m.normals[o1] = new Vector3(-zCoords[i] * norm.x, norm.y, xCoords[i] * norm.x);
+                m.tangents[o1] = new Vector4(xCoords[i], 0, zCoords[i], 1.0f);
 
                 int o2 = off + i + 2 * (subdivCount + 1);
                 m.uv[o2] = new Vector2(uCoords[i] + 0.50f, v);
@@ -731,9 +731,9 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
                 int o3 = off + i + 3 * (subdivCount + 1);
                 m.uv[o3] = new Vector2(uCoords[i] + 0.75f, v);
-                m.verticies[o3] = new Vector3(-zCoords[i] * 0.5f * diameter, y, xCoords[i] * 0.5f * diameter);
-                m.normals[o3] = new Vector3(-zCoords[i] * norm.x, norm.y, xCoords[i] * norm.x);
-                m.tangents[o3] = new Vector4(xCoords[i], 0, zCoords[i], 1.0f);
+                m.verticies[o3] = new Vector3(zCoords[i] * 0.5f * diameter, y, -xCoords[i] * 0.5f * diameter);
+                m.normals[o3] = new Vector3(zCoords[i] * norm.x, norm.y, -xCoords[i] * norm.x);
+                m.tangents[o3] = new Vector4(-xCoords[i], 0, -zCoords[i], 1.0f);
             }
 
             // write the wrapping vertex. This is identical to the first one except for u coord = 1
