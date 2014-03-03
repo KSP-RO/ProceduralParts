@@ -15,7 +15,7 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
             new float[] { 0.5f, 0.0f, 0.8f, 0.7f },
             new float[] { 0.3f, 0.2f, 1.0f, 0.5f },
             new float[] { 0.3f, 0.3f, 0.7f, 0.7f },
-            new float[] { 0.1f, 0.0f, 0.7f, 0.667f },
+            new float[] { 0.1f, 0.0f, 0.7f, 2f/3f },
             new float[] { 1f/3f, 0.3f, 1.0f, 0.9f }
         };
 
@@ -24,13 +24,16 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
     public float length = 1f;
     private float oldLength;
 
+    public string curve;
+    private string oldCurve;
+    /*
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3"),
      UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
     public float bottomDiameter = 1.25f;
     private float oldBottomDiameter;
 
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "C1 diameter A", guiFormat = "F0", guiUnits="%"),
-     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0f, maxValue = float.PositiveInfinity, incrementLarge = 100f, incrementSlide = 1f)]
+     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0f, maxValue=float.PositiveInfinity, incrementLarge = 100f, incrementSlide = 1f)]
     public float c1DiameterA = 0;
     private float oldC1DiameterA;
 
@@ -58,6 +61,7 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
      UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0f, maxValue = 100.0f, incrementSlide = 1f)]
     public float c2Vert = 75f;
     private float oldC2Vert;
+    */
 
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3"),
      UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
@@ -65,8 +69,8 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
     private float oldTopDiameter;
 
 
-    private UI_FloatEdit c1DiameterAEdit;
-    private UI_FloatEdit c2DiameterAEdit;
+    //private UI_FloatEdit c1DiameterAEdit;
+    //private UI_FloatEdit c2DiameterAEdit;
 
     public void Start()
     {
@@ -85,13 +89,8 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
         topDiameterEdit.incrementLarge = tank.diameterLargeStep;
         topDiameterEdit.incrementSmall = tank.diameterSmallStep;
 
-        c1DiameterAEdit = (UI_FloatEdit)Fields["c1DiameterA"].uiControlEditor;
-        c1DiameterAEdit.maxValue = tank.diameterMax;
-        c1DiameterAEdit.incrementLarge = tank.diameterSmallStep;
-
-        c2DiameterAEdit = (UI_FloatEdit)Fields["c2DiameterA"].uiControlEditor;
-        c2DiameterAEdit.maxValue = tank.diameterMax;
-        c2DiameterAEdit.incrementLarge = tank.diameterSmallStep;
+        //c1DiameterAEdit = (UI_FloatEdit)Fields["c1DiameterA"].uiControlEditor;
+        //c2DiameterAEdit = (UI_FloatEdit)Fields["c2DiameterA"].uiControlEditor;
 
         UI_FloatEdit bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
         bottomDiameterEdit.maxValue = tank.diameterMax;
@@ -102,6 +101,7 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
 
     protected override void UpdateShape(bool force)
     {
+        /*
         if (!force && oldTopDiameter == topDiameter && oldBottomDiameter == bottomDiameter && oldLength == length &&
             c1DiameterA == oldC1DiameterA && c1DiameterB == oldC1DiameterB && c1Vert == oldC1Vert &&
             c2DiameterA == oldC2DiameterA && c2DiameterB == oldC2DiameterB && c2Vert == oldC2Vert )
@@ -121,41 +121,40 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
         // The B component takes the absoute difference between the top and bottom, and multiplies it by the B factor.
         // This is useful for more conic shaped objects where there is a big difference between the top and bottom.
 
-        // Parts also have the requirement that they are convex
+        // There are also two other constraints. The diameter of the curve at any point must not exceed the maximum allowed
+        // diameter, plus the points on the curve must be convex.
 
 
-        // Vertical bits.
-        if (c1Vert != oldC1Vert)
+        if (!force)
         {
-            if (c2Vert < c1Vert)
-                c2Vert = c1Vert;
-        }
-        else if (c2Vert != oldC2Vert)
-        {
-            if (c1Vert > c2Vert)
-                c1Vert = c2Vert;
-        }
-
+            // Vertical bits.
+            if (c1Vert != oldC1Vert)
+            {
+                if (c2Vert < c1Vert)
+                    c2Vert = c1Vert;
+            }
+            else if (c2Vert != oldC2Vert)
+            {
+                if (c1Vert > c2Vert)
+                    c1Vert = c2Vert;
+            }
         
-        
-        float c1Y = length * c1Vert / 100f - length * 0.5f;
-        float c2Y = length * c2Vert / 100f - length * 0.5f;
+            float c1Y = length * c1Vert / 100f - length * 0.5f;
+            float c2Y = length * c2Vert / 100f - length * 0.5f;
 
 
 
-        float c1XBase = Mathf.Lerp(topDiameter, bottomDiameter, c1Vert / 100f);
-        float c1XA = c1DiameterA * (topDiameter + bottomDiameter) / 400f;
-        float c1XB = c1DiameterB * Mathf.Abs(topDiameter - bottomDiameter) / 200f;
-        float c1X = c1XBase + c1XA + c1XB;
+            float c1XBase = Mathf.Lerp(topDiameter, bottomDiameter, c1Vert / 100f);
+            float c1XA = c1DiameterA * (topDiameter + bottomDiameter) / 200f;
+            float c1XB = c1DiameterB * Mathf.Abs(topDiameter - bottomDiameter) / 100f;
+            float c1X = c1XBase + c1XA + c1XB;
 
-        float c2XBase = Mathf.Lerp(topDiameter, bottomDiameter, c2Vert / 100f);
-        float c2XA = c2DiameterA * (topDiameter + bottomDiameter) / 400f;
-        float c2XB = c2DiameterB * Mathf.Abs(topDiameter - bottomDiameter) / 200f;
-        float c2X = c2XBase + c2XA + c2XB;
+            float c2XBase = Mathf.Lerp(topDiameter, bottomDiameter, c2Vert / 100f);
+            float c2XA = c2DiameterA * (topDiameter + bottomDiameter) / 200f;
+            float c2XB = c2DiameterB * Mathf.Abs(topDiameter - bottomDiameter) / 100f;
+            float c2X = c2XBase + c2XA + c2XB;
 
 
-        if(!force) 
-        {
             // So the points need to form a convex hull to ensure the resulting shape is convex
             // Push things into shape so they stay that way.
 
@@ -168,52 +167,18 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
 
 
 
-        {
-            // Maxmin the volume.
-            float volume = (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
-            if (volume > tank.volumeMax)
-                volume = tank.volumeMax;
-            else if (volume < tank.volumeMin)
-                volume = tank.volumeMin;
-            else
-                goto nochange;
-
-            if (oldLength != length)
-                length = volume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter));
-            else if (oldTopDiameter != topDiameter) 
-            {
-                // this becomes solving the quadratic on topDiameter
-                float a = length * Mathf.PI;
-                float b = length * Mathf.PI * bottomDiameter;
-                float c = length * Mathf.PI * bottomDiameter * bottomDiameter - volume * 12f;
-
-                float det = Mathf.Sqrt(b * b - 4 * a * c);
-                topDiameter = (det - b) / ( 2f * a );
-            }
-            else
-            {
-                // this becomes solving the quadratic on bottomDiameter
-                float a = length * Mathf.PI;
-                float b = length * Mathf.PI * topDiameter;
-                float c = length * Mathf.PI * topDiameter * topDiameter - volume * 12f;
-
-                float det = Mathf.Sqrt(b * b - 4 * a * c);
-                bottomDiameter = (det - b) / (2f * a);
-            }
-        }
-        nochange:
-
         // Perpendicular.
         Vector2 norm = new Vector2(length, (bottomDiameter-topDiameter)/2f);
         norm.Normalize();
 
         WriteMeshes(
-            new ProfilePoint(topDiameter, 0.5f * length, 0f, norm),
-            new ProfilePoint(bottomDiameter, -0.5f * length, 1f, norm)
+            new ProfilePoint(bottomDiameter, -0.5f * length, 0f, norm),
+            new ProfilePoint(topDiameter, 0.5f * length, 1f, norm)
             );
 
         oldTopDiameter = topDiameter; oldBottomDiameter = bottomDiameter; oldLength = length;
         oldC1DiameterA = c1DiameterA; oldC1DiameterB = c1DiameterB; oldC1Vert = c1Vert;
         oldC2DiameterA = c2DiameterA; oldC2DiameterB = c2DiameterB; oldC2Vert = c2Vert;
+        */
     }
 }
