@@ -10,8 +10,9 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
     #region config fields
 
-    public const float maxCircleError = 0.005f;
-    public const float maxDiameterChange = 0.125f;
+    public const float maxCircleError = 5000f;
+    public const float maxDiameterChange = 0.05f;
+    public const int minCircleSubdiv = 3;
 
     [KSPField]
     public string topNodeName = "top";
@@ -390,7 +391,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         MoveAttachments(pts);
 
         // Horizontal profile point subdivision
-        SubdivHorizontal(pts);
+        //SubdivHorizontal(pts);
 
         // Tank stats
         float tankVolume = 0;
@@ -428,9 +429,10 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             ProfilePoint prev = null;
             int off = 0, prevOff = 0;
             int tOff = 0;
+            bool odd = false;
             foreach (ProfilePoint pt in pts)
             {
-                pt.circ.WriteVertexes(diameter: pt.dia, y: pt.y, v: pt.v, norm: pt.norm, off: off, m: m);
+                pt.circ.WriteVertexes(diameter: pt.dia, y: pt.y, v: pt.v, norm: pt.norm, off: off, m: m, odd: odd);
                 if (prev != null)
                 {
                     CirclePoints.WriteTriangles(prev.circ, prevOff, pt.circ, off, m.triangles, tOff * 3);
@@ -458,6 +460,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                 prev = pt;
                 prevOff = off;
                 off += pt.circ.totVertexes + 1;
+                odd = !odd;
             }
         }
 
@@ -561,7 +564,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                         CirclePoints ret;
                         do
                         {
-                            ret = new CirclePoints(circlePoints.Count + 3);
+                            ret = new CirclePoints(circlePoints.Count + minCircleSubdiv);
                             circlePoints.Add(ret);
                         } while ((ret.maxError * diameter) > maxError);
                         return ret;
@@ -609,8 +612,8 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                 xCoords = new float[] { 0.0f, -Mathf.Sin(theta) };
                 zCoords = new float[] { 1.0f, Mathf.Cos(theta) };
 
-                float dX = Mathf.Sin(theta / 2.0f) - xCoords[1] / 2.0f;
-                float dY = Mathf.Cos(theta / 2.0f) - zCoords[1] / 2.0f - 0.5f;
+                float dX = -Mathf.Sin(theta / 2.0f) - xCoords[1] / 2.0f;
+                float dY = Mathf.Cos(theta / 2.0f) - (1f + zCoords[1]) / 2.0f;
 
                 maxError = Mathf.Sqrt(dX * dX + dY * dY) * 0.5f;
 
@@ -742,6 +745,69 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             m.verticies[lp] = m.verticies[off];
             m.normals[lp] = m.normals[off];
             m.tangents[lp] = m.tangents[off];
+        }
+
+        private const float uDelta = 1e-5f;
+
+        public IEnumerable<Vector3> PointsXZU(float uFrom, float uTo)
+        {
+            Complete();
+            
+            int denom = (4 * (subdivCount + 1));
+
+            if(uFrom <= uTo) 
+            {
+                int iFrom = Mathf.CeilToInt((uFrom+uDelta) * denom);
+                int iTo = Mathf.FloorToInt((uTo-uDelta) * denom);
+
+                if(iFrom < 0) 
+                {
+                    int pushUp = (-iFrom / denom + 1) * denom;
+                    iFrom += pushUp;
+                    iTo += pushUp;
+                }
+
+                for (int i = iFrom; i <= iTo; ++i)
+                    yield return PointXZU(i);
+
+                yield break;
+            }
+            else
+            {
+                int iFrom = Mathf.FloorToInt((uFrom - uDelta) * denom);
+                int iTo = Mathf.CeilToInt((uTo + uDelta) * denom);
+
+                if (iTo < 0)
+                {
+                    int pushUp = (-iTo / denom + 1) * denom;
+                    iFrom += pushUp;
+                    iTo += pushUp;
+                }
+
+                for (int i = iFrom; i >= iTo; --i)
+                    yield return PointXZU(i);
+
+                yield break;
+            } 
+        }
+
+        private Vector3 PointXZU(int i)
+        {
+            int o = i % (subdivCount + 1);
+            int q = i / (subdivCount + 1) % 4;
+            Debug.LogWarning("PointXZU(" + i + ") o=" + o + " q=" + q + " subdiv=" + subdivCount);
+            switch (q)
+            {
+                case 0:
+                    return new Vector3(xCoords[o], zCoords[o], uCoords[o]);
+                case 1:
+                    return new Vector3(-zCoords[o], xCoords[o], uCoords[o] + 0.25f);
+                case 2:
+                    return new Vector3(-xCoords[o], -zCoords[o], uCoords[o] + 0.5f);
+                case 3:
+                    return new Vector3(zCoords[o], -xCoords[o], uCoords[o] + 0.75f);
+            }
+            throw new InvalidProgramException("Unreachable code");
         }
 
         /// <summary>

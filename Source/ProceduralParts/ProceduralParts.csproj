@@ -59,6 +59,7 @@
   <ItemGroup>
     <Compile Include="ObjectSerializer.cs" />
     <Compile Include="ProceduralShapeBezier.cs" />
+    <Compile Include="ProceduralShapePill.cs" />
     <Compile Include="ProceduralSRB.cs" />
     <Compile Include="ProceduralShapeCone.cs" />
     <Compile Include="ProceduralShapeCylinder.cs" />
