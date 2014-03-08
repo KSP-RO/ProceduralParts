@@ -3,6 +3,7 @@
 === 0.6.0 ===
 Added support for Pill sided tanks
 Ability to use a lower resolution mesh for the collider (this was needed for pill tanks)
+Structural part available
 Fixed texture alignment #1 and flipping #2 issues.
 
 === 0.5.0 ===
