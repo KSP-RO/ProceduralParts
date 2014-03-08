@@ -5,6 +5,7 @@ using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
 
+#if false
 public class ProceduralShapeBezier : ProceduralAbstractSoRShape
 {
 
@@ -26,7 +27,7 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
 
     public string curve;
     private string oldCurve;
-    /*
+    
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3"),
      UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
     public float bottomDiameter = 1.25f;
@@ -61,7 +62,6 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
      UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0f, maxValue = 100.0f, incrementSlide = 1f)]
     public float c2Vert = 75f;
     private float oldC2Vert;
-    */
 
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3"),
      UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
@@ -179,6 +179,6 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
         oldTopDiameter = topDiameter; oldBottomDiameter = bottomDiameter; oldLength = length;
         oldC1DiameterA = c1DiameterA; oldC1DiameterB = c1DiameterB; oldC1Vert = c1Vert;
         oldC2DiameterA = c2DiameterA; oldC2DiameterB = c2DiameterB; oldC2Vert = c2Vert;
-        */
     }
 }
+#endif

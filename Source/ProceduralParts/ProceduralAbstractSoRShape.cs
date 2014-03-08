@@ -10,9 +10,10 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
     #region config fields
 
-    public const float maxCircleError = 5000f;
+    public const int minCircleVertexes = 12;
+    public const float maxCircleError = 0.01f;
+
     public const float maxDiameterChange = 0.05f;
-    public const int minCircleSubdiv = 3;
 
     [KSPField]
     public string topNodeName = "top";
@@ -92,9 +93,12 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             float tbR = Mathf.Sqrt(topBot.y * topBot.y + topBot.dia * topBot.dia * 0.25f);
             float tbPhi = Mathf.Asin(topBot.y / tbR);
 
-            if (Mathf.Abs(phi) > Mathf.Abs(tbPhi))
+            if (Mathf.Abs(phi) >= Mathf.Abs(tbPhi))
             {
-                ret.uv = new Vector2(position.x / topBot.dia * 2f + 0.5f, position.z / topBot.dia * 2f + 0.5f);
+                if(topBot.dia < 0.001f)
+                    ret.uv = new Vector2(0.5f, 0.5f);
+                else
+                    ret.uv = new Vector2(position.x / topBot.dia * 2f + 0.5f, position.z / topBot.dia * 2f + 0.5f);
                 if (phi > 0)
                 {
                     ret.location = Location.Top;
@@ -118,16 +122,21 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         ret.location = Location.Side;
         ret.uv[0] = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
 
-        ProfilePoint pv = lastProfile.First.Value;
-        ProfilePoint pt = null;
-        for (LinkedListNode<ProfilePoint> next = lastProfile.First.Next; next != null; next = next.Next, pv = pt)
+        ProfilePoint pv = null;
+        ProfilePoint pt = lastProfile.First.Value;
+        for (LinkedListNode<ProfilePoint> ptNode = lastProfile.First.Next; ptNode != null; ptNode = ptNode.Next)
         {
-            pt = next.Value;
+            if (!ptNode.Value.inCollider)
+                continue;
+            pv = pt;
+            pt = ptNode.Value;
 
             float ptR = Mathf.Sqrt(pt.y * pt.y + pt.dia * pt.dia * 0.25f);
             float ptPhi = Mathf.Asin(pt.y / ptR);
 
-            if (phi < ptPhi)
+            //Debug.LogWarning("ptPhi=" + ptPhi + " phi=" + phi);
+
+            if (phi > ptPhi)
                 continue;
 
             // so we know the attachment is somewhere between the previous and this circle
@@ -144,14 +153,14 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
             float r0 = pv.dia * 0.5f;
             float r1 = pt.dia * 0.5f;
+            
+            float t = (s * r0 - pv.y) / ((pt.y - pv.y) - s * (r1 - r0));
 
-            float t = -(s * r0 - pv.y) / ((pv.y - pt.y) - s * (r1 - r0));
+            //Debug.LogWarning(string.Format("New Attachment: pv=({0:F2}, {1:F2}) pt=({2:F2}, {3:F2}) s={4:F2} t={5:F2}", r0, pv.y, r1, pt.y, s, t));
 
             ret.uv[1] = Mathf.Lerp(pv.v, pt.v, t);
             if (ret.uv[1] > 1.0f)
-            {
-                print("result off end of segment v=" + ret.uv[1] + " pv.v=" + pv.v + " pt.v=" + pt.v + " t=" + t);
-            }
+                Debug.LogError("result off end of segment v=" + ret.uv[1] + " pv.v=" + pv.v + " pt.v=" + pt.v + " t=" + t);
 
             // 
             Vector3 normal;
@@ -217,7 +226,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         lastProfile = pts;
 
         // top points
-        ProfilePoint top = pts.First.Value;
+        ProfilePoint top = pts.Last.Value;
         foreach (Attachment a in topAttachments)
         {
             Vector3 pos = new Vector3(
@@ -230,37 +239,41 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         }
 
         // bottom points
-        ProfilePoint bot = pts.Last.Value;
+        ProfilePoint bot = pts.First.Value;
         foreach (Attachment a in bottomAttachments)
         {
             Vector3 pos = new Vector3(
                 (a.uv[0] - 0.5f) * bot.dia * 0.5f,
                 bot.y,
                 (a.uv[1] - 0.5f) * bot.dia * 0.5f);
+            //Debug.LogWarning("Moving attachment:" + a + " to:" + pos);
             a.follower.transform.localPosition = pos;
             a.follower.Update();
         }
 
         // sides
-        LinkedListNode<ProfilePoint> ptNode = pts.First.Next;
+        ProfilePoint pv = null;
+        ProfilePoint pt = pts.First.Value;
+        LinkedListNode<ProfilePoint> ptNode = pts.First;
         foreach (Attachment a in sideAttachments)
         {
-            while (ptNode.Value.v < a.uv[1])
+            while (pt.v < a.uv[1])
             {
                 ptNode = ptNode.Next;
                 if (ptNode == null)
                 {
                     ptNode = pts.Last;
-                    print("As I suspected... child v=" + a.uv[1] + " last node v=" + ptNode.Value.v);
+                    Debug.LogError("Child v greater than last node child v=" + a.uv[1] + " last node v=" + ptNode.Value.v);
                     break;
                 }
-
+                if (!ptNode.Value.inCollider)
+                    continue;
+                pv = pt;
+                pt = ptNode.Value;
             }
 
-            ProfilePoint pv = ptNode.Previous.Value;
-            ProfilePoint pt = ptNode.Value;
-
             float t = Mathf.InverseLerp(pv.v, pt.v, a.uv[1]);
+            //Debug.LogWarning("pv.v=" + pv.v + " pt.v=" + pt.v + " att.v=" + a.uv[1] + " t=" + t);
 
             // using cylindrical coords
             float r = Mathf.Lerp(pv.dia * 0.5f, pt.dia * 0.5f, t);
@@ -278,7 +291,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             Vector3 normal;
             Quaternion rot = SideAttachOrientation(pv.norm, pt.norm, t, theta, out normal);
 
-            //print("Moving to orientation: normal: " + normal.ToString("F3") + " theta:" + (theta * 180f / Mathf.PI) + rot.ToStringAngleAxis());
+            //Debug.LogWarning("Moving to orientation: normal: " + normal.ToString("F3") + " theta:" + (theta * 180f / Mathf.PI) + rot.ToStringAngleAxis());
 
             a.follower.transform.localRotation = rot;
             a.follower.Update();
@@ -347,6 +360,8 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         public readonly float dia;
         public readonly float y;
         public readonly float v;
+
+        public readonly bool inRender;
         public readonly bool inCollider;
 
         // the normal as a 2 component unit vector (dia, y)
@@ -354,14 +369,26 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         public readonly Vector2 norm;
 
         public readonly CirclePoints circ;
+        public readonly CirclePoints colliderCirc;
 
-        public ProfilePoint(float dia, float y, float v, Vector2 norm, bool inCollider = true, CirclePoints circ = null)
+        public ProfilePoint(float dia, float y, float v, Vector2 norm, bool inRender = true, bool inCollider = true, CirclePoints circ = null, CirclePoints colliderCirc = null)
         {
             this.dia = dia;
             this.y = y;
             this.v = v;
             this.norm = norm;
-            this.circ = circ ?? CirclePoints.ForDiameter(dia, maxCircleError);
+            this.inRender = inRender;
+            this.inCollider = inCollider;
+            this.circ = inRender ? (circ ?? CirclePoints.ForDiameter(dia, maxCircleError, minCircleVertexes)) : null;
+            this.colliderCirc = inCollider ? (colliderCirc ?? this.circ ?? CirclePoints.ForDiameter(dia, maxCircleError, minCircleVertexes)) : null;
+        }
+
+        public bool customCollider
+        {
+            get
+            {
+                return circ != colliderCirc;
+            }
         }
     }
 
@@ -384,60 +411,73 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             return;
 
         // update nodes
-        UpdateNodeSize(pts.First(), topNodeName);
-        UpdateNodeSize(pts.Last(), bottomNodeName);
+        UpdateNodeSize(pts.First(), bottomNodeName);
+        UpdateNodeSize(pts.Last(), topNodeName);
 
         // Move attachments first, before subdividing
         MoveAttachments(pts);
 
         // Horizontal profile point subdivision
-        //SubdivHorizontal(pts);
+        SubdivHorizontal(pts);
 
         // Tank stats
-        float tankVolume = 0;
         float tankULength = 0;
         float tankVLength = 0;
 
         int nVrt = 0;
         int nTri = 0;
+        int nColVrt = 0;
+        int nColTri = 0;
+        bool customCollider = false;
 
         ProfilePoint first = pts.First.Value;
         ProfilePoint last = pts.Last.Value;
 
+        if (!first.inCollider || !last.inCollider)
+            throw new InvalidOperationException("First and last profile points must be used in the collider");
+
+        foreach (ProfilePoint pt in pts)
         {
-            int i = 0;
-            foreach (ProfilePoint pt in pts)
+            customCollider = customCollider || pt.customCollider;
+
+            if (pt.inRender)
             {
                 nVrt += pt.circ.totVertexes + 1;
-
                 // one for above, one for below
                 nTri += 2 * pt.circ.totVertexes;
+            }
 
-                ++i;
-                last = pt;
+            if (pt.inCollider)
+            {
+                nColVrt += pt.colliderCirc.totVertexes + 1;
+                nColTri += 2 * pt.colliderCirc.totVertexes;
             }
         }
-
         // Have double counted for the first and last circles.
         nTri -= first.circ.totVertexes + last.circ.totVertexes;
+        nColTri -= first.colliderCirc.totVertexes + last.colliderCirc.totVertexes;
 
         UncheckedMesh m = new UncheckedMesh(nVrt, nTri);
 
         float sumDiameters = 0;
 
+        bool odd = false;
         {
             ProfilePoint prev = null;
             int off = 0, prevOff = 0;
             int tOff = 0;
-            bool odd = false;
             foreach (ProfilePoint pt in pts)
             {
+                if (!pt.inRender)
+                    continue;
+
                 pt.circ.WriteVertexes(diameter: pt.dia, y: pt.y, v: pt.v, norm: pt.norm, off: off, m: m, odd: odd);
                 if (prev != null)
                 {
-                    CirclePoints.WriteTriangles(prev.circ, prevOff, pt.circ, off, m.triangles, tOff * 3);
+                    CirclePoints.WriteTriangles(prev.circ, prevOff, pt.circ, off, m.triangles, tOff * 3, !odd);
                     tOff += prev.circ.totVertexes + pt.circ.totVertexes;
 
+                    // Deprecated: Volume has been moved up to callers. This way we can use the idealized rather than aproximate volume
                     // Work out the area of the truncated cone
 
                     // integral_y1^y2 pi R(y)^2 dy   where R(y) = ((r2-r1)(y-y1))/(r2-r1) + r1   Integrate circles along a line
@@ -445,7 +485,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                     // == -1/3 pi (y1-y2) (r1^2+r1*r2+r2^2)                                   Do the calculus
                     // == -1/3 pi (y1-y2) (d1^2/4+d1*d2/4+d2^2/4)                             r = d/2
                     // == -1/12 pi (y1-y2) (d1^2+d1*d2+d2^2)                                  Take out the factor
-                    tankVolume += (Mathf.PI * (pt.y - prev.y) * (prev.dia * prev.dia + prev.dia * pt.dia + pt.dia * pt.dia)) / 12f;
+                    //tankVolume += (Mathf.PI * (pt.y - prev.y) * (prev.dia * prev.dia + prev.dia * pt.dia + pt.dia * pt.dia)) / 12f;
 
                     float dy = (pt.y - prev.y);
                     float dr = (prev.dia - pt.dia) * 0.5f;
@@ -470,7 +510,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         //print("ULength=" + tankULength + " VLength=" + tankVLength);
 
         // set the properties.
-        this.tankVolume = tankVolume;
+        //this.tankVolume = tankVolume;
         this.tankTextureScale = new Vector2(tankULength, tankVLength);
 
         m.WriteTo(sidesMesh);
@@ -480,14 +520,54 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         nTri = first.circ.totVertexes - 2 + last.circ.totVertexes - 2;
         m = new UncheckedMesh(nVrt, nTri);
 
-        first.circ.WriteEndcap(first.dia, first.y, false, 0, 0, m);
-        last.circ.WriteEndcap(last.dia, last.y, true, first.circ.totVertexes, (first.circ.totVertexes - 2) * 3, m);
+        first.circ.WriteEndcap(first.dia, first.y, false, 0, 0, m, false);
+        last.circ.WriteEndcap(last.dia, last.y, true, first.circ.totVertexes, (first.circ.totVertexes - 2) * 3, m, !odd);
 
         m.WriteTo(endsMesh);
 
-        // TODO: build the collider mesh at a lower resolution than the visual mesh.
-        tank.SetColliderMeshes(endsMesh, sidesMesh);
+        // build the collider mesh at a lower resolution than the visual mesh.
+        if (customCollider)
+        {
+            //Debug.LogWarning("Collider mesh vert=" + nColVrt + " tris=" + nColTri);
+            m = new UncheckedMesh(nColVrt, nColTri);
+            odd = false;
+            {
+                ProfilePoint prev = null;
+                int off = 0, prevOff = 0;
+                int tOff = 0;
+                foreach (ProfilePoint pt in pts)
+                {
+                    if (!pt.inCollider)
+                        continue;
+                    //Debug.LogWarning("Collider circ (" + pt.dia + ", " + pt.y + ") verts=" + pt.colliderCirc.totVertexes);
+                    pt.colliderCirc.WriteVertexes(diameter: pt.dia, y: pt.y, v: pt.v, norm: pt.norm, off: off, m: m, odd: odd);
+                    if (prev != null)
+                    {
+                        CirclePoints.WriteTriangles(prev.colliderCirc, prevOff, pt.colliderCirc, off, m.triangles, tOff * 3, !odd);
+                        tOff += prev.colliderCirc.totVertexes + pt.colliderCirc.totVertexes;
+                    }
+
+                    prev = pt;
+                    prevOff = off;
+                    off += pt.colliderCirc.totVertexes + 1;
+                    odd = !odd;
+                }
+            }
+
+            if (colliderMesh == null)
+                colliderMesh = new Mesh();
+
+            m.WriteTo(colliderMesh);
+
+            tank.colliderMesh = colliderMesh;
+        }
+        else
+        {
+            tank.colliderMesh = sidesMesh;
+        }
     }
+
+    private Mesh colliderMesh;
 
     /// <summary>
     /// Subdivide profile points according to the max diameter change. 
@@ -496,40 +576,43 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
     {
         ProfilePoint prev = pts.First.Value;
         ProfilePoint curr;
-        for (LinkedListNode<ProfilePoint> node = pts.First.Next; node != null; prev = curr, node = node.Next)
+        for (LinkedListNode<ProfilePoint> node = pts.First.Next; node != null; node = node.Next)
         {
             curr = node.Value;
-
-            float dDiameter = curr.dia - prev.dia;
-            int subdiv = (int)Math.Truncate(Mathf.Abs(dDiameter) / maxDiameterChange);
-            if (subdiv <= 1)
+            if (!curr.inRender)
                 continue;
 
-            // slerp alg for normals  http://http://en.wikipedia.org/wiki/Slerp
-            bool doSlerp = prev.norm != curr.norm;
-            float omega = 0, sinOmega = 0;
-            if (doSlerp)
+            float dDiameter = curr.dia - prev.dia;
+            int subdiv = Math.Min((int)Math.Truncate(Mathf.Abs(dDiameter) / maxDiameterChange), 30);
+            if (subdiv > 1)
             {
-                omega = Mathf.Acos(Vector2.Dot(prev.norm, curr.norm));
-                sinOmega = Mathf.Sin(omega);
-            }
-
-            for (int i = 1; i < subdiv; ++i)
-            {
-                float t = (float)i / (float)subdiv;
-                float tDiameter = prev.dia + dDiameter * t;
-                float tY = Mathf.Lerp(prev.y, curr.y, t);
-                float tV = Mathf.Lerp(prev.v, curr.v, t);
-
-                Vector2 norm;
+                // slerp alg for normals  http://http://en.wikipedia.org/wiki/Slerp
+                bool doSlerp = prev.norm != curr.norm;
+                float omega = 0, sinOmega = 0;
                 if (doSlerp)
-                    norm = Mathf.Sin(omega * (1f - t)) / sinOmega * prev.norm + Mathf.Sin(omega * t) / sinOmega * curr.norm;
-                else
-                    norm = prev.norm;
+                {
+                    omega = Mathf.Acos(Vector2.Dot(prev.norm, curr.norm));
+                    sinOmega = Mathf.Sin(omega);
+                }
 
-                pts.AddBefore(node, new ProfilePoint(dia: tDiameter, y: tY, v: tV, norm: norm, inCollider: false));
+                for (int i = 1; i < subdiv; ++i)
+                {
+                    float t = (float)i / (float)subdiv;
+                    float tDiameter = prev.dia + dDiameter * t;
+                    float tY = Mathf.Lerp(prev.y, curr.y, t);
+                    float tV = Mathf.Lerp(prev.v, curr.v, t);
+
+                    Vector2 norm;
+                    if (doSlerp)
+                        norm = Mathf.Sin(omega * (1f - t)) / sinOmega * prev.norm + Mathf.Sin(omega * t) / sinOmega * curr.norm;
+                    else
+                        norm = prev.norm;
+
+                    pts.AddBefore(node, new ProfilePoint(dia: tDiameter, y: tY, v: tV, norm: norm, inCollider: false));
+                }
             }
 
+            prev = curr;
         }
     }
 
@@ -550,56 +633,77 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
     public class CirclePoints
     {
-        public static CirclePoints ForDiameter(float diameter, float maxError)
+        public static CirclePoints ForDiameter(float diameter, float maxError, int minVertexes, int maxVertexes = int.MaxValue)
         {
-            // I'm not sure this lock is strictly required, but will do i anyhow.
-            lock (circlePoints)
+            int idx = circlePoints.FindIndex(v => (v.totVertexes >= minVertexes) && (v.maxError * diameter * 2f) <= maxError);
+            switch (idx)
             {
-                int idx = circlePoints.FindIndex(v => (v.maxError * diameter) < maxError);
-                switch (idx)
-                {
-                    case 0:
-                        return circlePoints[0];
-                    case -1:
-                        CirclePoints ret;
-                        do
-                        {
-                            ret = new CirclePoints(circlePoints.Count + minCircleSubdiv);
-                            circlePoints.Add(ret);
-                        } while ((ret.maxError * diameter) > maxError);
-                        return ret;
-                    default:
-                        return circlePoints[idx - 1];
-                }
-            }
+                case 0:
+                    return circlePoints[0];
+                case -1:
+                    CirclePoints prev;
+                    if(circlePoints.Count == 0)
+                        circlePoints.Add(prev = new CirclePoints(0));
+                    else
+                        prev = circlePoints.Last();
 
+                    while (prev.totVertexes <= minVertexes)
+                        circlePoints.Add(prev = new CirclePoints(prev.subdivCount+1));
+
+                    while(true)
+                    {
+                        CirclePoints nxt = new CirclePoints(prev.subdivCount+1);
+                        circlePoints.Add(nxt);
+                        if (nxt.totVertexes >= maxVertexes || nxt.maxError * diameter * 2 < maxError)
+                            return prev;
+                        prev = nxt;
+                    }
+                    throw new InvalidProgramException();
+                default:
+                    return circlePoints[Math.Min(idx - 1, maxVertexes/4-1)];
+            }
+        }
+
+        public static CirclePoints ForPoints(int vertexes)
+        {
+            int idx = vertexes / 4 - 1;
+            if (idx >= circlePoints.Count)
+            {
+                CirclePoints prev = circlePoints.Last();
+                do
+                {
+                    circlePoints.Add(prev = new CirclePoints(prev.subdivCount + 1));
+                }
+                while (prev.totVertexes <= vertexes);
+            }
+            return circlePoints[idx];
         }
 
         private static List<CirclePoints> circlePoints = new List<CirclePoints>();
 
 
-        public readonly int subdivCount;
+        private readonly int subdivCount;
         public readonly int totVertexes;
         public readonly float maxError;
 
         private static float maxError0 = Mathf.Sqrt(2) * (Mathf.Sin(Mathf.PI / 4.0f) - 0.5f) * 0.5f;
 
-        private float[] uCoords;
-        private float[] xCoords;
-        private float[] zCoords;
+        private float[][] uCoords;
+        private float[][] xCoords;
+        private float[][] zCoords;
 
         private bool complete = false;
 
-        public CirclePoints(int subdivCount)
+        private CirclePoints(int subdivCount)
         {
             this.subdivCount = subdivCount;
             this.totVertexes = (1 + subdivCount) * 4;
 
             if (subdivCount == 0)
             {
-                uCoords = new float[] { 0.0f };
-                xCoords = new float[] { 0.0f };
-                zCoords = new float[] { 1.0f };
+                uCoords = new float[][] { new float[] { 0.0f }, new float[] { 0.125f } };
+                xCoords = new float[][] { new float[] { 0.0f }, new float[] { -1f / Mathf.Sqrt(2) } };
+                zCoords = new float[][] { new float[] { 1.0f }, new float[] { 1f / Mathf.Sqrt(2) } };
 
                 maxError = maxError0;
                 complete = true;
@@ -607,15 +711,15 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             else
             {
                 // calculate the max error.
-                uCoords = new float[] { 0.0f, (float)1 / (float)(subdivCount + 1) / 4.0f };
-                float theta = uCoords[1] * Mathf.PI * 2.0f;
-                xCoords = new float[] { 0.0f, -Mathf.Sin(theta) };
-                zCoords = new float[] { 1.0f, Mathf.Cos(theta) };
+                uCoords = new float[][] { new float[] { 0.0f, 1f / (float)totVertexes }, new float[] { 0.5f / (float)totVertexes, 1.5f / (float)totVertexes } };
+                float theta = uCoords[0][1] * Mathf.PI * 2.0f;
+                xCoords = new float[][] { new float[] { 0.0f, -Mathf.Sin(theta) }, new float[] { -Mathf.Sin(theta * 0.5f), -Mathf.Sin(theta * 1.5f) } };
+                zCoords = new float[][] { new float[] { 1.0f, Mathf.Cos(theta) }, new float[] { Mathf.Cos(theta * 0.5f), Mathf.Cos(theta * 1.5f) } };
 
-                float dX = -Mathf.Sin(theta / 2.0f) - xCoords[1] / 2.0f;
-                float dY = Mathf.Cos(theta / 2.0f) - (1f + zCoords[1]) / 2.0f;
+                float dX = xCoords[1][0] - xCoords[0][1] / 2.0f;
+                float dY = zCoords[1][0] - (1f + zCoords[0][1]) / 2.0f;
 
-                maxError = Mathf.Sqrt(dX * dX + dY * dY) * 0.5f;
+                maxError = Mathf.Sqrt(dX * dX + dY * dY);
 
                 complete = subdivCount == 1;
             }
@@ -628,23 +732,31 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
             int totalCoords = subdivCount + 1;
 
-            float[] oldUCoords = uCoords;
-            float[] oldXCoords = xCoords;
-            float[] oldYCoords = zCoords;
-            uCoords = new float[totalCoords];
-            xCoords = new float[totalCoords];
-            zCoords = new float[totalCoords];
-            Array.Copy(oldUCoords, uCoords, 2);
-            Array.Copy(oldXCoords, xCoords, 2);
-            Array.Copy(oldYCoords, zCoords, 2);
+            float[][] oldUCoords = uCoords;
+            float[][] oldXCoords = xCoords;
+            float[][] oldYCoords = zCoords;
+            uCoords = new float[][] { new float[totalCoords], new float[totalCoords] };
+            xCoords = new float[][] { new float[totalCoords], new float[totalCoords] };
+            zCoords = new float[][] { new float[totalCoords], new float[totalCoords] };
+            Array.Copy(oldUCoords[0], uCoords[0], 2);
+            Array.Copy(oldXCoords[0], xCoords[0], 2);
+            Array.Copy(oldYCoords[0], zCoords[0], 2);
+            Array.Copy(oldUCoords[1], uCoords[1], 2);
+            Array.Copy(oldXCoords[1], xCoords[1], 2);
+            Array.Copy(oldYCoords[1], zCoords[1], 2);
 
             float denom = (float)(4 * (subdivCount + 1));
             for (int i = 2; i <= subdivCount; ++i)
             {
-                uCoords[i] = (float)i / denom;
-                float theta = uCoords[i] * Mathf.PI * 2.0f;
-                xCoords[i] = -Mathf.Sin(theta);
-                zCoords[i] = Mathf.Cos(theta);
+                uCoords[0][i] = (float)i / denom;
+                uCoords[1][i] = ((float)i + 0.5f) / denom;
+
+                float theta = uCoords[0][i] * Mathf.PI * 2.0f;
+                float theta1 = uCoords[1][i] * Mathf.PI * 2.0f;
+                xCoords[0][i] = -Mathf.Sin(theta);
+                zCoords[0][i] = Mathf.Cos(theta);
+                xCoords[1][i] = -Mathf.Sin(theta1);
+                zCoords[1][i] = Mathf.Cos(theta1);
             }
 
             complete = true;
@@ -662,27 +774,29 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         /// <param name="tangents">tangents array</param>
         /// <param name="to">offset into triangles array</param>
         /// <param name="triangles"></param>
-        public void WriteEndcap(float dia, float y, bool up, int vOff, int to, UncheckedMesh m)
+        public void WriteEndcap(float dia, float y, bool up, int vOff, int to, UncheckedMesh m, bool odd)
         {
             Complete();
+
+            int o = odd ? 1 : 0;
 
             for (int i = 0; i <= subdivCount; ++i)
             {
                 int o0 = vOff + i;
-                m.uv[o0] = new Vector2((-xCoords[i] + 1f) * 0.5f, (-zCoords[i] + 1f) * 0.5f);
-                m.verticies[o0] = new Vector3(xCoords[i] * dia * 0.5f, y, zCoords[i] * dia * 0.5f);
+                m.uv[o0] = new Vector2((-xCoords[o][i] + 1f) * 0.5f, (-zCoords[o][i] + 1f) * 0.5f);
+                m.verticies[o0] = new Vector3(xCoords[o][i] * dia * 0.5f, y, zCoords[o][i] * dia * 0.5f);
 
                 int o1 = vOff + i + subdivCount + 1;
-                m.uv[o1] = new Vector2((zCoords[i] + 1f) * 0.5f, (-xCoords[i] + 1f) * 0.5f);
-                m.verticies[o1] = new Vector3(-zCoords[i] * dia * 0.5f, y, xCoords[i] * dia * 0.5f);
+                m.uv[o1] = new Vector2((zCoords[o][i] + 1f) * 0.5f, (-xCoords[o][i] + 1f) * 0.5f);
+                m.verticies[o1] = new Vector3(-zCoords[o][i] * dia * 0.5f, y, xCoords[o][i] * dia * 0.5f);
 
                 int o2 = vOff + i + 2 * (subdivCount + 1);
-                m.uv[o2] = new Vector2((xCoords[i] + 1f) * 0.5f, (zCoords[i] + 1f) * 0.5f);
-                m.verticies[o2] = new Vector3(-xCoords[i] * dia * 0.5f, y, -zCoords[i] * dia * 0.5f);
+                m.uv[o2] = new Vector2((xCoords[o][i] + 1f) * 0.5f, (zCoords[o][i] + 1f) * 0.5f);
+                m.verticies[o2] = new Vector3(-xCoords[o][i] * dia * 0.5f, y, -zCoords[o][i] * dia * 0.5f);
 
                 int o3 = vOff + i + 3 * (subdivCount + 1);
-                m.uv[o3] = new Vector2((-zCoords[i] + 1f) * 0.5f, (xCoords[i] + 1f) * 0.5f);
-                m.verticies[o3] = new Vector3(zCoords[i] * dia * 0.5f, y, -xCoords[i] * dia * 0.5f);
+                m.uv[o3] = new Vector2((-zCoords[o][i] + 1f) * 0.5f, (xCoords[o][i] + 1f) * 0.5f);
+                m.verticies[o3] = new Vector3(zCoords[o][i] * dia * 0.5f, y, -xCoords[o][i] * dia * 0.5f);
 
                 m.tangents[o0] = m.tangents[o1] = m.tangents[o2] = m.tangents[o3] = new Vector4(-1, 0, 0, up ? 1 : -1);
                 m.normals[o0] = m.normals[o1] = m.normals[o2] = m.normals[o3] = new Vector3(0, up ? 1 : -1, 0);
@@ -708,40 +822,43 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         /// <param name="verticies">vertexes</param>
         /// <param name="normals">normals</param>
         /// <param name="tangents">tangents</param>
-        public void WriteVertexes(float diameter, float y, float v, Vector2 norm, int off, UncheckedMesh m)
+        public void WriteVertexes(float diameter, float y, float v, Vector2 norm, int off, bool odd, UncheckedMesh m)
         {
             Complete();
+
+            int o = odd ? 1 : 0;
+
             for (int i = 0; i <= subdivCount; ++i)
             {
                 int o0 = off + i;
-                m.uv[o0] = new Vector2(uCoords[i], v);
-                m.verticies[o0] = new Vector3(xCoords[i] * 0.5f * diameter, y, zCoords[i] * 0.5f * diameter);
-                m.normals[o0] = new Vector3(xCoords[i] * norm.x, norm.y, zCoords[i] * norm.x);
-                m.tangents[o0] = new Vector4(zCoords[i], 0, -xCoords[i], 1.0f);
+                m.uv[o0] = new Vector2(uCoords[o][i], v);
+                m.verticies[o0] = new Vector3(xCoords[o][i] * 0.5f * diameter, y, zCoords[o][i] * 0.5f * diameter);
+                m.normals[o0] = new Vector3(xCoords[o][i] * norm.x, norm.y, zCoords[o][i] * norm.x);
+                m.tangents[o0] = new Vector4(zCoords[o][i], 0, -xCoords[o][i], -1.0f);
                 //MonoBehaviour.print("Vertex #" + i + " off=" + o0 + " u=" + xy[o0][0] + " coords=" + verticies[o0]);
 
                 int o1 = off + i + subdivCount + 1;
-                m.uv[o1] = new Vector2(uCoords[i] + 0.25f, v);
-                m.verticies[o1] = new Vector3(-zCoords[i] * 0.5f * diameter, y, xCoords[i] * 0.5f * diameter);
-                m.normals[o1] = new Vector3(-zCoords[i] * norm.x, norm.y, xCoords[i] * norm.x);
-                m.tangents[o1] = new Vector4(xCoords[i], 0, zCoords[i], 1.0f);
+                m.uv[o1] = new Vector2(uCoords[o][i] + 0.25f, v);
+                m.verticies[o1] = new Vector3(-zCoords[o][i] * 0.5f * diameter, y, xCoords[o][i] * 0.5f * diameter);
+                m.normals[o1] = new Vector3(-zCoords[o][i] * norm.x, norm.y, xCoords[o][i] * norm.x);
+                m.tangents[o1] = new Vector4(xCoords[o][i], 0, zCoords[o][i], -1.0f);
 
                 int o2 = off + i + 2 * (subdivCount + 1);
-                m.uv[o2] = new Vector2(uCoords[i] + 0.50f, v);
-                m.verticies[o2] = new Vector3(-xCoords[i] * 0.5f * diameter, y, -zCoords[i] * 0.5f * diameter);
-                m.normals[o2] = new Vector3(-xCoords[i] * norm.x, norm.y, -zCoords[i] * norm.x);
-                m.tangents[o2] = new Vector4(-zCoords[i], 0, xCoords[i], 1.0f);
+                m.uv[o2] = new Vector2(uCoords[o][i] + 0.50f, v);
+                m.verticies[o2] = new Vector3(-xCoords[o][i] * 0.5f * diameter, y, -zCoords[o][i] * 0.5f * diameter);
+                m.normals[o2] = new Vector3(-xCoords[o][i] * norm.x, norm.y, -zCoords[o][i] * norm.x);
+                m.tangents[o2] = new Vector4(-zCoords[o][i], 0, xCoords[o][i], -1.0f);
 
                 int o3 = off + i + 3 * (subdivCount + 1);
-                m.uv[o3] = new Vector2(uCoords[i] + 0.75f, v);
-                m.verticies[o3] = new Vector3(zCoords[i] * 0.5f * diameter, y, -xCoords[i] * 0.5f * diameter);
-                m.normals[o3] = new Vector3(zCoords[i] * norm.x, norm.y, -xCoords[i] * norm.x);
-                m.tangents[o3] = new Vector4(-xCoords[i], 0, -zCoords[i], 1.0f);
+                m.uv[o3] = new Vector2(uCoords[o][i] + 0.75f, v);
+                m.verticies[o3] = new Vector3(zCoords[o][i] * 0.5f * diameter, y, -xCoords[o][i] * 0.5f * diameter);
+                m.normals[o3] = new Vector3(zCoords[o][i] * norm.x, norm.y, -xCoords[o][i] * norm.x);
+                m.tangents[o3] = new Vector4(-xCoords[o][i], 0, -zCoords[o][i], -1.0f);
             }
 
-            // write the wrapping vertex. This is identical to the first one except for u coord = 1
+            // write the wrapping vertex. This is identical to the first one except for u coord += 1
             int lp = off + totVertexes;
-            m.uv[lp] = new Vector2(1.0f, v);
+            m.uv[lp] = new Vector2(uCoords[o][0] + 1.0f, v);
             m.verticies[lp] = m.verticies[off];
             m.normals[lp] = m.normals[off];
             m.tangents[lp] = m.tangents[off];
@@ -795,17 +912,17 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         {
             int o = i % (subdivCount + 1);
             int q = i / (subdivCount + 1) % 4;
-            Debug.LogWarning("PointXZU(" + i + ") o=" + o + " q=" + q + " subdiv=" + subdivCount);
+            //Debug.LogWarning("PointXZU(" + i + ") o=" + o + " q=" + q + " subdiv=" + subdivCount);
             switch (q)
             {
                 case 0:
-                    return new Vector3(xCoords[o], zCoords[o], uCoords[o]);
+                    return new Vector3(xCoords[0][o], zCoords[0][o], uCoords[0][o]);
                 case 1:
-                    return new Vector3(-zCoords[o], xCoords[o], uCoords[o] + 0.25f);
+                    return new Vector3(-zCoords[0][o], xCoords[0][o], uCoords[0][o] + 0.25f);
                 case 2:
-                    return new Vector3(-xCoords[o], -zCoords[o], uCoords[o] + 0.5f);
+                    return new Vector3(-xCoords[0][o], -zCoords[0][o], uCoords[0][o] + 0.5f);
                 case 3:
-                    return new Vector3(zCoords[o], -xCoords[o], uCoords[o] + 0.75f);
+                    return new Vector3(zCoords[0][o], -xCoords[0][o], uCoords[0][o] + 0.75f);
             }
             throw new InvalidProgramException("Unreachable code");
         }
@@ -819,85 +936,70 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         /// <param name="bo">offset into vertex array for b points</param>
         /// <param name="triangles">triangles array for output</param>
         /// <param name="to">offset into triangles array. This must be a multiple of 3</param>
-        public static void WriteTriangles(CirclePoints a, int ao, CirclePoints b, int bo, int[] triangles, int to)
+        public static void WriteTriangles(CirclePoints a, int ao, CirclePoints b, int bo, int[] triangles, int too, bool odd)
         {
-            bool flip = false;
-            if (a.totVertexes < b.totVertexes)
+            int to = too;
+
+            int aq = a.subdivCount + 1, bq = b.subdivCount + 1;
+            int ai = 0, bi = 0;
+            int ad = (odd ? 1 : 0), bd = (odd ? 0 : 1);
+
+            while (ai < aq || bi < bq)
             {
-                Swap(ref a, ref b);
-                Swap(ref ao, ref bo);
-                //MonoBehaviour.print("Flipping");
-                flip = true;
-            }
+                float au = (ai < aq) ? a.uCoords[ad][ai] : (a.uCoords[ad][0] + 0.25f);
+                float bu = (bi < bq) ? b.uCoords[bd][bi] : (b.uCoords[bd][0] + 0.25f);
 
-            int bq = b.subdivCount + 1;
-            int aq = a.subdivCount + 1;
+                if (au < bu)
+                {
+                    //MonoBehaviour.print("A-tri #" + ai + " tOff=" + to);
+                    triangles[to++] = ao + ai;
+                    triangles[to++] = bo + bi;
+                    triangles[to++] = ao + ai + 1;
+                    //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
 
-            int bi = 0;
-            bool bcomplete = false;
-            for (int ai = 0; ai < aq; ++ai)
-            {
-                //MonoBehaviour.print("A-tri #" + ai + " tOff=" + to);
-                triangles[to++] = ao + ai;
-                triangles[to++] = flip ? (ao + ai + 1) : (bo + bi);
-                triangles[to++] = flip ? (bo + bi) : (ao + ai + 1);
-                //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
+                    triangles[to++] = ao + ai + aq;
+                    triangles[to++] = bo + bi + bq;
+                    triangles[to++] = ao + ai + 1 + aq;
+                    //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
 
-                triangles[to++] = ao + ai + aq;
-                triangles[to++] = flip ? (ao + ai + 1 + aq) : (bo + bi + bq);
-                triangles[to++] = flip ? (bo + bi + bq) : (ao + ai + 1 + aq);
-                //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
+                    triangles[to++] = ao + ai + 2 * aq;
+                    triangles[to++] = bo + bi + 2 * bq;
+                    triangles[to++] = ao + ai + 1 + 2 * aq;
+                    //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
 
-                triangles[to++] = ao + ai + 2 * aq;
-                triangles[to++] = flip ? (ao + ai + 1 + 2 * aq) : (bo + bi + 2 * bq);
-                triangles[to++] = flip ? (bo + bi + 2 * bq) : (ao + ai + 1 + 2 * aq);
-                //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
+                    triangles[to++] = ao + ai + 3 * aq;
+                    triangles[to++] = bo + bi + 3 * bq;
+                    triangles[to++] = ao + ai + 1 + 3 * aq;
+                    //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
 
-                triangles[to++] = ao + ai + 3 * aq;
-                triangles[to++] = flip ? (ao + ai + 1 + 3 * aq) : (bo + bi + 3 * bq);
-                triangles[to++] = flip ? (bo + bi + 3 * bq) : (ao + ai + 1 + 3 * aq);
-                //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
-
-                if (bcomplete)
-                    continue;
-
-                float nxau = (ai + 1 < aq) ? a.uCoords[ai + 1] : 0.25f;
-                float nxbu = (bi + 1 < bq) ? b.uCoords[bi + 1] : 0.25f;
-                //MonoBehaviour.print("Offsets: nxau=" + nxau + " nxbu=" + nxbu + " (nxau-au)=" + (nxau - a.uCoords[ai]) + " (nxbu-nxau)=" + (nxbu - nxau));
-
-                if ((nxau - a.uCoords[ai]) > (nxbu - nxau))
+                    ++ai;
+                }
+                else
                 {
                     //MonoBehaviour.print("B-tri #" + bi + " tOff=" + to);
                     triangles[to++] = bo + bi;
-                    triangles[to++] = flip ? (ao + ai + 1) : (bo + bi + 1);
-                    triangles[to++] = flip ? (bo + bi + 1) : (ao + ai + 1);
+                    triangles[to++] = bo + bi + 1;
+                    triangles[to++] = ao + ai;
                     //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
 
                     triangles[to++] = bo + bi + bq;
-                    triangles[to++] = flip ? (ao + ai + 1 + aq) : (bo + bi + 1 + bq);
-                    triangles[to++] = flip ? (bo + bi + 1 + bq) : (ao + ai + 1 + aq);
+                    triangles[to++] = bo + bi + 1 + bq;
+                    triangles[to++] = ao + ai + aq;
                     //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
 
                     triangles[to++] = bo + bi + 2 * bq;
-                    triangles[to++] = flip ? (ao + ai + 1 + 2 * aq) : (bo + bi + 1 + 2 * bq);
-                    triangles[to++] = flip ? (bo + bi + 1 + 2 * bq) : (ao + ai + 1 + 2 * aq);
+                    triangles[to++] = bo + bi + 1 + 2 * bq;
+                    triangles[to++] = ao + ai + 2 * aq;
                     //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
 
                     triangles[to++] = bo + bi + 3 * bq;
-                    triangles[to++] = flip ? (ao + ai + 1 + 3 * aq) : (bo + bi + 1 + 3 * bq);
-                    triangles[to++] = flip ? (bo + bi + 1 + 3 * bq) : (ao + ai + 1 + 3 * aq);
+                    triangles[to++] = bo + bi + 1 + 3 * bq;
+                    triangles[to++] = ao + ai + 3 * aq;
                     //MonoBehaviour.print(" (" + triangles[to - 3] + ", " + triangles[to - 2] + ", " + triangles[to - 1] + ") ");
 
-                    bcomplete = (++bi == bq);
+                    ++bi;
                 }
             }
-        }
-
-        private static void Swap<T>(ref T one, ref T two)
-        {
-            T tmp = one;
-            one = two;
-            two = tmp;
         }
 
     }

@@ -53,24 +53,26 @@ public class ProceduralShapeCone : ProceduralAbstractSoRShape
 
         //Debug.LogWarning("Cone.UpdateShape");
 
+        // Maxmin the volume.
+        tankVolume = (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
+
+        if (HighLogic.LoadedSceneIsEditor)
         {
-            // Maxmin the volume.
-            float volume = (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
-            if (volume > tank.volumeMax)
-                volume = tank.volumeMax;
-            else if (volume < tank.volumeMin)
-                volume = tank.volumeMin;
+            if (tankVolume > tank.volumeMax)
+                tankVolume = tank.volumeMax;
+            else if (tankVolume < tank.volumeMin)
+                tankVolume = tank.volumeMin;
             else
                 goto nochange;
 
             if (oldLength != length)
-                length = volume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter));
+                length = tankVolume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter));
             else if (oldTopDiameter != topDiameter) 
             {
                 // this becomes solving the quadratic on topDiameter
                 float a = length * Mathf.PI;
                 float b = length * Mathf.PI * bottomDiameter;
-                float c = length * Mathf.PI * bottomDiameter * bottomDiameter - volume * 12f;
+                float c = length * Mathf.PI * bottomDiameter * bottomDiameter - tankVolume * 12f;
 
                 float det = Mathf.Sqrt(b * b - 4 * a * c);
                 topDiameter = (det - b) / ( 2f * a );
@@ -80,7 +82,7 @@ public class ProceduralShapeCone : ProceduralAbstractSoRShape
                 // this becomes solving the quadratic on bottomDiameter
                 float a = length * Mathf.PI;
                 float b = length * Mathf.PI * topDiameter;
-                float c = length * Mathf.PI * topDiameter * topDiameter - volume * 12f;
+                float c = length * Mathf.PI * topDiameter * topDiameter - tankVolume * 12f;
 
                 float det = Mathf.Sqrt(b * b - 4 * a * c);
                 bottomDiameter = (det - b) / (2f * a);
