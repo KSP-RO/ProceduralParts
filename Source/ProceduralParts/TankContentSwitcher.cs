@@ -28,7 +28,7 @@ public class TankContentSwitcher : PartModule
     {
         if (HighLogic.LoadedScene != GameScenes.LOADING)
             return;
-
+        
         tankTypeOptions = new List<TankTypeOption>();
         foreach (ConfigNode optNode in node.GetNodes("TANK_TYPE_OPTION"))
         {
@@ -50,6 +50,13 @@ public class TankContentSwitcher : PartModule
 
     public override void OnStart(PartModule.StartState state)
     {
+        if (HighLogic.LoadedSceneIsFlight)
+        {
+            part.mass = dryMass;
+            isEnabled = enabled = false;
+            return;
+        }
+
         InitializeTankType();
         if (tankVolume != 0)
             UpdateTankType();
@@ -75,7 +82,7 @@ public class TankContentSwitcher : PartModule
     [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Volume", guiFormat = "F3", guiUnits = "kL")]
     public float tankVolume = 0.0f;
 
-    [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Dry Mass", guiFormat = "F2", guiUnits = "t")]
+    [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Dry Mass", guiFormat = "F3", guiUnits = "t")]
     public float dryMass = 0.0f;
 
     [KSPField]
@@ -86,6 +93,10 @@ public class TankContentSwitcher : PartModule
     /// </summary>
     public void UpdateTankVolume(float tankVolume)
     {
+        // Never update resources once flying
+        if (HighLogic.LoadedSceneIsFlight)
+            return;
+
         if (!useVolume)
         {
             Debug.LogError("Updating tank volume when this is not expected. Set useVolume = true in config file");
@@ -130,6 +141,8 @@ public class TankContentSwitcher : PartModule
         public void Load(ConfigNode node)
         {
             ConfigNode.LoadObjectFromConfig(this, node);
+            if (resources == null)
+                resources = new List<TankResource>();
         }
         public void Save(ConfigNode node)
         {
@@ -211,7 +224,16 @@ public class TankContentSwitcher : PartModule
             }
         }
 
-        Fields["dryMass"].guiName = (selectedTankType.isStructural) ? "Mass" : "Dry Mass";
+        if (selectedTankType.isStructural)
+        {
+            Fields["dryMass"].guiName = "Mass";
+            Fields["tankVolume"].guiActiveEditor = false;
+        }
+        else
+        {
+            Fields["dryMass"].guiName = "Dry Mass";
+            Fields["tankVolume"].guiActiveEditor = useVolume;
+        }
 
         UpdateMassAndResources(true);
     }
@@ -225,13 +247,9 @@ public class TankContentSwitcher : PartModule
         // Wait for the first update...
         if (selectedTankType == null)
             return;
-        
+
         if (useVolume)
             dryMass = part.mass = Mathf.Round(selectedTankType.dryDensity * tankVolume * volMultiplier * 1000f) / 1000f;
-
-        // Never update resources once flying
-        if (HighLogic.LoadedSceneIsFlight)
-            return;
 
         // Update the resources list.
         UIPartActionWindow window = FindWindow();

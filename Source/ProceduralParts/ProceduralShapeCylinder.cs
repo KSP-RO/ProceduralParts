@@ -42,20 +42,22 @@ public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
         if (!force && oldDiameter == diameter && oldLength == length)
             return;
 
+        tankVolume = diameter * diameter * 0.25f * Mathf.PI * length;
+        
+        if(HighLogic.LoadedSceneIsEditor)
         {
             // Maxmin the volume.
-            float volume = diameter * diameter * 0.25f * Mathf.PI * length;
-            if (volume > tank.volumeMax)
-                volume = tank.volumeMax;
-            else if (volume < tank.volumeMin)
-                volume = tank.volumeMin;
+            if (tankVolume > tank.volumeMax)
+                tankVolume = tank.volumeMax;
+            else if (tankVolume < tank.volumeMin)
+                tankVolume = tank.volumeMin;
             else
                 goto nochange;
 
             if (oldDiameter != diameter)
-                diameter = Mathf.Sqrt(volume / (0.25f * Mathf.PI * length));
+                diameter = Mathf.Sqrt(tankVolume / (0.25f * Mathf.PI * length));
             else
-                length = volume / (diameter * diameter * 0.25f * Mathf.PI);
+                length = tankVolume / (diameter * diameter * 0.25f * Mathf.PI);
         }
         nochange:
 
