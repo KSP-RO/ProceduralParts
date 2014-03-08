@@ -58,13 +58,12 @@ Note when using with Real Fuels: Stretchy SRB is ModularEngines enabled, so your
 
 New shapes:
 - First priority is bezier sided tanks, which covers the remaining feature from StretchySRB not available
-- A 'pod' shape, with hemispheres at the ends and an optional mounting pod for surface mounts
+- Add optional mounting pod for surface mounts to pod tank. 
 - Cuboid parts, with customizable side lengths
 - Extruded parts, such as hexagonal and octagonal pieces
 
 Tank types:
 - Xenon tank
-- Structural tank
 
 Other parts:
 - Procedural command module, possibly with rescaling / tweakable IVA.
