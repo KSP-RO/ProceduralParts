@@ -26,6 +26,8 @@ namespace KSPAPIExtensions
             Components = 0x30,
             Materials = 0x50,
             Mesh = 0x90,
+
+            Rigidbody = 0x110,
         }
 
         public static string DumpTree(this Transform t, DumpTreeOption options = DumpTreeOption.Default)
@@ -41,15 +43,15 @@ namespace KSPAPIExtensions
             for (int i = 0; i < level; ++i)
                 space += '-';
             sb.AppendLine(space + t.name);
-            if ((options & DumpTreeOption.Active) != 0)
+            if ((options & DumpTreeOption.Active) == DumpTreeOption.Active)
             {
                 sb.AppendLine(space + "+ activeSelf=" + t.gameObject.activeSelf + " activeInHeirachy=" + t.gameObject.activeInHierarchy);
             }
-            if ((options & DumpTreeOption.TransformPosition) != 0)
+            if ((options & DumpTreeOption.TransformPosition) == DumpTreeOption.TransformPosition)
             {
                 sb.AppendLine(space + "+ position: " + t.position + " localPosition: " + t.localPosition);
             }
-            if ((options & DumpTreeOption.TransformRotation) != 0)
+            if ((options & DumpTreeOption.TransformRotation) == DumpTreeOption.TransformRotation)
             {
                 sb.AppendLine(space + "+ rotation: " + t.rotation + " localRotation: " + t.localRotation);
             }
@@ -60,25 +62,41 @@ namespace KSPAPIExtensions
             foreach (Component c in t.gameObject.GetComponents<Component>())
             {
 
-                if (!typeof(Transform).IsInstanceOfType(c) && ((options & DumpTreeOption.Components) != 0))
+                if (!typeof(Transform).IsInstanceOfType(c) && ((options & DumpTreeOption.Components) == DumpTreeOption.Components))
                     sb.AppendLine(space + "+ component:" + c.GetType());
 
-                if (typeof(Renderer).IsInstanceOfType(c) && (options & DumpTreeOption.Materials) != 0)
+                if (typeof(Renderer).IsInstanceOfType(c) && (options & DumpTreeOption.Materials) == DumpTreeOption.Materials)
                     foreach (Material m in t.renderer.sharedMaterials)
-                        sb.AppendLine(space + "+ mat:" + m.name);
+                        sb.AppendLine(space + "++ mat:" + m.name);
 
-                if (typeof(MeshFilter).IsInstanceOfType(c) && (options & DumpTreeOption.Mesh) != 0)
+                if (typeof(MeshFilter).IsInstanceOfType(c) && (options & DumpTreeOption.Mesh) == DumpTreeOption.Mesh)
                 {
                     MeshFilter filter = (MeshFilter)c;
                     if (filter != null)
-                        sb.AppendLine(space + "+ mesh:" + ((filter.sharedMesh == null) ? "*null*" : (filter.sharedMesh.name + " verts:" + filter.sharedMesh.vertexCount)));
+                        sb.AppendLine(space + "++ mesh:" + ((filter.sharedMesh == null) ? "*null*" : (filter.sharedMesh.name + " verts:" + filter.sharedMesh.vertexCount)));
                 }
 
-                if (typeof(MeshCollider).IsInstanceOfType(c) && (options & DumpTreeOption.Mesh) != 0)
+                if (typeof(MeshCollider).IsInstanceOfType(c) && (options & DumpTreeOption.Mesh) == DumpTreeOption.Mesh)
                 {
                     MeshCollider collider = (MeshCollider)c;
                     if (collider != null)
-                        sb.AppendLine(space + "+ mesh:" + ((collider.sharedMesh == null) ? "*null*" : (collider.sharedMesh.name + " verts:" + collider.sharedMesh.vertexCount)));
+                        sb.AppendLine(space + "++ mesh:" + ((collider.sharedMesh == null) ? "*null*" : (collider.sharedMesh.name + " verts:" + collider.sharedMesh.vertexCount)));
+                }
+
+                if (typeof(Rigidbody).IsInstanceOfType(c) && (options & DumpTreeOption.Rigidbody) == DumpTreeOption.Rigidbody) 
+                {
+                    Rigidbody body = (Rigidbody)c;
+                    sb.AppendLine(space + "++ Mass:" + body.mass.ToString("F3"));
+                    sb.AppendLine(space + "++ CoM:" + body.centerOfMass.ToString("F3"));
+                }
+                if (typeof(Joint).IsInstanceOfType(c) && (options & DumpTreeOption.Rigidbody) == DumpTreeOption.Rigidbody)
+                {
+                    Joint joint = (Joint)c;
+                    sb.AppendLine(space + "++ anchor:" + joint.anchor.ToString("F3"));
+
+                    sb.AppendLine(space + "++ connectedBody: " + (joint.connectedBody != null));
+                    if (joint.connectedBody != null)
+                        DumpTree(joint.connectedBody.transform, options, level+1, sb);
                 }
             }
 
@@ -157,12 +175,12 @@ namespace KSPAPIExtensions
         #endregion
 
         #region transforms and geometry
-        public static string ToStringAngleAxis(this Quaternion q)
+        public static string ToStringAngleAxis(this Quaternion q, string format = "F3")
         {
             Vector3 axis;
             float angle;
             q.ToAngleAxis(out angle, out axis);
-            return "(axis:" + axis.ToString("F3") + " angle: " + angle.ToString("F3") + ")";
+            return "(axis:" + axis.ToString(format) + " angle: " + angle.ToString(format) + ")";
         }
 
         public static Transform FindDecendant(this Transform t, string name, bool activeOnly = false)

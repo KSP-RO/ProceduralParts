@@ -14,61 +14,49 @@ public abstract class ProceduralAbstractShape : PartModule
     [KSPField]
     public string techRequired;
 
+    [KSPField]
+    public string techObsolete;
+
     #endregion
 
     #region Objects
-    public ProceduralPart tank
+    public ProceduralPart pPart
     {
         get
         {
-            if (_tank == null)
-                _tank = GetComponent<ProceduralPart>();
-            return _tank;
+            if (_pPart == null)
+                _pPart = GetComponent<ProceduralPart>();
+            return _pPart;
         }
     }
-    private ProceduralPart _tank;
+    private ProceduralPart _pPart;
 
     public Mesh sidesMesh {
-        get { return tank.sidesMesh; } 
+        get { return pPart.sidesMesh; } 
     }
 
     public Mesh endsMesh
     {
-        get { return tank.endsMesh; }
+        get { return pPart.endsMesh; }
     }
     #endregion
 
     #region Shape details
 
-    public float tankVolume
+    public float volume
     {
-        get { return _tankVolume; }
+        get { return _volume; }
         protected set
         {
-            if (value != _tankVolume)
+            if (value != _volume)
             {
-                _tankVolume = value;
-                tankVolumeChanged = true;
+                _volume = value;
+                volumeChanged = true;
             }
         }
     }
-    private float _tankVolume;
-    private bool tankVolumeChanged = false;
-
-    public Vector2 tankTextureScale
-    {
-        get { return _tankTextureScale; }
-        protected set
-        {
-            if (value != _tankTextureScale)
-            {
-                _tankTextureScale = value;
-                tankTextureScaleChanged = true;
-            }
-        }
-    }
-    private Vector2 _tankTextureScale;
-    private bool tankTextureScaleChanged = false;
+    private float _volume;
+    private bool volumeChanged = false;
 
     #endregion
 
@@ -96,16 +84,10 @@ public abstract class ProceduralAbstractShape : PartModule
 
             UpdateShape(wasForce);
 
-            if (tankVolumeChanged || wasForce)
+            if (volumeChanged || wasForce)
             {
-                part.SendPartMessage("UpdateTankVolume", tankVolume);
-                tankVolumeChanged = false;
-            }
-
-            if (tankTextureScaleChanged || wasForce)
-            {
-                part.SendPartMessage("UpdateTankTextureScale", tankTextureScale);
-                tankTextureScaleChanged = false;
+                part.SendPartMessage("ChangeVolume", volume);
+                volumeChanged = false;
             }
         }
         catch (Exception ex)
@@ -125,8 +107,8 @@ public abstract class ProceduralAbstractShape : PartModule
     #region Attachments
 
     /// <summary>
-    /// Add object attached to the surface of this tank.
-    /// Base classes should proportionally move the location and orientation (rotation) as the tank stretches.
+    /// Add object attached to the surface of this pPart.
+    /// Base classes should proportionally move the location and orientation (rotation) as the pPart stretches.
     /// The return value will be passed back to removeTankAttachment when i's detached
     /// </summary>
     /// <param name="child">Transform offset follower for the attachment</param>
@@ -136,7 +118,7 @@ public abstract class ProceduralAbstractShape : PartModule
     public abstract object AddAttachment(TransformFollower attach, bool normalized = false);
 
     /// <summary>
-    /// Remove object attached to the surface of this tank.
+    /// Remove object attached to the surface of this pPart.
     /// </summary>
     /// <param name="data">Data returned from child method</param>
     /// <param name="normalize">If true, the transform positon follower will be relocated to a 'normalized' 

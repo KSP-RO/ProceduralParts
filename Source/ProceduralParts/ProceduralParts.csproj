@@ -57,6 +57,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DecouplerTweaker.cs" />
     <Compile Include="ObjectSerializer.cs" />
     <Compile Include="ProceduralShapeBezier.cs" />
     <Compile Include="ProceduralShapePill.cs" />

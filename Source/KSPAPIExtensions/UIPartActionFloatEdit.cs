@@ -317,15 +317,15 @@ namespace KSPAPIExtensions
             }
             if (!ParseFloat(out incrementLarge, node, "incrementLarge", UIControlName, null))
             {
-                incrementLarge = 1.0f;
+                incrementLarge = 0.0f;
             }
             if (!ParseFloat(out incrementSmall, node, "incrementSmall", UIControlName, null))
             {
-                incrementSmall = 0.1f;
+                incrementSmall = 0.0f;
             }
             if (!ParseFloat(out incrementSlide, node, "incrementSlide", UIControlName, null))
             {
-                incrementSlide = 1.0f;
+                incrementSlide = 0.0f;
             }
         }
 

@@ -9,12 +9,12 @@ public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
 {
 
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits="m"), 
-     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
+     UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
     public float diameter = 1.25f;
     private float oldDiameter;
 
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
-     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.00f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
+     UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
     public float length = 1f;
     private float oldLength;
 
@@ -23,17 +23,27 @@ public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
         if (!HighLogic.LoadedSceneIsEditor)
             return;
 
-        UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
-        lengthEdit.maxValue = tank.lengthMax;
-        lengthEdit.minValue = tank.lengthMin;
-        lengthEdit.incrementLarge = tank.lengthLargeStep;
-        lengthEdit.incrementSmall = tank.lengthSmallStep;
+        if (pPart.lengthMin == pPart.lengthMax)
+            Fields["length"].guiActiveEditor = false;
+        else
+        {
+            UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
+            lengthEdit.maxValue = pPart.lengthMax;
+            lengthEdit.minValue = pPart.lengthMin;
+            lengthEdit.incrementLarge = pPart.lengthLargeStep;
+            lengthEdit.incrementSmall = pPart.lengthSmallStep;
+        }
 
-        UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
-        diameterEdit.maxValue = tank.diameterMax;
-        diameterEdit.minValue = tank.diameterMin;
-        diameterEdit.incrementLarge = tank.diameterLargeStep;
-        diameterEdit.incrementSmall = tank.diameterSmallStep;
+        if (pPart.diameterMin == pPart.diameterMax)
+            Fields["diameter"].guiActiveEditor = false;
+        else
+        {
+            UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
+            diameterEdit.maxValue = pPart.diameterMax;
+            diameterEdit.minValue = pPart.diameterMin;
+            diameterEdit.incrementLarge = pPart.diameterLargeStep;
+            diameterEdit.incrementSmall = pPart.diameterSmallStep;
+        }
     }
 
 
@@ -42,22 +52,22 @@ public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
         if (!force && oldDiameter == diameter && oldLength == length)
             return;
 
-        tankVolume = diameter * diameter * 0.25f * Mathf.PI * length;
+        volume = diameter * diameter * 0.25f * Mathf.PI * length;
         
         if(HighLogic.LoadedSceneIsEditor)
         {
             // Maxmin the volume.
-            if (tankVolume > tank.volumeMax)
-                tankVolume = tank.volumeMax;
-            else if (tankVolume < tank.volumeMin)
-                tankVolume = tank.volumeMin;
+            if (volume > pPart.volumeMax)
+                volume = pPart.volumeMax;
+            else if (volume < pPart.volumeMin)
+                volume = pPart.volumeMin;
             else
                 goto nochange;
 
             if (oldDiameter != diameter)
-                diameter = Mathf.Sqrt(tankVolume / (0.25f * Mathf.PI * length));
+                diameter = Mathf.Sqrt(volume / (0.25f * Mathf.PI * length));
             else
-                length = tankVolume / (diameter * diameter * 0.25f * Mathf.PI);
+                length = volume / (diameter * diameter * 0.25f * Mathf.PI);
         }
         nochange:
 

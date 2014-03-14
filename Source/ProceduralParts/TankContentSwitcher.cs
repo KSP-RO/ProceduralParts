@@ -8,16 +8,16 @@ using KSPAPIExtensions;
 
 
 /// <summary>
-/// Module that allows switching the contents of a tank between different resources.
+/// Module that allows switching the contents of a pPart between different resources.
 /// The possible contents are set up in the config file, and the user may switch beween
 /// the different possiblities.
 /// 
 /// This is a bit of a light-weight version of RealFuels.
 /// 
-/// One can set this module up on any existing fuel tank (Maybe with module manager if you like) 
-/// if you set the tankVolume property in the config file.
+/// One can set this module up on any existing fuel pPart (Maybe with module manager if you like) 
+/// if you set the volume property in the config file.
 /// 
-/// The class also accepts the message UpdateTankVolume(float tankVolume) if attached to a dynamic resizing tank
+/// The class also accepts the message ChangeVolume(float volume) if attached to a dynamic resizing pPart
 /// such as ProceeduralTanks.
 /// </summary>
 public class TankContentSwitcher : PartModule
@@ -52,7 +52,7 @@ public class TankContentSwitcher : PartModule
     {
         if (HighLogic.LoadedSceneIsFlight)
         {
-            part.mass = dryMass;
+            //part.mass = dryMass;
             isEnabled = enabled = false;
             return;
         }
@@ -77,9 +77,9 @@ public class TankContentSwitcher : PartModule
     public float volMultiplier = 1.0f; // for MFS
 
     /// <summary>
-    /// Volume of tank in kilolitres. 
+    /// Volume of pPart in kilolitres. 
     /// </summary>
-    [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Volume", guiFormat = "F3", guiUnits = "kL")]
+    [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Volume", guiFormat = "F3", guiUnits = "kL")]
     public float tankVolume = 0.0f;
 
     [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Dry Mass", guiFormat = "F3", guiUnits = "t")]
@@ -91,7 +91,7 @@ public class TankContentSwitcher : PartModule
     /// <summary>
     /// Message sent from ProceduralAbstractShape when it updates.
     /// </summary>
-    public void UpdateTankVolume(float tankVolume)
+    public void ChangeVolume(float volume)
     {
         // Never update resources once flying
         if (HighLogic.LoadedSceneIsFlight)
@@ -99,14 +99,14 @@ public class TankContentSwitcher : PartModule
 
         if (!useVolume)
         {
-            Debug.LogError("Updating tank volume when this is not expected. Set useVolume = true in config file");
+            Debug.LogError("Updating pPart volume when this is not expected. Set useVolume = true in config file");
             return;
         }
 
-        if (tankVolume <= 0f)
-            throw new ArgumentOutOfRangeException("tankVolume");
+        if (volume <= 0f)
+            throw new ArgumentOutOfRangeException("volume");
 
-        this.tankVolume = tankVolume;
+        this.tankVolume = volume;
         UpdateMassAndResources(false);
     }
     
@@ -174,7 +174,7 @@ public class TankContentSwitcher : PartModule
 
     private void InitializeTankType()
     {
-        // Have to DIY to get the tank options deserialized
+        // Have to DIY to get the pPart options deserialized
         if (tankTypeOptionsSerialized != null)
             ObjectSerializer.Deserialize(tankTypeOptionsSerialized, out tankTypeOptions);
 
@@ -183,7 +183,7 @@ public class TankContentSwitcher : PartModule
 
         if (tankTypeOptions == null || tankTypeOptions.Count == 0)
         {
-            Debug.LogError("*TCS* No tank type options available");
+            Debug.LogError("*TCS* No pPart type options available");
             return;
         }
 
@@ -211,13 +211,13 @@ public class TankContentSwitcher : PartModule
         {
             if (oldTankType == null)
             {
-                Debug.LogWarning("*TCS* Initially selected tank type '" + tankType + "' does not exist, reverting to default");
+                Debug.LogWarning("*TCS* Initially selected pPart type '" + tankType + "' does not exist, reverting to default");
                 selectedTankType = tankTypeOptions[0];
                 tankType = selectedTankType.optionName;
             }
             else 
             {
-                Debug.LogWarning("*TCS* Selected tank type '" + tankType + "' does not exist, reverting to previous");
+                Debug.LogWarning("*TCS* Selected pPart type '" + tankType + "' does not exist, reverting to previous");
                 selectedTankType = oldTankType;
                 tankType = selectedTankType.optionName;
                 return;
@@ -285,7 +285,7 @@ public class TankContentSwitcher : PartModule
                 if (partRes.isTweakable && !UpdateWindow(window, partRes))
                     goto reinitialize;
             }
-            part.SendPartMessage("UpdateTankResources");
+            part.SendPartMessage("ResourcesChanged");
             return;
         }
 
@@ -298,7 +298,7 @@ public class TankContentSwitcher : PartModule
 
         // Build them afresh. This way we don't need to do all the messing around with reflection
         // The downside is the UIPartActionWindow gets maked dirty and rebuit, so you can't use 
-        // the sliders that affect tank contents properly cos they get recreated underneith you and the drag dies.
+        // the sliders that affect pPart contents properly cos they get recreated underneith you and the drag dies.
         foreach (TankResource res in selectedTankType.resources)
         {
             double amount = (double)Math.Round(tankVolume * volMultiplier * res.unitsPerKL + dryMass * res.unitsPerT, 2);
@@ -314,7 +314,7 @@ public class TankContentSwitcher : PartModule
         if (window != null)
             window.displayDirty = true;
 
-        part.SendPartMessage("UpdateTankResources");
+        part.SendPartMessage("ResourcesChanged");
     }
 
     #endregion
