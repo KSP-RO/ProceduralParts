@@ -3,7 +3,7 @@
 === 0.7.0 ===
 Support for bezier cones - cone shapes with smoothed sides
 Show correct images in VAB
-Tweakable decoupler
+Tweakable Stack Decoupler
 
 === 0.6.0 ===
 Added support for Pill sided tanks

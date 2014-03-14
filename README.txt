@@ -1,17 +1,19 @@
 
-ProceduralParts allows you to procedurally generate (currently) fuel tanks and SRBs in a range of sizes and shapes. The parts are fully tweakable with multiple options for customization.
+ProceduralParts allows you to procedurally generate (currently) fuel tanks, SRBs, Structural parts, and decouplers in a range of sizes and shapes. The parts are fully tweakable with multiple options for customization of the shape, surface texture, and other parameters.
 
 ====  Features  =====
 
 * Everything accessible by tweaking
-* Different parts available for different 'groups' of fuels (Liquid fuels, SRBs, Monoprop). 
-* New tank shapes are easy to develop and plug in, so cuboid / pill shaped / whatever else you want shaped will be able to be created.
+* A broad range of shapes including cylinders, truncated cones, filleted cylinders, bezier cones.
+* New part shapes are easy to develop and plug in, so cuboid / pill shaped / whatever else you want shaped will be able to be created.
 * Most stuff configurable in the config file, including resources and fill ratios, tech levels, available shapes
 * Diverse support for career mode - tank shapes, dimensions, and contents all limited by researched tech
-* a PartModule - TankContentSwitcher that can be applied to existing tanks (with say module manager) and allow their contents to be tweaked. Tweak any tank in the VAB into a Liquid fuel only or oxidizer tank.
-* SRBs, tweakable bells that are designed for surface or vacuum.
+* Multiple textures available for part surfaces. These are fully compatible with StretchySRB textures.
+
+* Tanks - to allow tech limiting different parts available for different 'groups' of fuels (Liquid fuels, SRBs, Monoprop). 
+* SRBs - tweakable bells that are designed for surface or vacuum, with variable ISP, and tweakable thrust (or burn time for real fuels)
 * Deprecation support for StretchySRB - you can continue to use stretchy SRBs for your existing ships, but hide all the tanks so they don't appear in the VAB
-* Multiple textures available for tank surfaces. These are fully compatible with StretchySRB textures.
+* A Module - TankContentSwitcher that can be applied to existing tanks (with say module manager) and allow their contents to be tweaked. Tweak any tank in the VAB into a Liquid fuel only or oxidizer tank.
 
 ==== Acknowlagements ====
 
@@ -25,6 +27,7 @@ Also featuring:
 
 * Models by Tiberion 
 * Further textures by Chestburster and Dante80.
+* Config code by jsimmonds
 
 
 ==== Installation ====
@@ -57,7 +60,6 @@ Note when using with Real Fuels: Stretchy SRB is ModularEngines enabled, so your
 ==== Plans for the future ====
 
 New shapes:
-- First priority is bezier sided tanks, which covers the remaining feature from StretchySRB not available
 - Add optional mounting pod for surface mounts to pod tank. 
 - Cuboid parts, with customizable side lengths
 - Extruded parts, such as hexagonal and octagonal pieces
