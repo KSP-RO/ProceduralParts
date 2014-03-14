@@ -15,7 +15,7 @@ namespace KSPAPIExtensions
         public UIProgressSlider slider;
 
         private int selectedIdx = -1;
-        private string selectedValue;
+        //private string selectedValue;
 
         public static UIPartActionChooseOption CreateTemplate()
         {
@@ -115,10 +115,19 @@ namespace KSPAPIExtensions
         {
             if (selectedIdx >= 0)
             {
-                selectedValue = fieldInfo.options[selectedIdx];
-                field.SetValue(selectedValue, field.host);
-                if (scene == UI_Scene.Editor)
-                    SetSymCounterpartValue(selectedValue);
+                if (field.FieldInfo.FieldType == typeof(int))
+                {
+                    field.SetValue(selectedIdx, field.host);
+                    if (scene == UI_Scene.Editor)
+                        SetSymCounterpartValue(selectedIdx);
+                }
+                else
+                {
+                    string selectedValue = fieldInfo.options[selectedIdx];
+                    field.SetValue(selectedValue, field.host);
+                    if (scene == UI_Scene.Editor)
+                        SetSymCounterpartValue(selectedValue);
+                }
             }
             UpdateControls();
         }
@@ -140,33 +149,44 @@ namespace KSPAPIExtensions
             {
                 fieldName.Text = field.guiName + ": " + fieldInfo.options[selectedIdx];
             }
-            slider.Value = (float)selectedIdx / (float)(fieldInfo.options.Length - 1);
+            slider.Value = (float)selectedIdx / (float)((fieldInfo.options ?? fieldInfo.display).Length - 1);
         }
 
-        private string GetFieldValue()
+        private int GetFieldValueInt()
         {
-            return field.GetValue<string>(field.host);
+            return field.GetValue<int>(field.host);
         }
+
 
         bool exceptionPrinted = false;
         public override void UpdateItem()
         {
             try
             {
-                string newSelectedValue = GetFieldValue();
-                if (newSelectedValue == selectedValue)
-                    return;
+                if (field.FieldInfo.FieldType == typeof(int))
+                {
+                    int newSelectedIdx = field.GetValue<int>(field.host);
+                    if (selectedIdx == newSelectedIdx)
+                        return;
 
-                selectedIdx = -1;
-                selectedValue = null;
-                if (fieldInfo.options != null)
+                    selectedIdx = newSelectedIdx;
+                    if (fieldInfo.options == null || selectedIdx < 0 || selectedIdx >= fieldInfo.options.Length)
+                        selectedIdx = -1;
+                }
+                else
+                {
+                    string newSelectedValue = field.GetValue<string>(field.host);
+                    if (selectedIdx >= 0 && newSelectedValue == fieldInfo.options[selectedIdx])
+                        return;
+
+                    selectedIdx = -1;
                     for (int i = 0; i < fieldInfo.options.Length; ++i)
                         if (newSelectedValue == fieldInfo.options[i])
                         {
                             selectedIdx = i;
-                            selectedValue = newSelectedValue;
                             break;
                         }
+                }
                 UpdateControls();
                 exceptionPrinted = false;
             }

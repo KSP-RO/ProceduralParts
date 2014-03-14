@@ -27,9 +27,9 @@ public class ProceduralSRB : PartModule
 
     public override void OnLoad(ConfigNode node)
     {
-        LoadBells(node);
         try
         {
+            LoadBells(node);
             if (part.Modules.Contains("ModuleEngineConfigs"))
                 ChangeThrust();
         }
@@ -40,6 +40,13 @@ public class ProceduralSRB : PartModule
         }
     }
 
+    public override string GetInfo()
+    {
+        InitializeBells();
+
+        return base.GetInfo();
+    }
+
     public override void OnSave(ConfigNode node)
     {
         // Force saved value for enabled to be true.
@@ -48,13 +55,18 @@ public class ProceduralSRB : PartModule
 
     public override void OnStart(PartModule.StartState state)
     {
-        InitializeBells();
+        try
+        {
+            InitializeBells();
 
-        if (HighLogic.LoadedSceneIsFlight)
-        {            
             // Need to update the thrust at least once, then disable
-            UpdateThrust();
-            isEnabled = enabled = false;
+            if (!HighLogic.LoadedSceneIsEditor)
+                isEnabled = enabled = false;
+        }
+        catch (Exception ex)
+        {
+            print("OnStart exception: " + ex);
+            throw ex;
         }
     }
 
@@ -88,6 +100,16 @@ public class ProceduralSRB : PartModule
         ChangeThrust();
     }
 
+    public void ChangeTextureScale(string name, Material material, Vector2 textureScale)
+    {
+        if (name != "bottom")
+            return;
+
+        // Can piggyback onto texture change messages to get the diameter of the bottom end.
+        maxBellChokeDiameter = textureScale.x;
+        UpdateMaxThrust();
+    }
+    
     #endregion
 
     #region Objects
@@ -117,6 +139,8 @@ public class ProceduralSRB : PartModule
     [SerializeField]
     private ConfigNode[] srbConfigsSerialized;
 
+    private float maxBellChokeDiameter = float.PositiveInfinity;
+
     [Serializable]
     public class SRBBellConfig : IConfigNode
     {
@@ -136,6 +160,12 @@ public class ProceduralSRB : PartModule
         public FloatCurve atmosphereCurve;
         [Persistent]
         public float gimbalRange;
+
+        [Persistent]
+        public float thrustScaleFactor = 256f;
+
+        [Persistent]
+        public float bellChokeDiameter = 0.5f;
 
         public void Load(ConfigNode node)
         {
@@ -184,13 +214,25 @@ public class ProceduralSRB : PartModule
             }
         }
 
-        ProceduralPart tank = GetComponent<ProceduralPart>();
+        BaseField field = Fields["selectedBellName"];
+        switch (srbConfigs.Count)
+        {
+            case 0:
+                Debug.LogError("*PT*  No SRB bells configured");
+                return;
+            case 1:
+                field.guiActiveEditor = false;
+                break;
+            default:
+                field.guiActiveEditor = true;
+                UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
+                range.options = srbConfigs.Keys.ToArray();
+                break;
+        }
 
-        // Attach the bell.
+        ProceduralPart pPart = GetComponent<ProceduralPart>();
+
         Transform srbBell = part.FindModelTransform(srbBellName);
-        srbBell.position = tank.transform.TransformPoint(0, -0.5f, 0);
-        tank.AddAttachment(srbBell, true);
-
         Transform thrustTransform = srbBell.Find(this.thrustTransform);
 
         foreach (SRBBellConfig conf in srbConfigs.Values)
@@ -224,10 +266,30 @@ public class ProceduralSRB : PartModule
 
         selectedBell = srbConfigs[selectedBellName];
 
+        // Set the bell active and do the bits and pieces.
+        selectedBell.model.gameObject.SetActive(true);
+        GetComponent<ModuleEngines>().atmosphereCurve = selectedBell.atmosphereCurve;
+        GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
+        srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", selectedBell.atmosphereCurve.Evaluate(1), selectedBell.atmosphereCurve.Evaluate(0));
+
+        // Break out at this stage during loading scene
+        if (HighLogic.LoadedScene == GameScenes.LOADING)
+        {
+            srbBell.position = pPart.transform.TransformPoint(0, -1f, 0);
+            return;
+        }
+
+        // Attach the bell.
+        srbBell.position = pPart.transform.TransformPoint(0, -0.5f, 0);
+        pPart.AddAttachment(srbBell, true);
+
+        // Call change thrust to initialize the bell scale.
+        ChangeThrust();
+
         // Move the bottom attach node into position.
+        bottomAttachNode = part.findAttachNode(bottomAttachNodeName);
         if (HighLogic.LoadedSceneIsEditor)
         {
-            bottomAttachNode = part.findAttachNode(bottomAttachNodeName);
             Vector3 delta = selectedBell.srbAttach.position - selectedBell.model.position;
             bottomAttachNode.originalPosition = bottomAttachNode.position += part.transform.InverseTransformDirection(delta);
             if (bottomAttachNode.attachedPart != null && bottomAttachNode.attachedPart.transform == part.transform.parent)
@@ -241,29 +303,7 @@ public class ProceduralSRB : PartModule
                 //Debug.LogWarning("Moving bottom attach " + delta);
             }
         }
-
-        // Set the bell active and do the bits and pieces.
-        selectedBell.model.gameObject.SetActive(true);
-        GetComponent<ModuleEngines>().atmosphereCurve = selectedBell.atmosphereCurve;
-        GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
-        srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", selectedBell.atmosphereCurve.Evaluate(1), selectedBell.atmosphereCurve.Evaluate(0));
-
-        BaseField field = Fields["selectedBellName"];
-        switch (srbConfigs.Count)
-        {
-            case 0:
-                Debug.LogError("*PT*  No SRB bells configured");
-                return;
-            case 1:
-                field.guiActiveEditor = false;
-                break;
-            default:
-                field.guiActiveEditor = true;
-                UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
-                range.options = srbConfigs.Keys.ToArray();
-                break;
-        }
-
+        
         // It makes no sense to have a thrust limiter for SRBs
         // Even though this is present in stock, I'm disabling it.
         BaseField thrustLimiter = GetComponent<ModuleEngines>().Fields["thrustPercentage"];
@@ -303,7 +343,8 @@ public class ProceduralSRB : PartModule
         GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
         srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", selectedBell.atmosphereCurve.Evaluate(1), selectedBell.atmosphereCurve.Evaluate(0));
 
-        ChangeThrust();
+        if(!UpdateMaxThrust())
+            ChangeThrust();
     }
 
     #endregion
@@ -338,41 +379,97 @@ public class ProceduralSRB : PartModule
     {
         if (oldThrust == thrust && burnTimeME == oldBurnTimeME)
             return;
+
+        Vector3 oldAttach = selectedBell.srbAttach.position;
         ChangeThrust();
+        UpdateBottomPosition(selectedBell.srbAttach.position - oldAttach);
     }
-    
+
+    private bool UpdateMaxThrust()
+    {
+        if(selectedBell == null)
+            return false;
+
+        float maxThrustSqrt = maxBellChokeDiameter * Mathf.Sqrt(selectedBell.thrustScaleFactor) / selectedBell.bellChokeDiameter;
+        float maxThrust = maxThrustSqrt * maxThrustSqrt;
+
+        Debug.LogWarning("Setting maxThrust=" + maxThrust);
+        if (!usingME)
+        {
+            ((UI_FloatEdit)Fields["thrust"].uiControlEditor).maxValue = maxThrust;
+            if (thrust > maxThrust)
+            {
+                thrust = maxThrust;
+                UpdateThrust();
+                return true;
+            }
+        }
+        else
+        {
+            PartResource solidFuel = part.Resources["SolidFuel"];
+            ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
+
+            float minISP, maxISP;
+            mE.atmosphereCurve.FindMinMaxValue(out minISP, out maxISP);
+            float maxBurnTime = (float)(maxISP * solidFuel.maxAmount * solidFuel.info.density * mE.g / maxThrust);
+
+            if (burnTimeME > maxBurnTime)
+            {
+                burnTimeME = maxBurnTime;
+                UpdateThrust();
+                return true;
+            }
+        }
+
+        return false;
+    }
     
     private void ChangeThrust()
     {
         ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
         PartResource solidFuel = part.Resources["SolidFuel"];
 
+        double solidFuelMassG;
+        if (solidFuel == null)
+            solidFuelMassG = 30.75;
+        else 
+            solidFuelMassG = solidFuel.maxAmount * solidFuel.info.density * mE.g;
+
         if (!usingME)
         {
-            float burnTime0 = burnTimeME = (float)(mE.atmosphereCurve.Evaluate(0) * solidFuel.maxAmount * solidFuel.info.density * mE.g / thrust);
-            float burnTime1 = (float)(mE.atmosphereCurve.Evaluate(1) * solidFuel.maxAmount * solidFuel.info.density * mE.g / thrust);
+            float burnTime0 = burnTimeME = (float)(selectedBell.atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
+            float burnTime1 = (float)(selectedBell.atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
 
-            mE.maxThrust = thrust;
             burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
 
             // The heat production is directly proportional to the thrust. This is what stock KSP uses.
-            heatProduction = mE.heatProduction = thrust * heatPerThrust;
+            heatProduction = thrust * heatPerThrust;
         }
         else
         {
-            float thrust0 = thrust = (float)(mE.atmosphereCurve.Evaluate(0) * solidFuel.maxAmount * solidFuel.info.density * mE.g / burnTimeME);
-            float thrust1 = (float)(mE.atmosphereCurve.Evaluate(1) * solidFuel.maxAmount * solidFuel.info.density * mE.g / burnTimeME);
+            float thrust0 = (float)(selectedBell.atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
+            float thrust1 = (float)(selectedBell.atmosphereCurve.Evaluate(1) * solidFuelMassG / burnTimeME);
 
-            mE.maxThrust = thrust0;
+            float minISP, maxISP;
+            selectedBell.atmosphereCurve.FindMinMaxValue(out minISP, out maxISP);
+            thrust = (float)(maxISP * solidFuelMassG / burnTimeME);
+
             thrustME = string.Format("{0:F1}s ({1:F1}s Vac)", thrust1, thrust0);
 
             // From original stretchySRBs.
-            heatProduction = mE.heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((burnTimeME + 20f), 0.75f)) * 0.5f);
+            heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((burnTimeME + 20f), 0.75f)) * 0.5f);
 
             var mEC = part.Modules["ModuleEngineConfigs"];
             Type engineType = mEC.GetType();
             engineType.GetMethod("ChangeThrust").Invoke(mEC, new object[] { thrust });
         }
+
+        mE.maxThrust = thrust;
+        mE.heatProduction = heatProduction;
+
+        // Rescale the bell.
+        float bellScale = Mathf.Sqrt(thrust) / Mathf.Sqrt(selectedBell.thrustScaleFactor);
+        selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
 
         oldThrust = thrust;
         oldBurnTimeME = burnTimeME;
@@ -426,7 +523,7 @@ public class ProceduralSRB : PartModule
 
     #region Heat 
 
-    public const float draperPoint = 525f;
+    internal const float draperPoint = 525f;
 
     private void UpdateHeat()
     {

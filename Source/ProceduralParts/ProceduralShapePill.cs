@@ -8,21 +8,23 @@ using KSPAPIExtensions;
 public class ProceduralShapePill
     : ProceduralAbstractSoRShape
 {
-
-    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
-     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.00f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
-    public float length = 1f;
-    private float oldLength;
-
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"), 
-     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
+     UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
     public float diameter = 1.25f;
     private float oldDiameter;
 
+    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
+     UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
+    public float length = 1f;
+    private float oldLength;
+
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fillet", guiFormat = "F3", guiUnits = "m"),
-     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.00f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
+     UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
     public float fillet = 1f;
     private float oldFillet;
+
+    [KSPField]
+    public bool useEndDiameter = false;
 
     private UI_FloatEdit filletEdit;
 
@@ -31,23 +33,41 @@ public class ProceduralShapePill
         if (!HighLogic.LoadedSceneIsEditor)
             return;
 
-        UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
-        lengthEdit.maxValue = tank.lengthMax;
-        lengthEdit.minValue = tank.lengthMin;
-        lengthEdit.incrementLarge = tank.lengthLargeStep;
-        lengthEdit.incrementSmall = tank.lengthSmallStep;
+        if (pPart.lengthMin == pPart.lengthMax)
+            Fields["length"].guiActiveEditor = false;
+        else
+        {
+            UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
+            lengthEdit.maxValue = pPart.lengthMax;
+            lengthEdit.minValue = pPart.lengthMin;
+            lengthEdit.incrementLarge = pPart.lengthLargeStep;
+            lengthEdit.incrementSmall = pPart.lengthSmallStep;
+        }
 
         UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
-        diameterEdit.maxValue = tank.diameterMax;
-        diameterEdit.minValue = tank.diameterMin;
-        diameterEdit.incrementLarge = tank.diameterLargeStep;
-        diameterEdit.incrementSmall = tank.diameterSmallStep;
+        if (pPart.diameterMin == pPart.diameterMax)
+            Fields["diameter"].guiActiveEditor = false;
+        else
+        {
+            diameterEdit.maxValue = pPart.diameterMax;
+            diameterEdit.minValue = useEndDiameter ? 0 : pPart.diameterMin;
+            diameterEdit.incrementLarge = pPart.diameterLargeStep;
+            diameterEdit.incrementSmall = pPart.diameterSmallStep;
+        }
 
-        filletEdit = (UI_FloatEdit)Fields["fillet"].uiControlEditor;
-        filletEdit.maxValue = Mathf.Min(length, diameter);
-        filletEdit.minValue = 0;
-        filletEdit.incrementLarge = tank.diameterLargeStep;
-        filletEdit.incrementSmall = tank.diameterSmallStep;
+        if (!pPart.allowCurveTweaking)
+        {
+            Fields["fillet"].guiActiveEditor = false;
+            diameterEdit.maxValue = pPart.diameterMax - fillet;
+        }
+        else
+        {
+            filletEdit = (UI_FloatEdit)Fields["fillet"].uiControlEditor;
+            filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? pPart.diameterMax : diameter);
+            filletEdit.minValue = 0;
+            filletEdit.incrementLarge = pPart.diameterLargeStep;
+            filletEdit.incrementSmall = pPart.diameterSmallStep;
+        }
     }
 
     // A few shortcuts to use in formulas.
@@ -62,7 +82,7 @@ public class ProceduralShapePill
 
         if(HighLogic.LoadedSceneIsFlight) 
         {
-            tankVolume = CalcVolume();
+            volume = CalcVolume();
         }
         else if(HighLogic.LoadedSceneIsEditor)
         {
@@ -80,19 +100,30 @@ public class ProceduralShapePill
                     // Again using alpha, solve the volume equation below equation for l
                     // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for l
                     // l = (-3 (pi-4) pi d f^2+pi (3 pi-10) f^3+24 v)/(6 pi d^2) 
-                    length = (-3f * (pi - 4f) * pi * diameter * pow(fillet, 2) + pi * (3f * pi - 10f) * pow(fillet, 3) + 24f * tankVolume) / (6f * pi * pow(diameter, 2));
+                    length = (-3f * (pi - 4f) * pi * diameter * pow(fillet, 2) + pi * (3f * pi - 10f) * pow(fillet, 3) + 24f * volume) / (6f * pi * pow(diameter, 2));
+                    length = Mathf.Round(length / pPart.lengthSmallStep) * pPart.lengthSmallStep;
 
                     // We could iterate here with the fillet and push it back up if it's been pushed down
                     // but it's altogether too much bother. User will just have to suck it up and not be
                     // so darn agressive with short lengths. I mean, seriously... :)
                 }
 
-                filletEdit.maxValue = Mathf.Min(length, diameter);
+                filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? pPart.diameterMax : diameter);
             }
             else if (diameter != oldDiameter)
             {
-                if (diameter < oldDiameter && fillet > diameter)
-                    fillet = diameter;
+                if (useEndDiameter)
+                {
+                    if (diameter + fillet < pPart.diameterMin)
+                        fillet = pPart.diameterMin - diameter;
+                    else if (diameter + fillet > pPart.diameterMax)
+                        fillet = pPart.diameterMax - diameter;
+                }
+                else 
+                {
+                    if (diameter < oldDiameter && fillet > diameter)
+                        fillet = diameter;
+                }
 
                 float volExcess = MaxMinVolume();
                 if (volExcess != 0)
@@ -104,19 +135,30 @@ public class ProceduralShapePill
                     // d = (-3 (pi-4) pi f^2 ± sqrt(3 pi) sqrt(3 (pi-4)^2 pi f^4+8 pi (3 pi-10) f^3 l+192 l v)) / (12 pi l)
 
                     float t1 = -3 * (pi - 4f) * pi * fillet * fillet;
-                    float t2 = sqrt(3f * pi) * sqrt(3f * pow(pi-4f, 2) * pi * pow(fillet, 4) +8f * pi * (3f * pi-10f) * pow(fillet, 3) * length + 192f * length * tankVolume);
+                    float t2 = sqrt(3f * pi) * sqrt(3f * pow(pi-4f, 2) * pi * pow(fillet, 4) +8f * pi * (3f * pi-10f) * pow(fillet, 3) * length + 192f * length * volume);
                     float de = (12f * pi * length);
 
                     // I'm pretty sure only the +ve value is required, but make the -ve possible too.
                     diameter = (t1 + t2) / de;
                     if(diameter < 0)
                         diameter = (t1 - t2) / de;
+
+                    diameter = Mathf.Round(diameter / pPart.diameterSmallStep) * pPart.diameterSmallStep;
                 }
 
-                filletEdit.maxValue = Mathf.Min(length, diameter);
+                filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? pPart.diameterMax : diameter);
             }
             else if (fillet != oldFillet)
             {
+                if (useEndDiameter)
+                {
+                    // Keep diameter + fillet within range.
+                    if (diameter + fillet < pPart.diameterMin)
+                        diameter = pPart.diameterMin - fillet;
+                    else if (diameter + fillet > pPart.diameterMax)
+                        diameter = pPart.diameterMax - fillet;
+                }
+
                 // Will do an iterative process for finding the value.
                 // The equation is far too complicated plug this into alpha and you'll see what I mean:
                 // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for f
@@ -124,19 +166,19 @@ public class ProceduralShapePill
                 float vol = CalcVolume();
                 float inc;
 
-                if (vol < tank.volumeMin)
+                if (vol < pPart.volumeMin)
                 {
-                    tankVolume = tank.volumeMin;
-                    inc = -0.001f;
+                    volume = pPart.volumeMin;
+                    inc = -pPart.diameterSmallStep;
                 }
-                else if (vol > tank.volumeMax)
+                else if (vol > pPart.volumeMax)
                 {
-                    tankVolume = tank.volumeMax;
-                    inc = 0.001f;
+                    volume = pPart.volumeMax;
+                    inc = pPart.diameterSmallStep;
                 }
                 else
                 {
-                    tankVolume = vol;
+                    volume = vol;
                     goto goldilocks;
                 }
 
@@ -149,8 +191,8 @@ public class ProceduralShapePill
                     fillet += inc;
                     vol = CalcVolume();
                 }
-                while (Mathf.Abs(vol - tankVolume) < Mathf.Abs(lVol - tankVolume));
-
+                while (Mathf.Abs(vol - volume) < Mathf.Abs(lVol - volume));
+                fillet = Mathf.Round(lFillet / pPart.diameterSmallStep) * pPart.diameterSmallStep;
             goldilocks: ;
             }
         }
@@ -159,14 +201,15 @@ public class ProceduralShapePill
 
         if (fillet == 0)
         {
-            // Reduces down to a cylinder tank.
+            // Reduces down to a cylinder pPart.
             points.AddLast(new ProfilePoint(diameter, -0.5f * length, 0f, new Vector2(1, 0)));
             points.AddLast(new ProfilePoint(diameter, 0.5f * length, 1f, new Vector2(1, 0)));
         }
         else 
         {
             float bodyLength = length - fillet;
-            float endDiameter = diameter - fillet;
+            float endDiameter = useEndDiameter ? diameter : (diameter - fillet);
+            float bodyDiameter = useEndDiameter ? (fillet + diameter) : diameter;
 
             float filletLength = Mathf.PI * fillet * 0.5f;
             float totLength = filletLength + bodyLength;
@@ -176,8 +219,8 @@ public class ProceduralShapePill
 
             // We need to be careful with the number of points so we don't blow the 255 point budget for colliders
             CirclePoints collCp = CirclePoints.ForDiameter(fillet, maxCircleError, 0, 12);
-            CirclePoints collEnds = CirclePoints.ForDiameter(endDiameter, maxCircleError * 4f, 0, 12);
-            CirclePoints collBody = CirclePoints.ForDiameter(diameter, maxCircleError * 4f, 0, 16);
+            CirclePoints collEnds = CirclePoints.ForDiameter(endDiameter, maxCircleError * 4f, 4, 12);
+            CirclePoints collBody = CirclePoints.ForDiameter(bodyDiameter, maxCircleError * 4f, 4, 16);
 
             points.AddLast(new ProfilePoint(endDiameter, -0.5f * length, 0f, new Vector2(0, -1), colliderCirc: collEnds));
 
@@ -186,9 +229,9 @@ public class ProceduralShapePill
             foreach (Vector3 xzu in collCp.PointsXZU(0.5f, 0.75f))
                 points.AddLast(new ProfilePoint(endDiameter + fillet * xzu.x, -0.5f * (bodyLength - fillet * xzu.y), s1 * Mathf.InverseLerp(0.5f, 0.75f, xzu[2]), (Vector2)xzu, inRender: false, colliderCirc: collEnds));
 
-            points.AddLast(new ProfilePoint(diameter, -0.5f * bodyLength, s1, new Vector2(1, 0), colliderCirc: collBody));
+            points.AddLast(new ProfilePoint(bodyDiameter, -0.5f * bodyLength, s1, new Vector2(1, 0), colliderCirc: collBody));
             if(fillet < length)
-                points.AddLast(new ProfilePoint(diameter, 0.5f * bodyLength, 1f - s1, new Vector2(1, 0), colliderCirc: collBody));
+                points.AddLast(new ProfilePoint(bodyDiameter, 0.5f * bodyLength, 1f - s1, new Vector2(1, 0), colliderCirc: collBody));
 
             foreach (Vector3 xzu in cp.PointsXZU(0.75f, 1))
                 points.AddLast(new ProfilePoint(endDiameter + fillet * xzu.x, 0.5f * (bodyLength + fillet * xzu.y), 1f - s1 * Mathf.InverseLerp(1f, 0.75f, xzu[2]), (Vector2)xzu, inCollider: false));
@@ -206,7 +249,7 @@ public class ProceduralShapePill
 
     private float CalcVolume()
     {
-        // To get formula for tank volume: l = length, d = diameter, f = fillet
+        // To get formula for pPart volume: l = length, d = diameter, f = fillet
         // body cylinder = pi * r^2 * h 
         //               = pi (d/2)^2 (l-f)
         // ends cylinder = pi * r^2 * h 
@@ -230,18 +273,18 @@ public class ProceduralShapePill
     private float MaxMinVolume()
     {
 
-        tankVolume = CalcVolume();
+        volume = CalcVolume();
 
-        if (tankVolume > tank.volumeMax)
+        if (volume > pPart.volumeMax)
         {
-            float excess = tankVolume - tank.volumeMax;
-            tankVolume = tank.volumeMax;
+            float excess = volume - pPart.volumeMax;
+            volume = pPart.volumeMax;
             return excess;
         }
-        if (tankVolume < tank.volumeMin)
+        if (volume < pPart.volumeMin)
         {
-            float excess = tankVolume - tank.volumeMin;
-            tankVolume = tank.volumeMin;
+            float excess = volume - pPart.volumeMin;
+            volume = pPart.volumeMin;
             return excess;
         }
         return 0;

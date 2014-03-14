@@ -1,5 +1,10 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 0.7.0 ===
+Support for bezier cones - cone shapes with smoothed sides
+Show correct images in VAB
+Tweakable decoupler
+
 === 0.6.0 ===
 Added support for Pill sided tanks
 Ability to use a lower resolution mesh for the collider (this was needed for pill tanks)

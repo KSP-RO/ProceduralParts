@@ -37,6 +37,16 @@ public class ProceduralPart : PartModule
         node.SetValue("isEnabled", "True");
     }
 
+    public override string GetInfo()
+    {
+        OnStart(PartModule.StartState.Editor);
+
+        // Need to rescale everything to make it look good in the icon, but reenable otherwise OnStart won't get called again.
+        isEnabled = enabled = true;
+
+        return base.GetInfo();
+    }
+
     [SerializeField]
     private bool symmetryClone = false;
 
@@ -47,10 +57,13 @@ public class ProceduralPart : PartModule
         {
             InitializeObjects();
 
-            InitializeTechLimits();
+            if (HighLogic.LoadedSceneIsEditor)
+                InitializeTechLimits();
+
             InitializeShapes();
 
-            InitializeNodes();
+            if (HighLogic.LoadedSceneIsEditor)
+                InitializeNodes();
 
             if (!HighLogic.LoadedSceneIsEditor)
             {
@@ -63,7 +76,8 @@ public class ProceduralPart : PartModule
                 isEnabled = enabled = false;
             }
 
-            symmetryClone = true;
+            if (HighLogic.LoadedSceneIsEditor)
+                symmetryClone = true;
         }
         catch (Exception ex)
         {
@@ -258,6 +272,12 @@ public class ProceduralPart : PartModule
     [KSPField]
     public float volumeMin = 0.01f;
 
+    /// <summary>
+    /// Set to false if user is not allowed to tweak the fillet / curve Id.
+    /// </summary>
+    [KSPField]
+    public bool allowCurveTweaking = true;
+
     [SerializeField]
     private byte[] techLimitsSerialized;
 
@@ -293,6 +313,7 @@ public class ProceduralPart : PartModule
         lengthMin = float.PositiveInfinity;
         volumeMax = 0;
         volumeMin = float.PositiveInfinity;
+        allowCurveTweaking = false;
 
         foreach (TechLimit limit in techLimits)
         {
@@ -311,6 +332,8 @@ public class ProceduralPart : PartModule
                 volumeMin = limit.volumeMin;
             if (limit.volumeMax > volumeMax)
                 volumeMax = limit.volumeMax;
+            if (limit.allowCurveTweaking)
+                allowCurveTweaking = true;
         }
 
         if (diameterMax == 0)
@@ -326,7 +349,7 @@ public class ProceduralPart : PartModule
         if (float.IsInfinity(volumeMin))
             volumeMin = 0.01f;
 
-        Debug.Log(string.Format("TechLimits applied: diameter=({0:G3}, {1:G3}) length=({2:G3}, {3:G3}) volume=({4:G3}, {5:G3})", diameterMin, diameterMax, lengthMin, lengthMax, volumeMin, volumeMax));
+        //Debug.Log(string.Format("TechLimits applied: diameter=({0:G3}, {1:G3}) length=({2:G3}, {3:G3}) volume=({4:G3}, {5:G3}) allowCurveTweaking={6}", diameterMin, diameterMax, lengthMin, lengthMax, volumeMin, volumeMax, allowCurveTweaking));
     }
 
     [Serializable]
@@ -346,6 +369,8 @@ public class ProceduralPart : PartModule
         public float volumeMax = float.NaN;
         [Persistent]
         public float volumeMin = float.NaN;
+        [Persistent]
+        public bool allowCurveTweaking = true;
 
         public void Load(ConfigNode node)
         {
@@ -526,11 +551,14 @@ public class ProceduralPart : PartModule
     }
 
     [SerializeField]
-    private Vector2 tankTextureScale = Vector2.one;
+    private Vector2 sideTextureScale = Vector2.one;
 
-    public void UpdateTankTextureScale(Vector2 tankTextureScale)
+    public void ChangeTextureScale(string name, Material material, Vector2 targetScale)
     {
-        this.tankTextureScale = tankTextureScale;
+        if (name != "sides")
+            return;
+
+        this.sideTextureScale = targetScale;
         oldTextureSet = null;
         UpdateTexture();
     }
@@ -576,19 +604,19 @@ public class ProceduralPart : PartModule
         Vector2 scaleUV = tex.scale;
         if (tex.autoScale)
         {
-            scaleUV.x = (float)Math.Round(scaleUV.x * tankTextureScale.x / 8f);
+            scaleUV.x = (float)Math.Round(scaleUV.x * sideTextureScale.x / 8f);
             if (scaleUV.x < 1)
                 scaleUV.x = 1;
             if (tex.autoWidthDivide)
             {
                 if (tex.autoHeightSteps > 0)
-                    scaleUV.y = (float)Math.Ceiling(scaleUV.y * tankTextureScale.y / scaleUV.x * (1f / tex.autoHeightSteps)) * tex.autoHeightSteps;
+                    scaleUV.y = (float)Math.Ceiling(scaleUV.y * sideTextureScale.y / scaleUV.x * (1f / tex.autoHeightSteps)) * tex.autoHeightSteps;
                 else
-                    scaleUV.y *= tankTextureScale.y / scaleUV.x;
+                    scaleUV.y *= sideTextureScale.y / scaleUV.x;
             }
             else
             {
-                scaleUV.y *= tankTextureScale.y;
+                scaleUV.y *= sideTextureScale.y;
             }
         }
 
@@ -900,8 +928,6 @@ public class ProceduralPart : PartModule
 
     public void RemoveAttachment(Transform child)
     {
-        string path = part.transform.PathToDecendant(child);
-
         LinkedListNode<ModelAttachment> node;
         for (node = attachments.First; node != null; node = node.Next)
             if (node.Value.child == child)
@@ -933,6 +959,8 @@ public class ProceduralPart : PartModule
         foreach (ProceduralAbstractShape compShape in GetComponents<ProceduralAbstractShape>())
         {
             if (!string.IsNullOrEmpty(compShape.techRequired) && ResearchAndDevelopment.GetTechnologyState(compShape.techRequired) != RDTech.State.Available)
+                goto disableShape;
+            if (!string.IsNullOrEmpty(compShape.techObsolete) && ResearchAndDevelopment.GetTechnologyState(compShape.techObsolete) == RDTech.State.Available)
                 goto disableShape;
 
             availableShapes.Add(compShape.displayName, compShape);

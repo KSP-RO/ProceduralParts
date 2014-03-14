@@ -10,10 +10,9 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
     #region config fields
 
-    public const int minCircleVertexes = 12;
-    public const float maxCircleError = 0.01f;
-
-    public const float maxDiameterChange = 0.05f;
+    internal const int minCircleVertexes = 12;
+    internal const float maxCircleError = 0.01f;
+    internal const float maxDiameterChange = 0.05f;
 
     [KSPField]
     public string topNodeName = "top";
@@ -64,7 +63,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         if (lastProfile == null)
             throw new InvalidOperationException("Can't child non-normalized attachments prior to the first update");
 
-        // All the code from here down assumes the tank is a convex shape, which is fair as it needs to be convex for 
+        // All the code from here down assumes the pPart is a convex shape, which is fair as it needs to be convex for 
         // partCollider purposes anyhow. If we allow concave shapes it will need some refinement.
         Vector3 position = attach.transform.localPosition;
 
@@ -233,7 +232,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                 (a.uv[0] - 0.5f) * top.dia * 0.5f,
                 top.y,
                 (a.uv[1] - 0.5f) * top.dia * 0.5f);
-            //Debug.LogWarning("Moving attachment:" + a + " to:" + pos);
+            //Debug.LogWarning("Moving attachment:" + a + " to:" + pos.ToString("F7") + " uv: " + a.uv.ToString("F5"));
             a.follower.transform.localPosition = pos;
             a.follower.Update();
         }
@@ -246,7 +245,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                 (a.uv[0] - 0.5f) * bot.dia * 0.5f,
                 bot.y,
                 (a.uv[1] - 0.5f) * bot.dia * 0.5f);
-            //Debug.LogWarning("Moving attachment:" + a + " to:" + pos);
+            //Debug.LogWarning("Moving attachment:" + a + " to:" + pos.ToString("F7") + " uv: " + a.uv.ToString("F5"));
             a.follower.transform.localPosition = pos;
             a.follower.Update();
         }
@@ -359,7 +358,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
     {
         public readonly float dia;
         public readonly float y;
-        public readonly float v;
+        public float v;
 
         public readonly bool inRender;
         public readonly bool inCollider;
@@ -460,6 +459,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         UncheckedMesh m = new UncheckedMesh(nVrt, nTri);
 
         float sumDiameters = 0;
+        //Debug.LogWarning("Display mesh vert=" + nVrt + " tris=" + nTri);
 
         bool odd = false;
         {
@@ -485,7 +485,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
                     // == -1/3 pi (y1-y2) (r1^2+r1*r2+r2^2)                                   Do the calculus
                     // == -1/3 pi (y1-y2) (d1^2/4+d1*d2/4+d2^2/4)                             r = d/2
                     // == -1/12 pi (y1-y2) (d1^2+d1*d2+d2^2)                                  Take out the factor
-                    //tankVolume += (Mathf.PI * (pt.y - prev.y) * (prev.dia * prev.dia + prev.dia * pt.dia + pt.dia * pt.dia)) / 12f;
+                    //volume += (Mathf.PI * (pt.y - prev.y) * (prev.dia * prev.dia + prev.dia * pt.dia + pt.dia * pt.dia)) / 12f;
 
                     float dy = (pt.y - prev.y);
                     float dr = (prev.dia - pt.dia) * 0.5f;
@@ -509,9 +509,8 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
         //print("ULength=" + tankULength + " VLength=" + tankVLength);
 
-        // set the properties.
-        //this.tankVolume = tankVolume;
-        this.tankTextureScale = new Vector2(tankULength, tankVLength);
+        // set the texture scale.
+        part.SendPartMessage("ChangeTextureScale", "sides", pPart.sidesMaterial, new Vector2(tankULength, tankVLength));
 
         m.WriteTo(sidesMesh);
 
@@ -559,11 +558,11 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
             m.WriteTo(colliderMesh);
 
-            tank.colliderMesh = colliderMesh;
+            pPart.colliderMesh = colliderMesh;
         }
         else
         {
-            tank.colliderMesh = sidesMesh;
+            pPart.colliderMesh = sidesMesh;
         }
     }
 
@@ -621,10 +620,14 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         AttachNode node = part.attachNodes.Find(n => n.id == nodeName);
         if (node == null)
             return;
-        node.size = Math.Min((int)(pt.dia / tank.diameterLargeStep), 3);
+        node.size = Math.Min((int)(pt.dia / pPart.diameterLargeStep), 3);
 
         // Breaking force and torque scales with the area of the surface (node size).
         node.breakingTorque = node.breakingForce = Mathf.Max(50 * node.size * node.size, 50);
+
+        // Send messages for the changing of the ends
+        // TODO: separate out the meshes for each end so we can use the scale for texturing.
+        part.SendPartMessage("ChangeTextureScale", nodeName, pPart.endsMaterial, new Vector2(pt.dia, pt.dia));
     }
 
     #endregion
