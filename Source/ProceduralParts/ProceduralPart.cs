@@ -955,7 +955,8 @@ public class ProceduralPart : PartModule
 
     private void InitializeShapes()
     {
-        List<string> shapeNames = new List<string>(); 
+        List<string> shapeNames = new List<string>();
+        availableShapes.Clear();
         foreach (ProceduralAbstractShape compShape in GetComponents<ProceduralAbstractShape>())
         {
             if (!string.IsNullOrEmpty(compShape.techRequired) && ResearchAndDevelopment.GetTechnologyState(compShape.techRequired) != RDTech.State.Available)
@@ -975,8 +976,7 @@ public class ProceduralPart : PartModule
             }
 
         disableShape:
-            if (compShape.enabled)
-                compShape.isEnabled = compShape.enabled = false;
+            compShape.isEnabled = compShape.enabled = false;
         }
 
         BaseField field = Fields["shapeName"];
