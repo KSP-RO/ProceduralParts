@@ -52,7 +52,6 @@ public class TankContentSwitcher : PartModule
     {
         if (HighLogic.LoadedSceneIsFlight)
         {
-            //part.mass = dryMass;
             isEnabled = enabled = false;
             return;
         }
@@ -82,8 +81,8 @@ public class TankContentSwitcher : PartModule
     [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Volume", guiFormat = "F3", guiUnits = "kL")]
     public float tankVolume = 0.0f;
 
-    [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Dry Mass", guiFormat = "F3", guiUnits = "t")]
-    public float dryMass = 0.0f;
+    [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Mass")]
+    public string massDisplay;
 
     [KSPField]
     public bool useVolume = false;
@@ -179,7 +178,7 @@ public class TankContentSwitcher : PartModule
             ObjectSerializer.Deserialize(tankTypeOptionsSerialized, out tankTypeOptions);
 
         Fields["tankVolume"].guiActiveEditor = useVolume;
-        Fields["dryMass"].guiActiveEditor = useVolume;
+        Fields["massDisplay"].guiActiveEditor = useVolume;
 
         if (tankTypeOptions == null || tankTypeOptions.Count == 0)
         {
@@ -225,15 +224,9 @@ public class TankContentSwitcher : PartModule
         }
 
         if (selectedTankType.isStructural)
-        {
-            Fields["dryMass"].guiName = "Mass";
             Fields["tankVolume"].guiActiveEditor = false;
-        }
         else
-        {
-            Fields["dryMass"].guiName = "Dry Mass";
             Fields["tankVolume"].guiActiveEditor = useVolume;
-        }
 
         UpdateMassAndResources(true);
     }
@@ -248,49 +241,72 @@ public class TankContentSwitcher : PartModule
         if (selectedTankType == null)
             return;
 
-        if (useVolume)
-            dryMass = part.mass = Mathf.Round(selectedTankType.dryDensity * tankVolume * volMultiplier * 1000f) / 1000f;
+        if(useVolume)
+            part.mass = Mathf.Round(selectedTankType.dryDensity * tankVolume * volMultiplier * 1000f) / 1000f;
 
         // Update the resources list.
         UIPartActionWindow window = FindWindow();
-        if (window == null)
-            goto reinitialize;
+        if (window == null || typeChanged || !UpdateResources(window))
+            RebuildResources(window);
 
-        if (!typeChanged) 
+        if (useVolume)
         {
-            // Hopefully we can just fiddle with the existing part resources.
-            if (part.Resources.Count != selectedTankType.resources.Count)
+            if (selectedTankType.isStructural)
+                massDisplay = part.mass.FormatFixedDigits(3);
+            else
             {
-                Debug.LogWarning("*TCS* Selected and existing resource counts differ");
-                goto reinitialize;
+                float totalMass = part.mass + part.GetResourceMass();
+                massDisplay = "Dry: " + part.mass.FormatFixedDigits(3) + "t / Wet: " + totalMass.FormatFixedDigits(3) + "t";
             }
+        }
+    }
 
-            for (int i = 0; i < part.Resources.Count; ++i)
-            {
-                PartResource partRes = part.Resources[i];
-                TankResource tankRes = selectedTankType.resources[i];
-
-                if (partRes.resourceName != tankRes.resourceName)
-                {
-                    Debug.LogWarning("*TCS* Selected and existing resource names differ");
-                    goto reinitialize;
-                }
-
-                double amount = (float)Math.Round(tankVolume * volMultiplier * tankRes.unitsPerKL + dryMass * tankRes.unitsPerT , 2);
-                double oldFillFraction = partRes.amount / partRes.maxAmount;
-
-                partRes.maxAmount = amount;
-                partRes.amount = double.IsNaN(oldFillFraction)?amount:Math.Round(amount * oldFillFraction, 2);
-
-                if (partRes.isTweakable && !UpdateWindow(window, partRes))
-                    goto reinitialize;
-            }
-            part.SendPartMessage("ResourcesChanged");
-            return;
+    private bool UpdateResources(UIPartActionWindow window)
+    {
+        // Hopefully we can just fiddle with the existing part resources.
+        // This saves having to make the window dirty, which breaks sliders.
+        if (part.Resources.Count != selectedTankType.resources.Count)
+        {
+            Debug.LogWarning("*TCS* Selected and existing resource counts differ");
+            return false;
         }
 
-        reinitialize:
-        
+        bool updated = false;
+
+        for (int i = 0; i < part.Resources.Count; ++i)
+        {
+            PartResource partRes = part.Resources[i];
+            TankResource tankRes = selectedTankType.resources[i];
+
+            if (partRes.resourceName != tankRes.resourceName)
+            {
+                Debug.LogWarning("*TCS* Selected and existing resource names differ");
+                return false;
+            }
+
+            double maxAmount = (float)Math.Round(tankVolume * volMultiplier * tankRes.unitsPerKL + part.mass * tankRes.unitsPerT, 2);
+
+            if (partRes.maxAmount == maxAmount)
+                continue;
+
+            double oldFillFraction = partRes.amount / partRes.maxAmount;
+
+            partRes.maxAmount = maxAmount;
+            partRes.amount = double.IsNaN(oldFillFraction) ? maxAmount : Math.Round(maxAmount * oldFillFraction, 2);
+
+            if (partRes.isTweakable && !UpdateWindow(window, partRes))
+                return false;
+
+            updated = true;
+        }
+        if(updated)
+            part.SendPartMessage("ResourcesChanged");
+
+        return true;
+    }
+
+    private void RebuildResources(UIPartActionWindow window)
+    {
         // Purge the old resources
         foreach (PartResource res in part.Resources)
             Destroy(res);
@@ -301,12 +317,12 @@ public class TankContentSwitcher : PartModule
         // the sliders that affect pPart contents properly cos they get recreated underneith you and the drag dies.
         foreach (TankResource res in selectedTankType.resources)
         {
-            double amount = (double)Math.Round(tankVolume * volMultiplier * res.unitsPerKL + dryMass * res.unitsPerT, 2);
+            double maxAmount = (double)Math.Round(tankVolume * volMultiplier * res.unitsPerKL + part.mass * res.unitsPerT, 2);
 
             ConfigNode node = new ConfigNode("RESOURCE");
             node.AddValue("name", res.resourceName);
-            node.AddValue("amount", amount);
-            node.AddValue("maxAmount", amount);
+            node.AddValue("maxAmount", maxAmount);
+            node.AddValue("amount", maxAmount);
             node.AddValue("isTweakable", res.isTweakable);
             part.AddResource(node);
         }
