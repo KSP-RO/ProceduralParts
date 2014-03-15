@@ -5,18 +5,51 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
+/// <summary>
+/// Module to allow tweaking of decouplers in the VAB.
+/// 
+/// This fairly flexible module allows tech dependent tweaking of the type and size of modules.
+/// There are options for it to target just one specific module, or all the modules on a part.
+/// </summary>
 public class DecouplerTweaker : PartModule
 {
 
+    /// <summary>
+    /// In career mode, if this tech is not available then the option to have separators is not present
+    /// </summary>
     [KSPField]
     public string separatorTechRequired;
 
+    /// <summary>
+    /// Maximum ejection force available. 
+    /// </summary>
     [KSPField]
     public float maxEjectionForce = float.PositiveInfinity;
 
+    /// <summary>
+    /// Target a specific decoupler module only, the one attached to this node. Leave unspecified by default.
+    /// </summary>
+    [KSPField]
+    public string explosiveNodeID;
+
+    /// <summary>
+    /// Allow targeting of all ModuleDecouple modules attached to a part, useful for symmetrical separators.
+    /// </summary>
+    [KSPField]
+    public bool multipleTargets = false;
+
+
+    /// <summary>
+    /// Density of the decoupler. This is for use with Procedural Parts. Listens for ChangeVolume message
+    /// </summary>
     [KSPField]
     public float density = 0.0f;
 
+    /// <summary>
+    /// Listen for a specific texture message, again for use with proceedural parts. If set, then listens for ChangeAttachNodeSize message.
+    /// </summary>
+    [KSPField]
+    public string textureMessageName;
 
     [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Style:"),
      UI_Toggle(disabledText = "Decoupler", enabledText = "Separator")]
@@ -36,55 +69,90 @@ public class DecouplerTweaker : PartModule
 
     public override void OnStart(PartModule.StartState state)
     {
+        FindDecoupler();
+
+        if (decouple == null)
+        {
+            Debug.LogError("Unable to find any decoupler modules");
+            isEnabled = enabled = false;
+            return;
+        }
+
         Fields["isOmniDecoupler"].guiActiveEditor =
             string.IsNullOrEmpty(separatorTechRequired) || ResearchAndDevelopment.GetTechnologyState(separatorTechRequired) == RDTech.State.Available;
 
-
-        decouple = (ModuleDecouple)part.Modules["ModuleDecouple"];
-        if(ejectionForce == 0)
+        if (ejectionForce == 0)
             ejectionForce = decouple.ejectionForce;
 
-        Update();
+        OnUpdate();
 
         isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
     }
 
-    public void Update()
+    private void FindDecoupler()
     {
-        decouple.ejectionForce = ejectionForce;
-        decouple.isOmniDecoupler = isOmniDecoupler;
+        if (explosiveNodeID != null)
+        {
+            for (int i = 0; i < part.Modules.Count; ++i)
+            {
+                PartModule module = part.Modules[i];
+                if (module is ModuleDecouple && (decouple = (ModuleDecouple)module).explosiveNodeID == explosiveNodeID)
+                    break;
+            }
+        }
+        else
+            decouple = part.Modules["ModuleDecouple"] as ModuleDecouple;
+    }
+
+    public override void OnUpdate()
+    {
+        if (!multipleTargets)
+        {
+            if (decouple == null)
+                FindDecoupler();
+            decouple.ejectionForce = ejectionForce;
+            decouple.isOmniDecoupler = isOmniDecoupler;
+        }
+        else 
+            foreach (PartModule m in part.Modules)
+                if (m is ModuleDecouple)
+                {
+                    ModuleDecouple decouple = (ModuleDecouple)m;
+                    decouple.ejectionForce = ejectionForce;
+                    decouple.isOmniDecoupler = isOmniDecoupler;
+                }
     }
 
     // Plugs into procedural parts.
-    public void ChangeTextureScale(string name, Material material, Vector2 textureScale)
+    // I may well change this message to something else in the fullness of time.
+    public void ChangeAttachNodeSize(string name, float area, int size)
     {
-        if (name != "bottom")
+        if (name != textureMessageName)
             return;
 
         UI_FloatEdit ejectionForceEdit = (UI_FloatEdit)Fields["ejectionForce"].uiControlEditor;
         float oldForceRatio = ejectionForce / ejectionForceEdit.maxValue;
 
-        // There's no real scaling law to the stock decouplers
-        float scale = textureScale.x;
+        const float area1 = 0.625f * 0.625f * Mathf.PI, force1 = 25;
+        const float area2 = 1.25f * 1.25f * Mathf.PI, force2 = 300;
+        const float area3 = 2.5f * 2.5f * Mathf.PI, force3 = 800;
+
+        // There's no real scaling law to the stock decouplers, will have maxima dependent on area so that it roughly fits
+        // the stock parts.
         float maxForce = float.PositiveInfinity;
-        if (scale <= 0.625f)
-            maxForce = 25;
+        if (area <= area1)
+            maxForce = 25; // 25 for small attach nodes
+        else if (area <= area2)
+            maxForce = Mathf.Lerp(force1, force2, Mathf.InverseLerp(area1, area2, area));
+        else if (area <= area3)
+            maxForce = Mathf.Lerp(force2, force3, Mathf.InverseLerp(area2, area3, area));
         else
-        {
-            float factor;
-            if (scale <= 1.25f)
-                factor = (scale - 0.625f) / 0.625f * (14f - 8f) + 8f;
-            else if (scale <= 2.5f)
-                factor = (scale - 1.25f) / 1.25f * (10f - 14f) + 14f;
-            else
-                factor = 10;
+            maxForce = area / area3 * force3;
 
-            maxForce = scale * factor;
-            maxForce *= maxForce;
-            maxForce = Mathf.Round(maxForce / 5f) * 5f;
-        }
+        maxForce = Mathf.Round(maxForce / 5f) * 5f;
+        maxForce = Mathf.Min(maxForce, this.maxEjectionForce);
 
-        ejectionForceEdit.maxValue = Math.Min(maxEjectionForce, maxForce);
+        ejectionForceEdit.maxValue = maxForce;
         ejectionForce = Mathf.Round(maxForce * oldForceRatio * 5f) / 5f;
     }
 
