@@ -222,7 +222,7 @@ public class ProceduralPart : PartModule
 
     #endregion
 
-    #region Maximum dimensions
+    #region Maximum dimensions and shape constraints
 
     /// <summary>
     /// Maximum radial diameter in meters
@@ -278,6 +278,25 @@ public class ProceduralPart : PartModule
     [KSPField]
     public bool allowCurveTweaking = true;
 
+    /// <summary>
+    /// If true, the bottom end can be smaller than the top end. Otherwise the bottom end is always bigger.
+    /// Be sure to set the config up so the bottom starts out big.
+    /// </summary>
+    [KSPField]
+    public bool allowBottomEndSmall = true;
+
+    /// <summary>
+    /// If true, ignore the minimum diameter for the small end of a conic shape and allow it to go down to zero.
+    /// </summary>
+    [KSPField]
+    public bool allowSmallEndToZero = true;
+
+    /// <summary>
+    /// If false, the small end of cone shapes is fixed in size and cannot be altered.
+    /// </summary>
+    [KSPField]
+    public bool allowSmallEndToChange = true;
+
     [SerializeField]
     private byte[] techLimitsSerialized;
 
@@ -307,13 +326,13 @@ public class ProceduralPart : PartModule
         List<TechLimit> techLimits;
         ObjectSerializer.Deserialize(techLimitsSerialized, out techLimits);
 
-        diameterMax = 0;
-        diameterMin = float.PositiveInfinity;
-        lengthMax = 0;
-        lengthMin = float.PositiveInfinity;
-        volumeMax = 0;
-        volumeMin = float.PositiveInfinity;
-        allowCurveTweaking = false;
+        float diameterMax = 0;
+        float diameterMin = float.PositiveInfinity;
+        float lengthMax = 0;
+        float lengthMin = float.PositiveInfinity;
+        float volumeMax = 0;
+        float volumeMin = float.PositiveInfinity;
+        bool allowCurveTweaking = false;
 
         foreach (TechLimit limit in techLimits)
         {
@@ -348,6 +367,15 @@ public class ProceduralPart : PartModule
             volumeMax = float.PositiveInfinity;
         if (float.IsInfinity(volumeMin))
             volumeMin = 0.01f;
+
+        this.diameterMax = Mathf.Min(this.diameterMax, diameterMax);
+        this.diameterMin = Mathf.Max(this.diameterMin, diameterMin);
+        this.lengthMax = Mathf.Min(this.lengthMax, lengthMax);
+        this.lengthMin = Mathf.Max(this.lengthMin, lengthMin);
+        this.volumeMax = Mathf.Min(this.volumeMax, volumeMax);
+        this.volumeMin = Mathf.Max(this.volumeMin, volumeMin);
+        this.allowCurveTweaking = this.allowCurveTweaking && allowCurveTweaking;
+
 
         //Debug.Log(string.Format("TechLimits applied: diameter=({0:G3}, {1:G3}) length=({2:G3}, {3:G3}) volume=({4:G3}, {5:G3}) allowCurveTweaking={6}", diameterMin, diameterMax, lengthMin, lengthMax, volumeMin, volumeMax, allowCurveTweaking));
     }
