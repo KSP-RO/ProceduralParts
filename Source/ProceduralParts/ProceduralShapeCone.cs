@@ -46,41 +46,73 @@ public class ProceduralShapeCone : ProceduralAbstractSoRShape
             Fields["topDiameter"].guiActiveEditor = false;
             Fields["bottomDiameter"].guiActiveEditor = false;
         }
-        else
+        else if(pPart.allowSmallEndToChange)
         {
             topDiameterEdit = (UI_FloatEdit)Fields["topDiameter"].uiControlEditor;
-            topDiameterEdit.maxValue = pPart.diameterMax;
             topDiameterEdit.incrementLarge = pPart.diameterLargeStep;
             topDiameterEdit.incrementSmall = pPart.diameterSmallStep;
+            topDiameterEdit.minValue = (!pPart.allowBottomEndSmall && pPart.allowSmallEndToZero) ? 0 : pPart.diameterMin;
+            topDiameterEdit.maxValue = pPart.diameterMax;
 
             bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
-            bottomDiameterEdit.maxValue = pPart.diameterMax;
             bottomDiameterEdit.incrementLarge = pPart.diameterLargeStep;
             bottomDiameterEdit.incrementSmall = pPart.diameterSmallStep;
+            bottomDiameterEdit.minValue = pPart.diameterMin;
+            bottomDiameterEdit.maxValue = pPart.diameterMax;
 
-            UpdateMinDiameters();
+            UpdateDiameterLimits();
+        }
+        else if (topDiameter <= bottomDiameter)
+        {
+            Fields["topDiameter"].guiActiveEditor = false;
+
+            Fields["bottomDiameter"].guiName = "Diameter";
+            UI_FloatEdit bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
+            bottomDiameterEdit.incrementLarge = pPart.diameterLargeStep;
+            bottomDiameterEdit.incrementSmall = pPart.diameterSmallStep;
+            bottomDiameterEdit.minValue = pPart.diameterMin;
+            bottomDiameterEdit.maxValue = pPart.diameterMax;
+        }
+        else
+        {
+            Fields["bottomDiameter"].guiActiveEditor = false;
+
+            Fields["topDiameter"].guiName = "Diameter";
+            UI_FloatEdit topDiameterEdit = (UI_FloatEdit)Fields["topDiameter"].uiControlEditor;
+            topDiameterEdit.incrementLarge = pPart.diameterLargeStep;
+            topDiameterEdit.incrementSmall = pPart.diameterSmallStep;
+            topDiameterEdit.minValue = pPart.diameterMin;
+            topDiameterEdit.maxValue = pPart.diameterMax;
         }
     }
 
-    private void UpdateMinDiameters()
+    private void UpdateDiameterLimits()
     {
         if (topDiameterEdit == null)
             return;
 
-        if (bottomDiameter == topDiameter)
+        if (!pPart.allowBottomEndSmall)
         {
-            topDiameterEdit.minValue = 0;
-            bottomDiameterEdit.minValue = 0;
+            topDiameterEdit.maxValue = bottomDiameter;
+            topDiameter = Mathf.Min(topDiameter, bottomDiameter);
         }
-        if (topDiameter < bottomDiameter)
+        else if (pPart.allowSmallEndToZero)
         {
-            topDiameterEdit.minValue = 0;
-            bottomDiameterEdit.minValue = pPart.diameterMin;
-        }
-        else
-        {
-            topDiameterEdit.minValue = pPart.diameterMin;
-            bottomDiameterEdit.minValue = 0;
+            if (topDiameter < bottomDiameter)
+            {
+                topDiameterEdit.minValue = 0;
+                bottomDiameterEdit.minValue = pPart.diameterMin;
+            }
+            else if (bottomDiameter == topDiameter)
+            {
+                topDiameterEdit.minValue = 0;
+                bottomDiameterEdit.minValue = 0;
+            }
+            else
+            {
+                topDiameterEdit.minValue = pPart.diameterMin;
+                bottomDiameterEdit.minValue = 0;
+            }
         }
     }
 
@@ -125,10 +157,9 @@ public class ProceduralShapeCone : ProceduralAbstractSoRShape
                 float det = Mathf.Sqrt(b * b - 4 * a * c);
                 bottomDiameter = (det - b) / (2f * a);
             }
-
-            UpdateMinDiameters();
         }
         nochange:
+        UpdateDiameterLimits();
 
         // Perpendicular.
         Vector2 norm = new Vector2(length, (bottomDiameter-topDiameter)/2f);
