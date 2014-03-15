@@ -443,7 +443,7 @@ public class ProceduralShapeBezier : ProceduralAbstractSoRShape
         Vector2 Btdt = Bdt(t);
 
         // normalized perpendicular to tangent (derivative)
-        Vector2 norm = new Vector2(Btdt.y, -Btdt.x).normalized;
+        Vector2 norm = new Vector2(Btdt.y, -Btdt.x/2f).normalized;
 
         // Count the number of triangles
         CirclePoints colliderCirc = CirclePoints.ForDiameter(Bt.x, maxCircleError * 4f, 4, 16);
