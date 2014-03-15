@@ -270,6 +270,17 @@ namespace KSPAPIExtensions
                     return false;
             return true;
         }
+
+        public static string FormatFixedDigits(this float value, int digits)
+        {
+            int max = 10;
+            while (value >= max && digits > 0)
+            {
+                max *= 10;
+                --digits;
+            }
+            return value.ToString("F" + digits);
+        }
     }
 
     /// <summary>
