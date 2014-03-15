@@ -217,13 +217,9 @@ public class TransformFollower : MonoBehaviour
             }
             else
             {
-                Vector3 oldWorldOffset = transform.TransformDirection(offset.Value);
-                Vector3 newWorldOffset = rotate * oldWorldOffset;
-
+                transform.Translate(offset.Value);
                 transform.rotation = rotate * transform.rotation;
-
-                offset = transform.InverseTransformDirection(newWorldOffset);
-                transform.Translate(oldWorldOffset - newWorldOffset, Space.World);
+                transform.Translate(-offset.Value);
             }
         }
 

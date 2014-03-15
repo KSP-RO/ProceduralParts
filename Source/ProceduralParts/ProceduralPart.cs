@@ -657,20 +657,18 @@ public class ProceduralPart : PartModule
 
         public override void Translate(Vector3 translation)
         {
-            translation = part.transform.InverseTransformDirection(translation);
-            node.originalPosition = node.position += translation;
-            //Debug.LogWarning("Transforming node:" + node.id + " translation=" + translation);
+            node.originalPosition = node.position += part.transform.InverseTransformPoint(translation + part.transform.position);
+
+            //Debug.LogWarning("Transforming node:" + node.id + " translation=" + translation + " new position=" + node.position.ToString("F3") + " orientation=" + node.orientation.ToString("F3"));
         }
 
         public override void Rotate(Quaternion rotate)
         {
-            Vector3 oldWorldOffset = part.transform.TransformDirection(node.position);
-            Vector3 newWorldOffset = rotate * oldWorldOffset;
-            node.originalPosition = node.position = part.transform.InverseTransformDirection(newWorldOffset);
-
-            Vector3 oldOrientationWorld = part.transform.TransformDirection(node.orientation);
+            Vector3 oldOrientationWorld = part.transform.TransformPoint(node.orientation) - part.transform.position;
             Vector3 newOrientationWorld = rotate * oldOrientationWorld;
-            node.originalOrientation = node.orientation = part.transform.InverseTransformDirection(newOrientationWorld);
+            node.originalOrientation = node.orientation = part.transform.InverseTransformPoint(newOrientationWorld + part.transform.position).normalized;
+
+            //Debug.LogWarning("Transforming node:" + node.id + " rotation=" + rotate.ToStringAngleAxis() + " new position=" + node.position.ToString("F3") + " orientation=" + node.orientation.ToString("F3"));
         }
     }
 
@@ -696,14 +694,7 @@ public class ProceduralPart : PartModule
 
     private void InitializeNode(AttachNode node)
     {
-        if (symmetryClone && false)
-        {
-            // for some reason KSP resets the node positions after deserializing, but *after* start is called. 
-            // Will undo this issue.
-            node.originalPosition = node.position;
-            node.originalOrientation = node.orientation;
-        }
-        Vector3 position = transform.position + transform.TransformDirection(node.position);
+        Vector3 position = transform.TransformPoint(node.position);
 
         TransformFollower follower = TransformFollower.createFollower(partModel, position, new NodeTransformable(part, node));
 
@@ -753,25 +744,24 @@ public class ProceduralPart : PartModule
 
         public override void Translate(Vector3 trans)
         {
-            int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
-            root.transform.Translate(trans / siblings, Space.World);
-            // we need to delta this childAttachment away so that when the translation from the parent reaches here it ends in the right spot
+            if (childToParent.nodeType != AttachNode.NodeType.Surface)
+            {
+                // For stack nodes, push the parent up instead of moving the part down.
+                int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
+                root.transform.Translate(trans / siblings, Space.World);
+            }
+            // Push the part down, we need to delta this childAttachment away so that when the translation from the parent reaches here it ends in the right spot
             part.transform.Translate(-trans, Space.World);
         }
 
         public override void Rotate(Quaternion rotate)
         {
-            // Apply the inverse rotation to the part itself
+            // Apply the inverse rotation to the part itself. Don't involve the parent.
             rotate = rotate.Inverse();
 
-            Vector3 oldWorldOffset = part.transform.TransformDirection(childToParent.position);
-            Vector3 newWorldOffset = rotate * oldWorldOffset;
-
+            part.transform.Translate(childToParent.position);
             part.transform.rotation = rotate * part.transform.rotation;
-
-            childToParent.position = part.transform.InverseTransformDirection(newWorldOffset);
-            part.transform.Translate(oldWorldOffset - newWorldOffset, Space.World);
-
+            part.transform.Translate(-childToParent.position);
         }
     }
 
@@ -812,7 +802,7 @@ public class ProceduralPart : PartModule
                     return;
                 }
 
-                Vector3 position = transform.position + transform.TransformDirection(childToParent.position);
+                Vector3 position = transform.TransformPoint(childToParent.position);
                 Part root = EditorLogic.SortedShipList[0];
 
                 //Debug.LogWarning("Attaching new parent: " + parent + " to " + childToParent.id + " position=" + childToParent.position.ToString("G3"));

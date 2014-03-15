@@ -163,7 +163,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
 
             // 
             Vector3 normal;
-            Quaternion rot = SideAttachOrientation(pv.norm, pt.norm, t, theta, out normal);
+            Quaternion rot = SideAttachOrientation(pv, pt, theta, out normal);
             ret.follower.SetLocalRotationReference(rot);
 
             AddSideAttachment(ret);
@@ -288,7 +288,7 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
             a.follower.transform.localPosition = pos;
 
             Vector3 normal;
-            Quaternion rot = SideAttachOrientation(pv.norm, pt.norm, t, theta, out normal);
+            Quaternion rot = SideAttachOrientation(pv, pt, theta, out normal);
 
             //Debug.LogWarning("Moving to orientation: normal: " + normal.ToString("F3") + " theta:" + (theta * 180f / Mathf.PI) + rot.ToStringAngleAxis());
 
@@ -297,9 +297,9 @@ public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
         }
     }
 
-    private static Quaternion SideAttachOrientation(Vector3 pvNorm, Vector3 ptNorm, float t, float theta, out Vector3 normal)
+    private static Quaternion SideAttachOrientation(ProfilePoint pv, ProfilePoint pt, float theta, out Vector3 normal)
     {
-        normal = Quaternion.AngleAxis(theta*180/Mathf.PI, Vector3.up) * Vector3.Slerp(pvNorm, ptNorm, t);
+        normal = Quaternion.AngleAxis(theta * 180 / Mathf.PI, Vector3.up) * new Vector2(pt.y - pv.y, -(pt.dia - pv.dia) / 2f);
         return Quaternion.FromToRotation(Vector3.up, normal);
     }
 
