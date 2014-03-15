@@ -274,12 +274,9 @@ public class ProceduralSRB : PartModule
 
         // Break out at this stage during loading scene
         if (HighLogic.LoadedScene == GameScenes.LOADING)
-        {
-            srbBell.position = pPart.transform.TransformPoint(0, -1f, 0);
             return;
-        }
 
-        // Attach the bell.
+        // Attach the bell. In the config file this isn't in normalized position, move it into normalized position first.
         srbBell.position = pPart.transform.TransformPoint(0, -0.5f, 0);
         pPart.AddAttachment(srbBell, true);
 
