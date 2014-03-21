@@ -5,25 +5,31 @@ using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 
-internal static class ObjectSerializer {
+namespace ProceduralParts
+{
 
-    internal static byte[] Serialize<T>(T obj)
+    internal static class ObjectSerializer
     {
-        MemoryStream stream = new MemoryStream();
-        using (stream)
+
+        internal static byte[] Serialize<T>(T obj)
         {
-            BinaryFormatter fmt = new BinaryFormatter();
-            fmt.Serialize(stream, obj);
+            MemoryStream stream = new MemoryStream();
+            using (stream)
+            {
+                BinaryFormatter fmt = new BinaryFormatter();
+                fmt.Serialize(stream, obj);
+            }
+            return stream.ToArray();
         }
-        return stream.ToArray();
+
+        internal static void Deserialize<T>(byte[] data, out T value)
+        {
+            using (MemoryStream stream = new MemoryStream(data))
+            {
+                BinaryFormatter fmt = new BinaryFormatter();
+                value = (T)fmt.Deserialize(stream);
+            }
+        }
     }
 
-    internal static void Deserialize<T>(byte[] data, out T value)
-    {
-        using (MemoryStream stream = new MemoryStream(data))
-        {
-            BinaryFormatter fmt = new BinaryFormatter();
-            value = (T)fmt.Deserialize(stream);
-        }
-    }
 }

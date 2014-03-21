@@ -6,6 +6,8 @@ using System.Reflection;
 using UnityEngine;
 using KSPAPIExtensions;
 
+namespace ProceduralParts
+{
 
 /// <summary>
 /// Module that allows switching the contents of a pPart between different resources.
@@ -52,6 +54,8 @@ public class TankContentSwitcher : PartModule
     {
         if (HighLogic.LoadedSceneIsFlight)
         {
+            if(useVolume)
+                part.mass = mass;
             isEnabled = enabled = false;
             return;
         }
@@ -72,9 +76,6 @@ public class TankContentSwitcher : PartModule
 
     #region Tank Volume
 
-    [KSPField]
-    public float volMultiplier = 1.0f; // for MFS
-
     /// <summary>
     /// Volume of pPart in kilolitres. 
     /// </summary>
@@ -84,13 +85,17 @@ public class TankContentSwitcher : PartModule
     [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Mass")]
     public string massDisplay;
 
+    [KSPField(isPersistant=true)]
+    public float mass;
+
     [KSPField]
     public bool useVolume = false;
 
     /// <summary>
     /// Message sent from ProceduralAbstractShape when it updates.
     /// </summary>
-    public void ChangeVolume(float volume)
+    [PartMessageListener]
+    private void ChangeVolume(float volume)
     {
         // Never update resources once flying
         if (HighLogic.LoadedSceneIsFlight)
@@ -242,17 +247,17 @@ public class TankContentSwitcher : PartModule
             return;
 
         if(useVolume)
-            part.mass = Mathf.Round(selectedTankType.dryDensity * tankVolume * volMultiplier * 1000f) / 1000f;
+            part.mass = mass = Mathf.Round(selectedTankType.dryDensity * tankVolume * 1000f) / 1000f;
 
         // Update the resources list.
-        UIPartActionWindow window = FindWindow();
+        UIPartActionWindow window = part.FindActionWindow();
         if (window == null || typeChanged || !UpdateResources(window))
             RebuildResources(window);
 
         if (useVolume)
         {
             if (selectedTankType.isStructural)
-                massDisplay = part.mass.FormatFixedDigits(3);
+                massDisplay = part.mass.FormatFixedDigits(3) + "t";
             else
             {
                 float totalMass = part.mass + part.GetResourceMass();
@@ -284,7 +289,7 @@ public class TankContentSwitcher : PartModule
                 return false;
             }
 
-            double maxAmount = (float)Math.Round(tankVolume * volMultiplier * tankRes.unitsPerKL + part.mass * tankRes.unitsPerT, 2);
+            double maxAmount = (float)Math.Round(tankVolume * tankRes.unitsPerKL + part.mass * tankRes.unitsPerT, 2);
 
             if (partRes.maxAmount == maxAmount)
                 continue;
@@ -317,7 +322,7 @@ public class TankContentSwitcher : PartModule
         // the sliders that affect pPart contents properly cos they get recreated underneith you and the drag dies.
         foreach (TankResource res in selectedTankType.resources)
         {
-            double maxAmount = (double)Math.Round(tankVolume * volMultiplier * res.unitsPerKL + part.mass * res.unitsPerT, 2);
+            double maxAmount = (double)Math.Round(tankVolume * res.unitsPerKL + part.mass * res.unitsPerT, 2);
 
             ConfigNode node = new ConfigNode("RESOURCE");
             node.AddValue("name", res.resourceName);
@@ -336,36 +341,6 @@ public class TankContentSwitcher : PartModule
     #endregion
 
     #region Nasty Reflection Code
-
-    private FieldInfo windowListField;
-    private UIPartActionWindow FindWindow()
-    {
-        // We need to do quite a bit of piss-farting about with reflection to 
-        // dig the thing out.
-        UIPartActionController controller = UIPartActionController.Instance;
-
-        if(windowListField == null) 
-        {
-            Type cntrType = typeof(UIPartActionController);
-            foreach (FieldInfo info in cntrType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic))
-            {
-                if (info.FieldType == typeof(List<UIPartActionWindow>))
-                {
-                    windowListField = info;
-                    goto foundField;
-                }
-            }
-            Debug.LogWarning("*TCS* Unable to find UIPartActionWindow list");
-            return null;
-        }
-    foundField:
-
-        foreach (UIPartActionWindow window in (List<UIPartActionWindow>)windowListField.GetValue(controller))
-            if (window.part == part)
-                return window;
-
-        return null;
-    }
 
     private FieldInfo actionItemListField;
     private bool UpdateWindow(UIPartActionWindow window, PartResource res)
@@ -412,4 +387,150 @@ public class TankContentSwitcher : PartModule
 
 
     #endregion
+}
+
+
+public class TankContentSwitcherRealFuels : PartModule
+{
+
+#if false
+    [KSPField(guiName = "Tank Type", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]
+    public string type;
+    private string oldType;
+
+    [KSPField]
+    public string[] typesAvailable;
+#endif
+
+    [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Mass")]
+    public string massDisplay;
+
+    [KSPField(isPersistant = false, guiActiveEditor = true, guiActive = false, guiName = "Real Fuels"),
+     UI_Toggle(enabledText="GUI", disabledText="GUI")]
+    public bool showRFGUI = false;
+
+    public override void OnSave(ConfigNode node)
+    {
+        // Force saved value for enabled to be true.
+        node.SetValue("isEnabled", "True");
+    }
+
+    private object moduleFuelTanks;
+    private MethodInfo fuelManagerGUIMethod;
+
+    public override void OnStart(PartModule.StartState state)
+    {
+        if (!part.Modules.Contains("ModuleFuelTanks")
+            || HighLogic.LoadedSceneIsFlight)
+        {
+            isEnabled = enabled = false;
+            return;
+        }
+
+        moduleFuelTanks = part.Modules["ModuleFuelTanks"];
+        fuelManagerGUIMethod = moduleFuelTanks.GetType().GetMethod("fuelManagerGUI", BindingFlags.Public | BindingFlags.Instance);
+
+        GameEvents.onPartActionUIDismiss.Add(p => { if (p == part) showRFGUI = false; });
+
+#if false
+        BaseField typeField = Fields["type"];
+        if (typesAvailable != null && typesAvailable.Length > 0)
+        {
+            UI_ChooseOption typeEditor = (UI_ChooseOption)typeField.uiControlEditor;
+            typeEditor.options = typesAvailable;
+
+            if (type == null || !typesAvailable.Contains(type))
+                type = typesAvailable[0];
+        }
+        else
+        {
+            typeField.guiActiveEditor = false;
+        }
+        UpdateTankType();
+#endif
+
+        isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
+    }
+
+    public void Update()
+    {
+        if (!HighLogic.LoadedSceneIsEditor)
+            return;
+
+        Fields["showRFGUI"].guiActiveEditor = EditorLogic.fetch.editorScreen == EditorLogic.EditorScreen.Parts;
+
+        UpdateTankType();
+    }
+
+    public void OnGUI()
+    {
+        EditorLogic editor = EditorLogic.fetch;
+        if (!HighLogic.LoadedSceneIsEditor || !showRFGUI || !editor || editor.editorScreen != EditorLogic.EditorScreen.Parts)
+        {
+            return;
+        }
+
+        //Rect screenRect = new Rect(0, 365, 430, (Screen.height - 365));
+        Rect screenRect = new Rect((Screen.width-438), 365, 438, (Screen.height - 365));
+        //Color reset = GUI.backgroundColor;
+        //GUI.backgroundColor = Color.clear;
+        GUILayout.Window(part.name.GetHashCode(), screenRect, windowID => fuelManagerGUIMethod.Invoke(moduleFuelTanks, new object[] { windowID }), "Fuel Tanks for " + part.partInfo.title);
+        //GUI.backgroundColor = reset;
+    }
+
+    /// <summary>
+    /// Message sent from ProceduralAbstractShape when it updates.
+    /// </summary>
+    [PartMessageListener]
+    private void ChangeVolume(float volume)
+    {
+        // Never update resources once flying
+        if (HighLogic.LoadedSceneIsFlight)
+            return;
+
+        UpdateMassDisplay();
+    }
+
+    [KSPEvent (guiActive=false, active = true)]
+    public void OnMassModified(BaseEventData data)
+    {
+        Debug.LogWarning("OnMassModified()");
+
+        UpdateMassDisplay();
+    }
+
+    [KSPEvent(guiActive=false, active=true)]
+    public void OnResourcesModified(BaseEventData data)
+    {
+        Debug.LogWarning("OnResourcesModified()");
+
+        UIPartActionWindow window = part.FindActionWindow();
+        if (window != null)
+            window.displayDirty = true;
+    }
+
+    private void UpdateTankType()
+    {
+#if false
+        if (type == null || oldType == type)
+            return;
+
+        //part.SendPartMessage(PartMessageScope.Default | PartMessageScope.IgnoreAttribute, "SwitchTankType", type);
+        //UpdateMassDisplay();
+
+        oldType = type;
+#endif
+    }
+
+    private void UpdateMassDisplay()
+    {
+        if (part.Resources.Count == 0)
+            massDisplay = part.mass.FormatFixedDigits(3) + "t";
+        else
+        {
+            float totalMass = part.mass + part.GetResourceMass();
+            massDisplay = "Dry: " + part.mass.FormatFixedDigits(3) + "t / Wet: " + totalMass.FormatFixedDigits(3) + "t";
+        }
+    }
+}
 }

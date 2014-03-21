@@ -24,15 +24,13 @@ namespace KSPAPIExtensions
             if (UIPartActionController.Instance.fieldPrefabs.Find(item => item.GetType() == typeof(UIPartActionFloatEdit)) != null)
                 return;
 
-            print("Registering template...");
-
             // Register prefabs.
             UIPartActionController.Instance.fieldPrefabs.Add(UIPartActionFloatEdit.CreateTemplate());
             UIPartActionController.Instance.fieldPrefabs.Add(UIPartActionChooseOption.CreateTemplate());
 
             if (UIPartActionController.Instance.GetFieldControl(typeof(UI_FloatEdit)) == null)
             {
-                print("Unable to find field prefab, will reinitialize");
+                print("Unable to find field prefab, will reinitialize. Ignore error below... ");
                 MethodInfo method = typeof(UIPartActionController).GetMethod("SetupItemControls", BindingFlags.NonPublic | BindingFlags.Instance);
                 if (method == null)
                     print("Can't find method");

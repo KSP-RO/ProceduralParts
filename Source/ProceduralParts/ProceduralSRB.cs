@@ -7,531 +7,548 @@ using KSPAPIExtensions;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
-public class ProceduralSRB : PartModule
+namespace ProceduralParts
 {
-    #region callbacks
 
-    public override void OnInitialize()
+    public class ProceduralSRB : PartModule
     {
-        try
+        #region callbacks
+
+        public override void OnInitialize()
         {
-            if (part.Modules.Contains("ModuleEngineConfigs"))
-                ChangeThrust();
+            try
+            {
+                if (part.Modules.Contains("ModuleEngineConfigs"))
+                    UpdateThrust(true);
+            }
+            catch (Exception ex)
+            {
+                print("OnInitialize exception: " + ex);
+                throw ex;
+            }
         }
-        catch (Exception ex)
+
+        public override void OnLoad(ConfigNode node)
         {
-            print("OnInitialize exception: " + ex);
-            throw ex;
+            try
+            {
+                LoadBells(node);
+                if (part.Modules.Contains("ModuleEngineConfigs"))
+                    UpdateThrust(true);
+            }
+            catch (Exception ex)
+            {
+                print("OnLoad exception: " + ex);
+                throw ex;
+            }
         }
-    }
 
-    public override void OnLoad(ConfigNode node)
-    {
-        try
-        {
-            LoadBells(node);
-            if (part.Modules.Contains("ModuleEngineConfigs"))
-                ChangeThrust();
-        }
-        catch (Exception ex)
-        {
-            print("OnLoad exception: " + ex);
-            throw ex;
-        }
-    }
-
-    public override string GetInfo()
-    {
-        InitializeBells();
-
-        return base.GetInfo();
-    }
-
-    public override void OnSave(ConfigNode node)
-    {
-        // Force saved value for enabled to be true.
-        node.SetValue("isEnabled", "True");
-    }
-
-    public override void OnStart(PartModule.StartState state)
-    {
-        try
+        public override string GetInfo()
         {
             InitializeBells();
 
-            // Need to update the thrust at least once, then disable
-            if (!HighLogic.LoadedSceneIsEditor)
-                isEnabled = enabled = false;
+            return base.GetInfo();
         }
-        catch (Exception ex)
+
+        public override void OnSave(ConfigNode node)
         {
-            print("OnStart exception: " + ex);
-            throw ex;
+            // Force saved value for enabled to be true.
+            node.SetValue("isEnabled", "True");
         }
-    }
 
-    private AttachNode bottomAttachNode;
-
-    public void Update()
-    {
-        try
+        public override void OnStart(PartModule.StartState state)
         {
-            if (HighLogic.LoadedSceneIsEditor)
+            try
             {
-                UpdateBell();
-                UpdateThrust();
+                InitializeBells();
 
-                UpdateAttachedPart();
+                // Need to update the thrust at least once, then disable
+                if (!HighLogic.LoadedSceneIsEditor)
+                    isEnabled = enabled = false;
             }
-            else
+            catch (Exception ex)
             {
-                UpdateHeat();
+                print("OnStart exception: " + ex);
+                throw ex;
             }
         }
-        catch (Exception ex)
+
+        private AttachNode bottomAttachNode;
+
+        public void Update()
         {
-            Debug.LogException(ex);
-            enabled = false;
-        }
-    }
-
-    public void UpdateTankResources()
-    {
-        ChangeThrust();
-    }
-
-    public void ChangeTextureScale(string name, Material material, Vector2 textureScale)
-    {
-        if (name != "bottom")
-            return;
-
-        // Can piggyback onto texture change messages to get the diameter of the bottom end.
-        maxBellChokeDiameter = textureScale.x;
-        UpdateMaxThrust();
-    }
-    
-    #endregion
-
-    #region Objects
-
-    [KSPField]
-    public string srbBellName;
-
-    [KSPField]
-    public string bottomAttachNodeName;
-
-    [KSPField]
-    public string thrustTransform = "thrustTransform";
-
-    #endregion
-
-    #region Bell selection
-
-    [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "SRB Type"), UI_ChooseOption(scene = UI_Scene.Editor)]
-    public string selectedBellName;
-
-    [KSPField(isPersistant = false, guiName = "ISP", guiActive = false, guiActiveEditor = true)]
-    public string srbISP;
-
-    private SRBBellConfig selectedBell;
-    private Dictionary<string, SRBBellConfig> srbConfigs;
-
-    [SerializeField]
-    private ConfigNode[] srbConfigsSerialized;
-
-    private float maxBellChokeDiameter = float.PositiveInfinity;
-
-    [Serializable]
-    public class SRBBellConfig : IConfigNode
-    {
-        [Persistent]
-        public string displayName;
-        [Persistent]
-        public string modelName;
-        [NonSerialized]
-        public Transform model;
-
-        [Persistent]
-        public string srbAttachName = "srbAttach";
-        [NonSerialized]
-        public Transform srbAttach;
-
-        [Persistent]
-        public FloatCurve atmosphereCurve;
-        [Persistent]
-        public float gimbalRange;
-
-        [Persistent]
-        public float thrustScaleFactor = 256f;
-
-        [Persistent]
-        public float bellChokeDiameter = 0.5f;
-
-        public void Load(ConfigNode node)
-        {
-            ConfigNode.LoadObjectFromConfig(this, node);
-            ConfigNode atmosCurveNode = node.GetNode("atmosphereCurve");
-            if (atmosCurveNode != null)
+            try
             {
-                atmosphereCurve = new FloatCurve();
-                atmosphereCurve.Load(atmosCurveNode);
+                if (HighLogic.LoadedSceneIsEditor)
+                {
+                    UpdateBell();
+                    UpdateThrust();
+
+                    UpdateAttachedPart();
+                }
+                else
+                {
+                    UpdateHeat();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+                enabled = false;
             }
         }
-        public void Save(ConfigNode node)
+
+        [PartMessageListener]
+        private void ResourcesChanged()
         {
-            ConfigNode.CreateConfigFromObject(this, node);
+            if (selectedBell == null)
+                return;
+            UpdateThrust(true);
         }
 
-    }
-
-    private void LoadBells(ConfigNode node)
-    {
-        if (HighLogic.LoadedScene != GameScenes.LOADING)
-            return;
-
-        srbConfigs = new Dictionary<string, SRBBellConfig>();
-        srbConfigsSerialized = node.GetNodes("SRB_BELL");
-        foreach (ConfigNode srbNode in srbConfigsSerialized)
+        [PartMessageListener]
+        private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
-            SRBBellConfig conf = new SRBBellConfig();
-            conf.Load(srbNode);
-            srbConfigs.Add(conf.displayName, conf);
+            if (name != "bottom")
+                return;
+
+            // Max choke diameter is equal to the tank bottom size.
+            maxBellChokeDiameter = minDia;
+
+            UpdateMaxThrust();
         }
 
-    }
+        #endregion
 
-    private void InitializeBells()
-    {
-        // Initialize the configs.
-        if (srbConfigs == null)
+        #region Objects
+
+        [KSPField]
+        public string srbBellName;
+
+        [KSPField]
+        public string bottomAttachNodeName;
+
+        [KSPField]
+        public string thrustVectorTransformName;
+
+        #endregion
+
+        #region Bell selection
+
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "SRB Type"), UI_ChooseOption(scene = UI_Scene.Editor)]
+        public string selectedBellName;
+
+        [KSPField(isPersistant = false, guiName = "ISP", guiActive = false, guiActiveEditor = true)]
+        public string srbISP;
+
+        private SRBBellConfig selectedBell;
+        private Dictionary<string, SRBBellConfig> srbConfigs;
+
+        [SerializeField]
+        private ConfigNode[] srbConfigsSerialized;
+
+        private float maxBellChokeDiameter = float.PositiveInfinity;
+        private Transform thrustTransform;
+
+        [Serializable]
+        public class SRBBellConfig : IConfigNode
         {
+            [Persistent]
+            public string displayName;
+            [Persistent]
+            public string modelName;
+            [NonSerialized]
+            public Transform model;
+
+            [Persistent]
+            public string srbAttachName = "srbAttach";
+            [NonSerialized]
+            public Transform srbAttach;
+
+            [Persistent]
+            public FloatCurve atmosphereCurve;
+            [Persistent]
+            public float gimbalRange;
+
+            [Persistent]
+            public float thrustScaleFactor = 256f;
+
+            [Persistent]
+            public float bellChokeDiameter = 0.5f;
+
+            public void Load(ConfigNode node)
+            {
+                ConfigNode.LoadObjectFromConfig(this, node);
+                ConfigNode atmosCurveNode = node.GetNode("atmosphereCurve");
+                if (atmosCurveNode != null)
+                {
+                    atmosphereCurve = new FloatCurve();
+                    atmosphereCurve.Load(atmosCurveNode);
+                }
+            }
+            public void Save(ConfigNode node)
+            {
+                ConfigNode.CreateConfigFromObject(this, node);
+            }
+
+        }
+
+        private void LoadBells(ConfigNode node)
+        {
+            if (HighLogic.LoadedScene != GameScenes.LOADING)
+                return;
+
             srbConfigs = new Dictionary<string, SRBBellConfig>();
+            srbConfigsSerialized = node.GetNodes("SRB_BELL");
             foreach (ConfigNode srbNode in srbConfigsSerialized)
             {
                 SRBBellConfig conf = new SRBBellConfig();
                 conf.Load(srbNode);
                 srbConfigs.Add(conf.displayName, conf);
             }
+
         }
 
-        BaseField field = Fields["selectedBellName"];
-        switch (srbConfigs.Count)
+        private void InitializeBells()
         {
-            case 0:
-                Debug.LogError("*PT*  No SRB bells configured");
+            // Initialize the configs.
+            if (srbConfigs == null)
+            {
+                srbConfigs = new Dictionary<string, SRBBellConfig>();
+                foreach (ConfigNode srbNode in srbConfigsSerialized)
+                {
+                    SRBBellConfig conf = new SRBBellConfig();
+                    conf.Load(srbNode);
+                    srbConfigs.Add(conf.displayName, conf);
+                }
+            }
+
+            BaseField field = Fields["selectedBellName"];
+            switch (srbConfigs.Count)
+            {
+                case 0:
+                    Debug.LogError("*PT*  No SRB bells configured");
+                    return;
+                case 1:
+                    field.guiActiveEditor = false;
+                    break;
+                default:
+                    field.guiActiveEditor = true;
+                    UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
+                    range.options = srbConfigs.Keys.ToArray();
+                    break;
+            }
+
+            ProceduralPart pPart = GetComponent<ProceduralPart>();
+
+            Transform srbBell = part.FindModelTransform(srbBellName);
+            thrustTransform = srbBell.Find(this.thrustVectorTransformName);
+
+            foreach (SRBBellConfig conf in srbConfigs.Values)
+            {
+                conf.model = part.FindModelTransform(conf.modelName);
+                if (conf.model == null)
+                {
+                    Debug.LogError("*PT* Unable to find model transform for SRB bell name: " + conf.modelName);
+                    srbConfigs.Remove(conf.modelName);
+                    continue;
+                }
+                conf.model.transform.parent = srbBell;
+
+                conf.srbAttach = conf.model.Find(conf.srbAttachName);
+                if (conf.srbAttach == null)
+                {
+                    Debug.LogError("*PT* Unable to find srbAttach for SRB bell name: " + conf.modelName);
+                    srbConfigs.Remove(conf.modelName);
+                    continue;
+                }
+
+                // Only enable the colider for flight mode. This prevents any surface attachments.
+                if (HighLogic.LoadedSceneIsEditor && conf.model.collider != null)
+                    Destroy(conf.model.collider);
+
+                conf.model.gameObject.SetActive(false);
+            }
+
+            if (string.IsNullOrEmpty(selectedBellName) || !srbConfigs.ContainsKey(selectedBellName))
+                selectedBellName = srbConfigsSerialized[0].GetValue("displayName");
+
+            selectedBell = srbConfigs[selectedBellName];
+
+            // Set the bell active and do the bits and pieces.
+            selectedBell.model.gameObject.SetActive(true);
+            GetComponent<ModuleEngines>().atmosphereCurve = selectedBell.atmosphereCurve;
+            GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
+            srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", selectedBell.atmosphereCurve.Evaluate(1), selectedBell.atmosphereCurve.Evaluate(0));
+
+            // Break out at this stage during loading scene
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
                 return;
-            case 1:
-                field.guiActiveEditor = false;
-                break;
-            default:
-                field.guiActiveEditor = true;
-                UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
-                range.options = srbConfigs.Keys.ToArray();
-                break;
-        }
 
-        ProceduralPart pPart = GetComponent<ProceduralPart>();
+            // Attach the bell. In the config file this isn't in normalized position, move it into normalized position first.
+            srbBell.position = pPart.transform.TransformPoint(0, -0.5f, 0);
+            pPart.AddAttachment(srbBell, true);
 
-        Transform srbBell = part.FindModelTransform(srbBellName);
-        Transform thrustTransform = srbBell.Find(this.thrustTransform);
+            // Call change thrust to initialize the bell scale.
+            UpdateThrustNoMoving();
 
-        foreach (SRBBellConfig conf in srbConfigs.Values)
-        {
-            conf.model = part.FindModelTransform(conf.modelName);
-            if (conf.model == null)
+            // Move thrust transform to the end of the bell
+            thrustTransform.position = selectedBell.srbAttach.position;
+
+            // Move the bottom attach node into position.
+            bottomAttachNode = part.findAttachNode(bottomAttachNodeName);
+            if (HighLogic.LoadedSceneIsEditor)
             {
-                Debug.LogError("*PT* Unable to find model transform for SRB bell name: " + conf.modelName);
-                srbConfigs.Remove(conf.modelName);
-                continue;
-            }
-            conf.model.transform.parent = thrustTransform;
-
-            conf.srbAttach = conf.model.Find(conf.srbAttachName);
-            if (conf.srbAttach == null)
-            {
-                Debug.LogError("*PT* Unable to find srbAttach for SRB bell name: " + conf.modelName);
-                srbConfigs.Remove(conf.modelName);
-                continue;
+                Vector3 delta = selectedBell.srbAttach.position - selectedBell.model.position;
+                bottomAttachNode.originalPosition = bottomAttachNode.position += part.transform.InverseTransformDirection(delta);
+                if (bottomAttachNode.attachedPart != null && bottomAttachNode.attachedPart.transform == part.transform.parent)
+                {
+                    // Because the parent is attached using our node, we need to move it out by the
+                    // node offset as it will get moved back again by the same amount when it gets attached
+                    // Children are attached using their own nodes, so their original offset ends up correct.
+                    bottomAttachNode.attachedPart.transform.position += delta;
+                    part.transform.position -= delta;
+                    oldAttachedPart = bottomAttachNode.attachedPart;
+                    //Debug.LogWarning("Moving bottom attach " + delta);
+                }
             }
 
-            // Only enable the colider for flight mode. This prevents any surface attachments.
-            if (HighLogic.LoadedSceneIsEditor && conf.model.collider != null)
-                Destroy(conf.model.collider);
+            // It makes no sense to have a thrust limiter for SRBs
+            // Even though this is present in stock, I'm disabling it.
+            BaseField thrustLimiter = GetComponent<ModuleEngines>().Fields["thrustPercentage"];
+            thrustLimiter.guiActive = false;
+            thrustLimiter.guiActiveEditor = false;
 
-            conf.model.gameObject.SetActive(false);
+            usingME = part.Modules.Contains("ModuleEngineConfigs");
+
+            Fields["thrust"].guiActiveEditor = !usingME;
+            Fields["burnTime"].guiActiveEditor = !usingME;
+            Fields["burnTimeME"].guiActiveEditor = usingME;
+            Fields["thrustME"].guiActiveEditor = usingME;
         }
 
-        if (string.IsNullOrEmpty(selectedBellName) || !srbConfigs.ContainsKey(selectedBellName))
-            selectedBellName = srbConfigsSerialized[0].GetValue("displayName");
-
-        selectedBell = srbConfigs[selectedBellName];
-
-        // Set the bell active and do the bits and pieces.
-        selectedBell.model.gameObject.SetActive(true);
-        GetComponent<ModuleEngines>().atmosphereCurve = selectedBell.atmosphereCurve;
-        GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
-        srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", selectedBell.atmosphereCurve.Evaluate(1), selectedBell.atmosphereCurve.Evaluate(0));
-
-        // Break out at this stage during loading scene
-        if (HighLogic.LoadedScene == GameScenes.LOADING)
-            return;
-
-        // Attach the bell. In the config file this isn't in normalized position, move it into normalized position first.
-        srbBell.position = pPart.transform.TransformPoint(0, -0.5f, 0);
-        pPart.AddAttachment(srbBell, true);
-
-        // Call change thrust to initialize the bell scale.
-        ChangeThrust();
-
-        // Move the bottom attach node into position.
-        bottomAttachNode = part.findAttachNode(bottomAttachNodeName);
-        if (HighLogic.LoadedSceneIsEditor)
+        private void UpdateBell()
         {
-            Vector3 delta = selectedBell.srbAttach.position - selectedBell.model.position;
-            bottomAttachNode.originalPosition = bottomAttachNode.position += part.transform.InverseTransformDirection(delta);
-            if (bottomAttachNode.attachedPart != null && bottomAttachNode.attachedPart.transform == part.transform.parent)
+            if (selectedBell != null && selectedBellName == selectedBell.displayName)
+                return;
+
+            SRBBellConfig oldSelectedBell = selectedBell;
+
+            if (!srbConfigs.TryGetValue(selectedBellName, out selectedBell))
             {
-                // Because the parent is attached using our node, we need to move it out by the
-                // node offset as it will get moved back again by the same amount when it gets attached
-                // Children are attached using their own nodes, so their original offset ends up correct.
-                bottomAttachNode.attachedPart.transform.position += delta;
-                part.transform.position -= delta;
-                oldAttachedPart = bottomAttachNode.attachedPart;
-                //Debug.LogWarning("Moving bottom attach " + delta);
+                Debug.LogError("*ST* Selected bell name \"" + selectedBellName + "\" does not exist. Reverting.");
+                selectedBellName = oldSelectedBell.displayName;
+                selectedBell = oldSelectedBell;
+                return;
+            }
+
+            oldSelectedBell.model.gameObject.SetActive(false);
+
+            MoveBottomAttachmentAndNode(selectedBell.srbAttach.position - oldSelectedBell.srbAttach.position);
+
+            // Set the bits and pieces
+            selectedBell.model.gameObject.SetActive(true);
+            GetComponent<ModuleEngines>().atmosphereCurve = selectedBell.atmosphereCurve;
+            GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
+            srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", selectedBell.atmosphereCurve.Evaluate(1), selectedBell.atmosphereCurve.Evaluate(0));
+
+            UpdateMaxThrust();
+        }
+
+        #endregion
+
+        #region Thrust and heat production
+
+        private bool usingME = false;
+
+        [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "F0", guiUnits = "kN"),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 0, incrementSlide = 1f)]
+        public float thrust = 250;
+        private float oldThrust;
+
+        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Burn Time")]
+        public string burnTime;
+
+        [KSPField(isPersistant = true, guiName = "Burn Time", guiActive = false, guiActiveEditor = false, guiFormat = "F2", guiUnits = "s"),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 0, incrementSlide = 1f)]
+        public float burnTimeME = 60;
+        private float oldBurnTimeME;
+
+        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = false, guiName = "Thrust")]
+        public string thrustME;
+
+        [KSPField(isPersistant = false, guiName = "Heat", guiActive = false, guiActiveEditor = true, guiFormat = "F2", guiUnits = "K/s")]
+        public float heatProduction;
+
+        [KSPField]
+        public float heatPerThrust = 2.0f;
+
+        [KSPField]
+        public bool useOldHeatEquation = false;
+
+        private void UpdateMaxThrust()
+        {
+            if (selectedBell == null)
+                return;
+
+            float maxThrustSqrt = maxBellChokeDiameter * Mathf.Sqrt(selectedBell.thrustScaleFactor) / selectedBell.bellChokeDiameter;
+            float maxThrust = maxThrustSqrt * maxThrustSqrt;
+
+            if (!usingME)
+            {
+                ((UI_FloatEdit)Fields["thrust"].uiControlEditor).maxValue = maxThrust;
+                if (thrust > maxThrust)
+                {
+                    thrust = maxThrust;
+                    UpdateThrust();
+                }
+            }
+            else
+            {
+                PartResource solidFuel = part.Resources["SolidFuel"];
+                ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
+
+                float minISP, maxISP;
+                mE.atmosphereCurve.FindMinMaxValue(out minISP, out maxISP);
+                float maxBurnTime = (float)(maxISP * solidFuel.maxAmount * solidFuel.info.density * mE.g / maxThrust);
+
+                if (burnTimeME > maxBurnTime)
+                {
+                    burnTimeME = maxBurnTime;
+                    UpdateThrust();
+                }
             }
         }
-        
-        // It makes no sense to have a thrust limiter for SRBs
-        // Even though this is present in stock, I'm disabling it.
-        BaseField thrustLimiter = GetComponent<ModuleEngines>().Fields["thrustPercentage"];
-        thrustLimiter.guiActive = false;
-        thrustLimiter.guiActiveEditor = false;
 
-        usingME = part.Modules.Contains("ModuleEngineConfigs");
-
-        Fields["thrust"].guiActiveEditor = !usingME;
-        Fields["burnTime"].guiActiveEditor = !usingME;
-        Fields["burnTimeME"].guiActiveEditor = usingME;
-        Fields["thrustME"].guiActiveEditor = usingME;
-    }
-
-    private void UpdateBell()
-    {
-        if (selectedBell != null && selectedBellName == selectedBell.displayName)
-            return;
-
-        SRBBellConfig oldSelectedBell = selectedBell;
-
-        if (!srbConfigs.TryGetValue(selectedBellName, out selectedBell))
+        private void UpdateThrust(bool force = false)
         {
-            Debug.LogError("*ST* Selected bell name \"" + selectedBellName + "\" does not exist. Reverting.");
-            selectedBellName = oldSelectedBell.displayName;
-            selectedBell = oldSelectedBell;
-            return;
+            if (!force && oldThrust == thrust && burnTimeME == oldBurnTimeME)
+                return;
+
+            Vector3 oldAttach = selectedBell.srbAttach.position;
+            UpdateThrustNoMoving();
+            MoveBottomAttachmentAndNode(selectedBell.srbAttach.position - oldAttach);
         }
 
-        oldSelectedBell.model.gameObject.SetActive(false);
-
-        UpdateBottomPosition(selectedBell.srbAttach.position - oldSelectedBell.srbAttach.position);
-
-        // Set the bits and pieces
-        selectedBell.model.gameObject.SetActive(true);
-        GetComponent<ModuleEngines>().atmosphereCurve = selectedBell.atmosphereCurve;
-        GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
-        srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", selectedBell.atmosphereCurve.Evaluate(1), selectedBell.atmosphereCurve.Evaluate(0));
-
-        if(!UpdateMaxThrust())
-            ChangeThrust();
-    }
-
-    #endregion
-
-    #region Thrust and heat production
-
-    private bool usingME = false;
-
-    [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat="F0", guiUnits="kN"),
-     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 0, incrementSlide = 1f) ]
-    public float thrust = 250;
-    private float oldThrust;
-
-    [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Burn Time")]
-    public string burnTime;
-
-    [KSPField(isPersistant = true, guiName = "Burn Time", guiActive = false, guiActiveEditor = false, guiFormat = "F2", guiUnits = "s"),
-     UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 0, incrementSlide = 1f)]
-    public float burnTimeME = 60;
-    private float oldBurnTimeME;
-
-    [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = false, guiName = "Thrust")]
-    public string thrustME;
-
-    [KSPField(isPersistant = false, guiName = "Heat", guiActive = false, guiActiveEditor = true, guiFormat="F2", guiUnits="K/s")]
-    public float heatProduction;
-
-    [KSPField]
-    public float heatPerThrust = 2.0f;
-
-    private void UpdateThrust()
-    {
-        if (oldThrust == thrust && burnTimeME == oldBurnTimeME)
-            return;
-
-        Vector3 oldAttach = selectedBell.srbAttach.position;
-        ChangeThrust();
-        UpdateBottomPosition(selectedBell.srbAttach.position - oldAttach);
-    }
-
-    private bool UpdateMaxThrust()
-    {
-        if(selectedBell == null)
-            return false;
-
-        float maxThrustSqrt = maxBellChokeDiameter * Mathf.Sqrt(selectedBell.thrustScaleFactor) / selectedBell.bellChokeDiameter;
-        float maxThrust = maxThrustSqrt * maxThrustSqrt;
-
-        Debug.LogWarning("Setting maxThrust=" + maxThrust);
-        if (!usingME)
+        private void UpdateThrustNoMoving()
         {
-            ((UI_FloatEdit)Fields["thrust"].uiControlEditor).maxValue = maxThrust;
-            if (thrust > maxThrust)
-            {
-                thrust = maxThrust;
-                UpdateThrust();
-                return true;
-            }
-        }
-        else
-        {
-            PartResource solidFuel = part.Resources["SolidFuel"];
             ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
+            PartResource solidFuel = part.Resources["SolidFuel"];
 
-            float minISP, maxISP;
-            mE.atmosphereCurve.FindMinMaxValue(out minISP, out maxISP);
-            float maxBurnTime = (float)(maxISP * solidFuel.maxAmount * solidFuel.info.density * mE.g / maxThrust);
+            double solidFuelMassG;
+            if (solidFuel == null)
+                solidFuelMassG = 30.75;
+            else
+                solidFuelMassG = solidFuel.maxAmount * solidFuel.info.density * mE.g;
 
-            if (burnTimeME > maxBurnTime)
+            if (!usingME)
             {
-                burnTimeME = maxBurnTime;
-                UpdateThrust();
-                return true;
+                float burnTime0 = burnTimeME = (float)(selectedBell.atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
+                float burnTime1 = (float)(selectedBell.atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
+
+                burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
+
+                mE.maxThrust = thrust;
+                // This equation is much easier
+                if (useOldHeatEquation)
+                    mE.heatProduction = heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((Math.Min(burnTime0, burnTime1) + 20f), 0.75f)) * 0.5f);
+                // The heat production is directly proportional to the thrust on part mass.
+                else
+                    mE.heatProduction = heatProduction = thrust * heatPerThrust / (part.mass + part.GetResourceMass());
+            }
+            else
+            {
+                float thrust0 = (float)(selectedBell.atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
+                float thrust1 = (float)(selectedBell.atmosphereCurve.Evaluate(1) * solidFuelMassG / burnTimeME);
+
+                float minISP, maxISP;
+                selectedBell.atmosphereCurve.FindMinMaxValue(out minISP, out maxISP);
+                mE.maxThrust = thrust = (float)(maxISP * solidFuelMassG / burnTimeME);
+
+                thrustME = string.Format("{0:F1}s ({1:F1}s Vac)", thrust1, thrust0);
+
+                // This equation is much easier
+                if (useOldHeatEquation)
+                    mE.heatProduction = heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((burnTimeME + 20f), 0.75f)) * 0.5f);
+                // The heat production is directly proportional to the thrust on part mass.
+                else
+                    mE.heatProduction = heatProduction = thrust * heatPerThrust / (part.mass + part.GetResourceMass());
+
+                var mEC = part.Modules["ModuleEngineConfigs"];
+                Type engineType = mEC.GetType();
+                engineType.GetMethod("ChangeThrust").Invoke(mEC, new object[] { thrust });
+            }
+
+            // Rescale the bell.
+            float bellScale = Mathf.Sqrt(thrust) / Mathf.Sqrt(selectedBell.thrustScaleFactor);
+            selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
+
+            oldThrust = thrust;
+            oldBurnTimeME = burnTimeME;
+        }
+
+        #endregion
+
+        #region Attachments and nodes
+
+        private Part oldAttachedPart = null;
+
+        private void UpdateAttachedPart()
+        {
+            // When we attach a new part to the bottom node, ProceduralPart sets its reference position to on the surface.
+            // Since we've moved the node, we need to undo the move that ProceeduralPart does to move it back to
+            // the surface when first attached.
+            if (oldAttachedPart != bottomAttachNode.attachedPart)
+            {
+                if (bottomAttachNode.attachedPart != null)
+                    MoveBottomAttachment(selectedBell.srbAttach.position - selectedBell.model.transform.position);
+                oldAttachedPart = bottomAttachNode.attachedPart;
             }
         }
 
-        return false;
-    }
-    
-    private void ChangeThrust()
-    {
-        ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
-        PartResource solidFuel = part.Resources["SolidFuel"];
-
-        double solidFuelMassG;
-        if (solidFuel == null)
-            solidFuelMassG = 30.75;
-        else 
-            solidFuelMassG = solidFuel.maxAmount * solidFuel.info.density * mE.g;
-
-        if (!usingME)
+        private void MoveBottomAttachmentAndNode(Vector3 delta)
         {
-            float burnTime0 = burnTimeME = (float)(selectedBell.atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
-            float burnTime1 = (float)(selectedBell.atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
-
-            burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
-
-            // The heat production is directly proportional to the thrust. This is what stock KSP uses.
-            heatProduction = thrust * heatPerThrust;
-        }
-        else
-        {
-            float thrust0 = (float)(selectedBell.atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
-            float thrust1 = (float)(selectedBell.atmosphereCurve.Evaluate(1) * solidFuelMassG / burnTimeME);
-
-            float minISP, maxISP;
-            selectedBell.atmosphereCurve.FindMinMaxValue(out minISP, out maxISP);
-            thrust = (float)(maxISP * solidFuelMassG / burnTimeME);
-
-            thrustME = string.Format("{0:F1}s ({1:F1}s Vac)", thrust1, thrust0);
-
-            // From original stretchySRBs.
-            heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((burnTimeME + 20f), 0.75f)) * 0.5f);
-
-            var mEC = part.Modules["ModuleEngineConfigs"];
-            Type engineType = mEC.GetType();
-            engineType.GetMethod("ChangeThrust").Invoke(mEC, new object[] { thrust });
-        }
-
-        mE.maxThrust = thrust;
-        mE.heatProduction = heatProduction;
-
-        // Rescale the bell.
-        float bellScale = Mathf.Sqrt(thrust) / Mathf.Sqrt(selectedBell.thrustScaleFactor);
-        selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
-
-        oldThrust = thrust;
-        oldBurnTimeME = burnTimeME;
-    }
-
-    #endregion
-
-    #region Attachments and nodes
-
-    private void UpdateBottomPosition(Vector3 delta)
-    {
-        bottomAttachNode.originalPosition = bottomAttachNode.position += part.transform.InverseTransformDirection(delta);
-        if (bottomAttachNode.attachedPart != null)
-            UpdateAttachedPart(delta);
-    }
-
-    private Part oldAttachedPart = null;
-
-    private void UpdateAttachedPart()
-    {
-        // When we attach a new part to the bottom node, ProceduralPart sets its reference position to on the surface.
-        // Since we've moved the node, we need to undo the move that ProceeduralPart does to move it back to
-        // the surface when first attached.
-        if (oldAttachedPart != bottomAttachNode.attachedPart)
-        {
+            bottomAttachNode.originalPosition = bottomAttachNode.position += part.transform.InverseTransformDirection(delta);
             if (bottomAttachNode.attachedPart != null)
-                UpdateAttachedPart(selectedBell.srbAttach.position - selectedBell.model.transform.position);
-            oldAttachedPart = bottomAttachNode.attachedPart;
+                MoveBottomAttachment(delta);
+            thrustTransform.position += delta;
         }
-    }
 
-    private Vector3 UpdateAttachedPart(Vector3 delta)
-    {
-        //Debug.LogWarning("UpdateAttachedPart delta=" + delta);
-        if (bottomAttachNode.attachedPart.transform == part.transform.parent)
+        private Vector3 MoveBottomAttachment(Vector3 delta)
         {
-            part.transform.Translate(-delta, Space.World);
-            Part root = EditorLogic.SortedShipList[0];
-            int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
+            //Debug.LogWarning("UpdateAttachedPart delta=" + delta);
+            if (bottomAttachNode.attachedPart.transform == part.transform.parent)
+            {
+                part.transform.Translate(-delta, Space.World);
+                Part root = EditorLogic.SortedShipList[0];
+                int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
 
-            root.transform.Translate(delta / siblings, Space.World);
+                root.transform.Translate(delta / siblings, Space.World);
+            }
+            else
+            {
+                bottomAttachNode.attachedPart.transform.Translate(delta, Space.World);
+            }
+            return delta;
         }
-        else
+
+        #endregion
+
+        #region Heat
+
+        internal const float draperPoint = 525f;
+
+        private void UpdateHeat()
         {
-            bottomAttachNode.attachedPart.transform.Translate(delta, Space.World);
+            // The emmissive module is too much effort to get working, just do it the easy way.
+            float num = Mathf.Clamp01((part.temperature - draperPoint) / (part.maxTemp - draperPoint));
+            if (float.IsNaN(num))
+                num = 0f;
+
+            Material mat = selectedBell.model.renderer.sharedMaterial;
+            mat.SetColor("_EmissiveColor", new Color(num, 0, 0));
         }
-        return delta;
+
+        #endregion
     }
-
-    #endregion
-
-    #region Heat 
-
-    internal const float draperPoint = 525f;
-
-    private void UpdateHeat()
-    {
-        // The emmissive module is too much effort to get working, just do it the easy way.
-        float num = Mathf.Clamp01((part.temperature - draperPoint) / (part.maxTemp - draperPoint));
-        if (float.IsNaN(num))
-            num = 0f;
-
-        Material mat = selectedBell.model.renderer.sharedMaterial;
-        mat.SetColor("_EmissiveColor", new Color(num, 0, 0));
-    }
-
-    #endregion
 }
