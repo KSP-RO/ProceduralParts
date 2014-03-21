@@ -59,7 +59,7 @@
   <ItemGroup>
     <Compile Include="DecouplerTweaker.cs" />
     <Compile Include="ObjectSerializer.cs" />
-    <Compile Include="ProceduralShapeBezier.cs" />
+    <Compile Include="ProceduralShapeBezierCone.cs" />
     <Compile Include="ProceduralShapePill.cs" />
     <Compile Include="ProceduralSRB.cs" />
     <Compile Include="ProceduralShapeCone.cs" />

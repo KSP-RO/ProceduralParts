@@ -8,7 +8,7 @@ using UnityEngine;
 namespace KSPAPIExtensions
 {
 
-    public static class APIExtensions
+    public static class UnityUtils
     {
         #region Debugging dumpage
 
@@ -218,46 +218,42 @@ namespace KSPAPIExtensions
             return string.Join("/", inBetween.ToArray());
         }
         #endregion
-
-        #region Message passing 
-
-        /// <summary>
-        /// Invoke a method on the part and all enabled modules attached to the part. This is similar in scope to
-        /// the SendMessage method on GameObject.
-        /// </summary>
-        /// <param name="part">the part</param>
-        /// <param name="messageName">Name of the method to invoke</param>
-        /// <param name="args">parameters</param>
-        public static void SendPartMessage(this Part part, string messageName, params object[] args)
-        {
-            if(part.enabled)
-                SendPartMessageInternal(part, messageName, args);
-            foreach(PartModule module in part.Modules)
-                if(module.enabled && module.isEnabled)
-                    SendPartMessageInternal(module, messageName, args);
-        }
-
-        private static void SendPartMessageInternal(object target, string message, object[] args)
-        {
-            Type t = target.GetType();
-            foreach(MethodInfo m in t.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
-                if (m.Name == message)
-                {
-                    // Just invoke it and deal with the consequences, rather than stuff around trying to match parameters
-                    // MethodInfo does all the parameter checking anyhow.
-                    try
-                    {
-                        m.Invoke(target, args);
-                    }
-                    catch (ArgumentException) { }
-                    catch (TargetParameterCountException) { }
-                }
-        }
-
-        #endregion
     }
 
-    public static class UtilityExtensions
+    public static class PartUtils
+    {
+        private static FieldInfo windowListField;
+        public static UIPartActionWindow FindActionWindow(this Part part)
+        {
+            // We need to do quite a bit of piss-farting about with reflection to 
+            // dig the thing out.
+            UIPartActionController controller = UIPartActionController.Instance;
+
+            if (windowListField == null)
+            {
+                Type cntrType = typeof(UIPartActionController);
+                foreach (FieldInfo info in cntrType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic))
+                {
+                    if (info.FieldType == typeof(List<UIPartActionWindow>))
+                    {
+                        windowListField = info;
+                        goto foundField;
+                    }
+                }
+                Debug.LogWarning("*PartUtils* Unable to find UIPartActionWindow list");
+                return null;
+            }
+        foundField:
+
+            foreach (UIPartActionWindow window in (List<UIPartActionWindow>)windowListField.GetValue(controller))
+                if (window.part == part)
+                    return window;
+
+            return null;
+        }
+    }
+
+    public static class StringUtils
     {
         public static bool BeginsWith(this string str, string comp)
         {
@@ -281,6 +277,31 @@ namespace KSPAPIExtensions
             }
             return value.ToString("F" + digits);
         }
+    }
+
+    public static class MathUtils
+    {
+
+        public static bool TestClamp(ref float value, float min, float max)
+        {
+            if (value < min)
+            {
+                value = min;
+                return true;
+            }
+            if (value > max)
+            {
+                value = max;
+                return true;
+            }
+            return false;
+        }
+
+        public static float RoundTo(float value, float precision)
+        {
+            return Mathf.Round(value / precision) * precision;
+        }
+
     }
 
     /// <summary>
