@@ -6,127 +6,14 @@ using System.Reflection;
 using UnityEngine;
 using System.Linq.Expressions;
 
-namespace KSPAPIExtensions
+namespace KSPAPIExtensions.PartMessage
 {
-    /// <summary>
-    /// This utility class replaces the clunky and rather broken KSPEvent system for passing messages, 
-    /// plus the also overly broad SendMessage method in Unity. It allows you to send messages to 
-    /// the Part class itself, plus PartModules attached to the part. It can optionally pass the message 
-    /// on to children of the part, or to the whole ship.
-    /// </summary>
-    public static class PartMessageUtils
-    {
-        /// <summary>
-        /// Invoke a method on the part and all enabled modules attached to the part. This is similar in scope to
-        /// the SendMessage method on GameObject, only you can send it just to the part and its modules, rather
-        /// than all the children. To recieve a message, just declare a method with the PartMessageListener attribute
-        /// with any access level who's parameters are compatible with what is passed.
-        /// </summary>
-        /// <param name="part">the part</param>
-        /// <param name="messageName">Name of the method to invoke</param>
-        /// <param name="args">parameters</param>
-        /// <returns>True if at least one reciever recieved the message</returns>
-        public static bool SendPartMessage(this Part part, string messageName, params object[] args)
-        {
-            return SendPartMessage(part, PartMessageScope.Default, messageName, args);
-        }
-
-        /// <summary>
-        /// Invoke a method on the part and all enabled modules attached to the part. This is similar in scope to
-        /// the SendMessage method on GameObject, only you can send it just to the part and its modules, rather
-        /// than all the children. To recieve a message, just declare a method with the PartMessageListener attribute
-        /// with any access level who's parameters are compatible with what is passed.
-        /// </summary>
-        /// <param name="part">the part</param>
-        /// <param name="messageName">Name of the method to invoke</param>
-        /// <param name="scope">Allow a scope for the message - can send up and down the heirachy.</param>
-        /// <param name="args">parameters</param>
-        /// <returns>True if at least one reciever recieved the message</returns>
-        public static bool SendPartMessage(this Part part, PartMessageScope scope, string messageName, params object[] args)
-        {
-            bool success = false;
-
-            if ((scope & PartMessageScope.Vessel) == PartMessageScope.Vessel)
-            {
-                PartMessageScope scopeCall = (scope & (PartMessageScope.IgnoreAttribute)) | PartMessageScope.Self | PartMessageScope.Decendents;
-                return SendPartMessage(part.localRoot, scopeCall, messageName, args);
-            }
-
-            if ((scope & PartMessageScope.Self) == PartMessageScope.Self)
-            {
-                bool ignoreAttribute = (scope & PartMessageScope.IgnoreAttribute) == PartMessageScope.IgnoreAttribute;
-                success = SendPartMessageToModules(part, messageName, ignoreAttribute, args) || success;
-            }
-
-            if ((scope & PartMessageScope.Symmetry) == PartMessageScope.Symmetry)
-            {
-                bool ignoreAttribute = (scope & PartMessageScope.IgnoreAttribute) == PartMessageScope.IgnoreAttribute;
-                foreach (Part p in part.symmetryCounterparts)
-                    success = SendPartMessageToModules(p, messageName, ignoreAttribute, args) || success;
-            }
-
-            if (part.parent != null && (scope & PartMessageScope.Parent) == PartMessageScope.Parent)
-            {
-                PartMessageScope scopeCall = (scope & (PartMessageScope.IgnoreAttribute | PartMessageScope.Symmetry)) | PartMessageScope.Self;
-                if((scope & PartMessageScope.Ancestors) == PartMessageScope.Ancestors)
-                    scopeCall = scopeCall | PartMessageScope.Ancestors;
-
-                success = SendPartMessage(part.parent, scopeCall, messageName, args) || success;
-            }
-
-            if ((scope & PartMessageScope.Children) == PartMessageScope.Children)
-            {
-                PartMessageScope scopeCall = (scope & (PartMessageScope.IgnoreAttribute | PartMessageScope.Symmetry)) | PartMessageScope.Self;
-                if ((scope & PartMessageScope.Decendents) == PartMessageScope.Decendents)
-                    scopeCall = scopeCall | PartMessageScope.Decendents;
-
-                foreach (Part p in part.children)
-                    success = SendPartMessage(p, scopeCall, messageName, args) || success;
-            }
-
-            return success;
-        }
-
-        private static bool SendPartMessageToModules(Part part, string message, bool ignoreAttribute, object[] args)
-        {
-            bool success = false;
-            if (part.enabled)
-                success = SendPartMessageToTarget(part, message, ignoreAttribute, args) || success;
-            foreach (PartModule module in part.Modules)
-                if (module.enabled && module.isEnabled)
-                    success = SendPartMessageToTarget(module, message, ignoreAttribute, args) || success;
-            return success;
-        }
-
-        private static bool SendPartMessageToTarget(object target, string message, bool ignoreAttribute, object[] args)
-        {
-            bool success = false;
-            Type t = target.GetType();
-            foreach (MethodInfo m in t.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
-                if (m.Name == message)
-                {
-                    if (!ignoreAttribute &&  m.GetCustomAttributes(typeof(PartMessageListenerAttribute), true).Length == 0)
-                        continue;
-
-                    // Just invoke it and deal with the consequences, rather than stuff around trying to match parameters
-                    // MethodInfo does all the parameter checking anyhow.
-                    try
-                    {
-                        m.Invoke(target, args);
-                        success = true;
-                    }
-                    catch (ArgumentException) { }
-                    catch (TargetParameterCountException) { }
-                }
-            return success;
-        }
-    }
 
     /// <summary>
     /// Scope to send part messages. The message can go to various heirachy members.
     /// </summary>
     [Flags]
-    public enum PartMessageScope
+    public enum PartRelationship
     {
         Self = 0x1,
         Symmetry = 0x2,
@@ -135,23 +22,24 @@ namespace KSPAPIExtensions
         Parent = 0x10,
         Ancestors = 0x30,
         Vessel = 0xFF,
-
-        Default = Self,
     }
 
     /// <summary>
-    /// Apply this attribute to any method you wish to recieve messages. The access modifier is
-    /// important - public listeners can be called by other Assemblies (other mods) while
-    /// internal ones will only be called from events within the same Assembly.
+    /// Apply this attribute to any method you wish to recieve messages. 
+    /// 
+    /// The access modifier is important - public events can call other Assemblies (other mods) and should use a public
+    /// delegate and will pass messages to public listener methods. 
+    /// Internal messages are internal to a particular Assembly, will pass messages to internal listeners in the
+    /// same assembly, and should use internal delegates.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple=true, Inherited=true)]
-    public class PartMessageListenerAttribute : Attribute 
+    public class PartMessageListener : Attribute 
     {
-        public PartMessageListenerAttribute(Type message, UI_Scene scene = UI_Scene.All)
+        public PartMessageListener(Type message, UI_Scene scene = UI_Scene.All)
         {
             if(message == null || !message.IsSubclassOf(typeof(Delegate)))
                 throw new ArgumentException("Message is not a delegate type");
-            if(message.GetCustomAttributes(typeof(PartMessageEventAttribute), true).Length == 0)
+            if(message.GetCustomAttributes(typeof(PartMessageEvent), true).Length == 0)
                 throw new ArgumentException("Message does not have the PartMessageEvent attribute");
 
             this.message = message;
@@ -169,40 +57,132 @@ namespace KSPAPIExtensions
     }
 
     /// <summary>
-    /// Apply this attribute to a part message listener to listen for ksp messages.
+    /// 
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
-    public class PartKSPEventListenerAttribute : Attribute
-    {
-        /// <summary>
-        /// The message to recieve. If unset will default to the name of the method.
-        /// </summary>
-        public string kspMessage;
-        /// <summary>
-        /// If set, provides a mapping between the event's parameters, and parameter names
-        /// as provided to a KSPEvent type event. If set the corresponding methods marked
-        /// with KSPEvent will be recieved.
-        /// </summary>
-        public string[] kspEventParams;
-    }
+    [AttributeUsage(AttributeTargets.Delegate)]
+    public class PartMessageEvent : Attribute { }
+
 
     /// <summary>
-    /// Apply this attribute to any event you wish to send messages. The access modifier is
-    /// important - public events can call other Assemblies (other mods) while internal ones 
-    /// will only be called from events within the same Assembly.
+    /// PartMessageListeners can use the properties in this class to examine the source of the message
     /// </summary>
-    [AttributeUsage(AttributeTargets.Delegate, AllowMultiple = true, Inherited = true)]
-    public class PartMessageEventAttribute : Attribute 
+    public static class PartMessageCallerInfo
     {
-        public PartMessageEventAttribute(PartMessageScope scope)
-        {
-            this.scope = scope;
+        public static object source 
+        { 
+            get { 
+                return curr.Peek().source; 
+            } 
         }
 
-        /// <summary>
-        /// Scope to send the message to. This is to other members of the part heirachy.
-        /// </summary>
-        public PartMessageScope scope = PartMessageScope.Default;
+        public static EventInfo srcEvent 
+        {   
+            get
+            {
+                return curr.Peek().evt;
+            }
+        }
+
+        public static Part srcPart { 
+            get { 
+                object src = source;
+                if(src is Part)
+                    return (Part)src;
+                if(src is PartModule)
+                    return ((PartModule)src).part;
+                return null;
+            } 
+        }
+
+        public static PartModule srcModule
+        {
+            get { return source as PartModule; }
+        }
+
+        public static Type srcDelegateType 
+        { 
+            get { return srcEvent.EventHandlerType; } 
+        }
+
+        public static bool isSourcePartRelation(Part listener, PartRelationship relation)
+        {
+            Part src = srcPart;
+            if (src == null)
+                return false;
+
+            if (TestFlag(relation, PartRelationship.Vessel))
+                return src.localRoot == listener.localRoot;
+
+            if (TestFlag(relation, PartRelationship.Self) && src == listener)
+                return true;
+
+            if (TestFlag(relation, PartRelationship.Ancestors)) 
+            {
+                for (Part upto = listener.parent; upto != null; upto = upto.parent) 
+                    if(upto == src)
+                        return true;
+            }
+            else if (TestFlag(relation, PartRelationship.Parent) && src == listener.parent)
+                    return true;
+
+            if (TestFlag(relation, PartRelationship.Decendents))
+            {
+                for (Part upto = src.parent; upto != null; upto = upto.parent)
+                    if (upto == listener)
+                        return true;
+            }
+            else if (TestFlag(relation, PartRelationship.Children) && src.parent == listener)
+                return true;
+
+            if (TestFlag(relation, PartRelationship.Symmetry))
+                foreach (Part sym in listener.symmetryCounterparts)
+                    if (src == sym)
+                        return true;
+
+            return false;
+        }
+
+        public static bool isSourceSamePart(Part listener)
+        {
+            return srcPart == listener;
+        }
+
+        public static bool isSourceSameVessel(Part listener)
+        {
+            return srcPart.localRoot == listener.localRoot;
+        }
+
+        #region Internal Bits
+        private static Stack<Info> curr = new Stack<Info>();
+
+        static internal IDisposable Push(object source, EventInfo evt)
+        {
+            return new Info(source, evt);
+        }
+
+        private class Info : IDisposable
+        {
+            internal Info(object source, EventInfo evt)
+            {
+                this.source = source;
+                this.evt = evt;
+                curr.Push(this);
+            }
+
+            internal object source;
+            internal EventInfo evt;
+
+            void IDisposable.Dispose()
+            {
+                curr.Pop();
+            }
+        }
+
+        private static bool TestFlag(PartRelationship e, PartRelationship flags)
+        {
+            return (e & flags) == flags;
+        }
+        #endregion
     }
 
     // Delegates for some standard events
@@ -210,14 +190,32 @@ namespace KSPAPIExtensions
     /// <summary>
     /// Message for when the part's mass is modified.
     /// </summary>
-    [PartMessageEvent(PartMessageScope.Vessel)]
-    public delegate void OnPartMassChangedDelegate(Part part);
+    [PartMessageEvent]
+    public delegate void PartMassChanged();
 
     /// <summary>
-    /// Message for when the part's resource list is modified.
+    /// Message for when the part's CoMOffset changes.
     /// </summary>
-    [PartMessageEvent(PartMessageScope.Vessel)]
-    public delegate void OnResourcesModifiedDelegate(Part part, float oldmass);
+    [PartMessageEvent]
+    public delegate void PartCoMOffsetChanged();
+
+    /// <summary>
+    /// Message for when the part's resource list is modified (added to or subtracted from).
+    /// </summary>
+    [PartMessageEvent]
+    public delegate void PartResourceListModified();
+
+    /// <summary>
+    /// Message for when the max amount of a resource is modified.
+    /// </summary>
+    [PartMessageEvent]
+    public delegate void PartResourceMaxAmountModified(PartResource resource);
+
+    /// <summary>
+    /// Message for when some change has been made to the part's model or collider.
+    /// </summary>
+    [PartMessageEvent]
+    public delegate void PartModelModified();
 
     internal class PartMessageManager : PartModule
     {
@@ -251,15 +249,14 @@ namespace KSPAPIExtensions
             foreach (EventInfo evt in t.GetEvents(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
                 Type deleg = evt.EventHandlerType;
-                foreach (PartMessageEventAttribute attr in deleg.GetCustomAttributes(typeof(PartMessageEventAttribute), true))
-                    GenerateEventHandoff(obj, evt, attr);
+                foreach (PartMessageEvent attr in deleg.GetCustomAttributes(typeof(PartMessageEvent), true))
+                    GenerateEventHandoff(obj, module, evt, attr);
             }
 
             foreach (MethodInfo meth in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
-                foreach (PartMessageListenerAttribute attr in meth.GetCustomAttributes(typeof(PartMessageListenerAttribute), true))
+                foreach (PartMessageListener attr in meth.GetCustomAttributes(typeof(PartMessageListener), true))
                     AddListener(module, meth, attr);
-
             }
         }
 
@@ -268,13 +265,12 @@ namespace KSPAPIExtensions
             public PartModule module;
             public MethodInfo method;
 
-            public PartMessageListenerAttribute listenerAttr;
-            public KSPEvent kspEvent;
+            public PartMessageListener listenerAttr;
         }
 
-        private Dictionary<string, List<ListenerInfo>> listeners = new Dictionary<string, List<ListenerInfo>>();
+        private Dictionary<Type, List<ListenerInfo>> listeners = new Dictionary<Type, List<ListenerInfo>>();
 
-        private void AddListener(PartModule module, MethodInfo meth, PartMessageListenerAttribute attr)
+        private void AddListener(PartModule module, MethodInfo meth, PartMessageListener attr)
         {
             switch (HighLogic.LoadedScene)
             {
@@ -290,13 +286,19 @@ namespace KSPAPIExtensions
                     return;
             }
 
-            string name = attr.message ?? meth.Name;
+            Type message = attr.message;
+
+            if (Delegate.CreateDelegate(attr.message, meth, false) == null)
+            {
+                Debug.LogError(string.Format("PartMessageListener method {0}.{1} does not support the delegate type {2} as declared in the attribute", meth.DeclaringType, meth.Name, attr.message.Name));
+                return;
+            }
 
             List<ListenerInfo> listenerList;
-            if (!listeners.TryGetValue(name, out listenerList))
+            if (!listeners.TryGetValue(message, out listenerList))
             {
                 listenerList = new List<ListenerInfo>();
-                listeners[name] = listenerList;
+                listeners.Add(message, listenerList);
             }
 
             ListenerInfo info = new ListenerInfo();
@@ -305,93 +307,9 @@ namespace KSPAPIExtensions
             info.listenerAttr = attr;
 
             listenerList.Add(info);
-
-            if (attr.kspEventParams != null)
-            {
-                if (Events[name] != null)
-                {
-                    BaseEventList list = (module != null) ? module.Events : part.Events;
-                    KSPEvent kspEvent = new KSPEvent();
-                    kspEvent.active = true;
-                    kspEvent.name = name;
-
-                    BaseEvent baseEvent = new BaseEvent(list, name, data => HandleKSPEvent(name, data), kspEvent);
-
-                    Events.Add(baseEvent);
-                }
-            }
         }
 
-        private void AddListener(PartModule module, MethodInfo meth, KSPEvent attr)
-        {
-            List<ListenerInfo> listenerList;
-            if (!listeners.TryGetValue(attr.name, out listenerList))
-            {
-                listenerList = new List<ListenerInfo>();
-                listeners[attr.name] = listenerList;
-            }
-
-            ListenerInfo info = new ListenerInfo();
-            info.module = module;
-            info.method = meth;
-            info.kspEvent = attr;
-            listenerList.Add(info);
-        }
-
-        private void HandleKSPEvent(string name, BaseEventData data)
-        {
-            foreach (ListenerInfo info in listeners[name])
-            {
-                string[] pList = info.listenerAttr.kspEventParams;
-                if (pList == null)
-                    continue;
-
-                if (info.module != null && !(info.module.isEnabled && info.module.enabled))
-                    continue;
-
-                object target = ((info.module==null)?(object)part:info.module);
-
-                if (pList.Length != data.Keys.Count)
-                {
-                    Debug.LogWarning(string.Format("PartMessageListener {0} defined in {1} has incorrect kspEvent params", name, target.GetType().Name));
-                    return;
-                }
-
-                object[] args = new object[pList.Length];
-                for (int i = 0; i < pList.Length; i++)
-                {
-                    if (!data.Keys.Cast<string>().Contains(pList[i]))
-                    {
-                        Debug.LogWarning(string.Format("PartMessageListener {0} defined in {1} has incorrect kspEvent params", name, target.GetType().Name));
-                        return;
-                    }
-                    args[i] = data.Get(pList[i]);
-                }
-
-                try {
-                    info.method.Invoke(target, args);
-                }
-                catch(TargetInvocationException ex) {
-                    Debug.LogError(string.Format("PartMessageListener {0} defined in {1} Exception threw excepton when calling listener from kspEvent", name, target.GetType().Name));
-                    Debug.LogException(ex.InnerException);
-                }
-                catch (ArgumentException ex)
-                {
-                    Debug.LogError(string.Format("PartMessageListener {0} defined in {1} Exception has arguments that don't match the types of the kspEvent", name, target.GetType().Name));
-                    Debug.LogException(ex);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError("Exception thrown when using reflection");
-                    Debug.LogException(ex);
-                }
-
-            }
-        }
-
-
-
-        private void GenerateEventHandoff(object source, EventInfo evt, PartMessageEventAttribute attr)
+        private void GenerateEventHandoff(object source, PartModule module, EventInfo evt, PartMessageEvent attr)
         {
             MethodAttributes addAttrs = evt.GetAddMethod(true).Attributes;
 
@@ -406,10 +324,8 @@ namespace KSPAPIExtensions
 
             // This generates a dynamic method that pulls the properties of the event
             // plus the arguments passed and hands it off to the EventHandler method below.
-            Type delegateType = evt.EventHandlerType;
-            MethodInfo m = delegateType.GetMethod("Invoke");
-
-            string message = attr.message ?? delegateType.Name;
+            Type message = evt.EventHandlerType;
+            MethodInfo m = message.GetMethod("Invoke");
 
             ParameterInfo[] pLst = m.GetParameters();
             ParameterExpression[] peLst = new ParameterExpression[pLst.Length];
@@ -421,45 +337,49 @@ namespace KSPAPIExtensions
             }
 
             Expression createArr = Expression.NewArrayInit(typeof(object), cvrt);
-            Expression invoke = Expression.Call(Expression.Constant(this), GetType().GetMethod("EventHandler"), 
-                Expression.Constant(message), Expression.Constant(attr), Expression.Constant(delegateType), Expression.Constant(internalAssem), Expression.Constant(internalAssem), createArr);
-            Delegate d = Expression.Lambda(delegateType, invoke, peLst).Compile();
+
+            Expression invoke = Expression.Call(Expression.Constant(this), GetType().GetMethod("EventHandler"),
+                Expression.Constant(message), Expression.Constant(module), Expression.Constant(evt), Expression.Constant(attr), Expression.Constant(internalCall), Expression.Constant(internalAssem), createArr);
+            Delegate d = Expression.Lambda(message, invoke, peLst).Compile();
 
             // Shouldn't need to use a weak delegate here.
             evt.AddEventHandler(source, d);
         }
 
-        private void EventHandler(string message, PartMessageEventAttribute attr, Type delegateType, bool internalCall, Assembly internalAssem, object[] args)
+        private void EventHandler(Type message, PartModule module, EventInfo evt, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args)
         {
-            if (TestFlag(attr.scope, PartMessageScope.Vessel))
+            using (var info = new PartMessageCallerInfo.Info(part, module, evt, attr))
             {
-                EventHandlerDecendants(message, attr, delegateType, internalCall, internalAssem, args, false, part.localRoot);
-            }
-            else if (TestFlag(attr.scope, PartMessageScope.Symmetry) && part.symmetryCounterparts != null && part.symmetryCounterparts.Count > 0)
-            {
-                EventHandlerSymmetry(message, attr, delegateType, internalCall, internalAssem, args);
-            }
-            else 
-            {
-                if (TestFlag(attr.scope, PartMessageScope.Ancestors))
-                    EventHandlerAncestors(message, attr, delegateType, internalCall, internalAssem, args, part);
-                else if (TestFlag(attr.scope, PartMessageScope.Parent) && part.parent != null)
-                    IfExistsInvokeHandler(part.parent, message, attr, delegateType, internalCall, internalAssem, args);
+                if (TestFlag(attr.scope, PartRelationship.Vessel))
+                {
+                    EventHandlerDecendants(message, attr, internalCall, internalAssem, args, false, part.localRoot);
+                }
+                else if (TestFlag(attr.scope, PartRelationship.Symmetry) && part.symmetryCounterparts != null && part.symmetryCounterparts.Count > 0)
+                {
+                    EventHandlerSymmetry(message, attr, internalCall, internalAssem, args);
+                }
+                else
+                {
+                    if (TestFlag(attr.scope, PartRelationship.Ancestors))
+                        EventHandlerAncestors(message, attr, internalCall, internalAssem, args, part);
+                    else if (TestFlag(attr.scope, PartRelationship.Parent) && part.parent != null)
+                        IfExistsInvokeHandler(part.parent, message, attr, internalCall, internalAssem, args);
 
-                if (TestFlag(attr.scope, PartMessageScope.Self))
-                    EventHandlerSelf(message, attr, delegateType, internalCall, internalAssem, args);
+                    if (TestFlag(attr.scope, PartRelationship.Self))
+                        EventHandlerSelf(message, attr, internalCall, internalAssem, args);
 
-                if (TestFlag(attr.scope, PartMessageScope.Decendents))
-                    EventHandlerDecendants(message, attr, delegateType, internalCall, internalAssem, args, true, part);
-                else if (TestFlag(attr.scope, PartMessageScope.Children))
-                    EventHandlerDecendants(message, attr, delegateType, internalCall, internalAssem, args, false, part);
+                    if (TestFlag(attr.scope, PartRelationship.Decendents))
+                        EventHandlerDecendants(message, attr, internalCall, internalAssem, args, true, part);
+                    else if (TestFlag(attr.scope, PartRelationship.Children))
+                        EventHandlerDecendants(message, attr, internalCall, internalAssem, args, false, part);
+                }
             }
         }
 
-        private void EventHandlerSymmetry(string message, PartMessageEventAttribute attr, Type delegateType, bool internalCall, Assembly internalAssem, object[] args)
+        private void EventHandlerSymmetry(Type message, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args)
         {
             // Invoke the ancestors first, then the symmetrical bits.
-            if ((uint)(attr.scope & PartMessageScope.Ancestors) != 0)
+            if ((uint)(attr.scope & PartRelationship.Ancestors) != 0)
             {
                 // so at some point between here and the common ancestor, ancestors may merge
                 // Consider (parts A, B, C. Bx2 represents symmetry)  A -> ( Bx2 -> ( Cx3, Cx3, Cx3 ), Bx2 -> ( Cx3, Cx3, Cx3 ) )
@@ -474,7 +394,7 @@ namespace KSPAPIExtensions
                     if(!inList.Add(part.parent))
                         toInvoke.AddLast(p.parent);
 
-                if(TestFlag(attr.scope, PartMessageScope.Ancestors)) 
+                if(TestFlag(attr.scope, PartRelationship.Ancestors)) 
                     for (var next = toInvoke.First; next != null; )
                     {
                         // if not already present, add the parent to the list
@@ -498,55 +418,50 @@ namespace KSPAPIExtensions
                 for (var next = toInvoke.Last; next != null; next = next.Previous)
                 {
                     PartMessageManager mgr = next.Value.transform.GetComponent<PartMessageManager>();
-                    mgr.EventHandlerSelf(message, attr, delegateType, internalCall, internalAssem, args);
+                    mgr.EventHandlerSelf(message, attr, internalCall, internalAssem, args);
                 }
             }
 
-            // Just build a new attribute that doesn't include the parents or the symmetry, and invoke
-            PartMessageEventAttribute symAttr = new PartMessageEventAttribute();
-            symAttr.message = attr.message;
-            symAttr.scope = (attr.scope & ~(PartMessageScope.Symmetry | PartMessageScope.Ancestors)) | PartMessageScope.Self;
-            symAttr.kspEventParams = attr.kspEventParams;
+            // Just build a new attribute that doesn't include the parents or the symmetry, and invoke the handler again.
+            PartMessageEvent symAttr = new PartMessageEvent((attr.scope & ~(PartRelationship.Symmetry | PartRelationship.Ancestors)) | PartRelationship.Self);
 
             foreach (Part sym in part.symmetryCounterparts)
             {
                 PartMessageManager symMgr = sym.GetComponent<PartMessageManager>();
-                symMgr.EventHandler(message, symAttr, delegateType, internalCall, internalAssem, args);
+                symMgr.EventHandler(message, PartMessageCallerInfo.srcModule, PartMessageCallerInfo.srcEvent, symAttr, internalCall, internalAssem, args);
             }
 
-            if(TestFlag(attr.scope, PartMessageScope.Self))
-                EventHandler(message, symAttr, delegateType, internalCall, internalAssem, args);
+            if(TestFlag(attr.scope, PartRelationship.Self))
+                EventHandler(message, PartMessageCallerInfo.srcModule, PartMessageCallerInfo.srcEvent, symAttr, internalCall, internalAssem, args);
         }
 
-
-
-        private static void EventHandlerAncestors(string message, PartMessageEventAttribute attr, Type delegateType, bool internalCall, Assembly internalAssem, object[] args, Part part)
+        private static void EventHandlerAncestors(Type message, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args, Part part)
         {
             if (part.parent == null)
                 return;
             part = part.parent;
-            EventHandlerAncestors(message, attr, delegateType, internalCall, internalAssem, args, part);
-            IfExistsInvokeHandler(part, message, attr, delegateType, internalCall, internalAssem, args);
+            EventHandlerAncestors(message, attr, internalCall, internalAssem, args, part);
+            IfExistsInvokeHandler(part, message, attr, internalCall, internalAssem, args);
         }
 
-        private static void EventHandlerDecendants(string message, PartMessageEventAttribute attr, Type delegateType, bool internalCall, Assembly internalAssem, object[] args, bool recurse, Part part)
+        private static void EventHandlerDecendants(Type message, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args, bool recurse, Part part)
         {
             foreach (Part child in part.children)
             {
-                IfExistsInvokeHandler(part, message, attr, delegateType, internalCall, internalAssem, args);
+                IfExistsInvokeHandler(part, message, attr, internalCall, internalAssem, args);
                 if (recurse)
-                    EventHandlerDecendants(message, attr, delegateType, internalCall, internalAssem, args, true, child);
+                    EventHandlerDecendants(message, attr, internalCall, internalAssem, args, true, child);
             }
         }
 
-        private static void IfExistsInvokeHandler(Part part, string message, PartMessageEventAttribute attr, Type delegateType, bool internalCall, Assembly internalAssem, object[] args)
+        private static void IfExistsInvokeHandler(Part part, Type message, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args)
         {
             PartMessageManager childManager = part.transform.GetComponent<PartMessageManager>();
             if (childManager != null)
-                childManager.EventHandlerSelf(message, attr, delegateType, internalCall, internalAssem, args);
+                childManager.EventHandlerSelf(message, attr, internalCall, internalAssem, args);
         }
 
-        internal void EventHandlerSelf(string message, PartMessageEventAttribute attr, Type delegateType, bool internalCall, Assembly internalAssem, object[] args)
+        internal void EventHandlerSelf(Type message, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args)
         {
             List<ListenerInfo> listeners;
             if (!this.listeners.TryGetValue(message, out listeners))
@@ -563,33 +478,24 @@ namespace KSPAPIExtensions
                 if (info.module != null && (!info.module.isEnabled || !info.module.enabled))
                     continue;
 
-
+                object target = (object)info.module ?? part;
 
                 if (info.listenerAttr != null)
                 {
-                    Delegate d = Delegate.CreateDelegate(delegateType, (object)info.module ?? part, info.method, false);
-                    if (d != null)
+                    try
                     {
-                        try
-                        {
-                            d.DynamicInvoke(args);
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.LogError("Exception when invoking event handler:");
-                            Debug.LogException(ex);
-                        }
+                        info.method.Invoke(target, args);
                     }
-                }
-
-                if (info.kspEvent != null)
-                {
-
+                    catch (Exception ex)
+                    {
+                        Debug.LogError("Exception when invoking event handler:");
+                        Debug.LogException(ex);
+                    }
                 }
             }
         }
 
-        private static bool TestFlag(PartMessageScope e, PartMessageScope flags)
+        private static bool TestFlag(PartRelationship e, PartRelationship flags)
         {
             return (e & flags) == flags;
         }
@@ -654,12 +560,11 @@ namespace KSPAPIExtensions
         private static bool NeedsManager(Type t)
         {
             foreach (EventInfo info in t.GetEvents(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-                if (info.GetCustomAttributes(typeof(PartMessageEventAttribute), true).Length > 0)
+                if (info.GetCustomAttributes(typeof(PartMessageEvent), true).Length > 0)
                     return true;
 
             foreach (MethodInfo meth in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-                if (meth.GetCustomAttributes(typeof(PartMessageListenerAttribute), true).Length > 0
-                    || meth.GetCustomAttributes(typeof(KSPEvent), true).Length > 0)
+                if (meth.GetCustomAttributes(typeof(PartMessageListener), true).Length > 0)
                     return true;
 
             return false;
