@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-namespace KSPAPIExtensions
+namespace KSPAPIExtensions.DebuggingUtils
 {
 
     public class PhysicsDebugger : PartModule

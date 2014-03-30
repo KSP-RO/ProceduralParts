@@ -10,170 +10,6 @@ namespace KSPAPIExtensions
 
     public static class UnityUtils
     {
-        #region Debugging dumpage
-
-        [Flags]
-        public enum DumpTreeOption
-        {
-            None = 0x0,
-            Default = 0x0,
-
-            Active = 0x1,
-            TransformPosition = 0x2,
-            TransformRotation = 0x4,
-
-            // Optons that require iterating through components should have the 0x10 bit set.
-            Components = 0x30,
-            Materials = 0x50,
-            Mesh = 0x90,
-
-            Rigidbody = 0x110,
-        }
-
-        public static string DumpTree(this Transform t, DumpTreeOption options = DumpTreeOption.Default)
-        {
-            StringBuilder sb = new StringBuilder();
-            DumpTree(t, options, 0, sb);
-            return sb.ToString();
-        }
-
-        private static void DumpTree(Transform t, DumpTreeOption options, int level, StringBuilder sb)
-        {
-            string space = "";
-            for (int i = 0; i < level; ++i)
-                space += '-';
-            sb.AppendLine(space + t.name);
-            if ((options & DumpTreeOption.Active) == DumpTreeOption.Active)
-            {
-                sb.AppendLine(space + "+ activeSelf=" + t.gameObject.activeSelf + " activeInHeirachy=" + t.gameObject.activeInHierarchy);
-            }
-            if ((options & DumpTreeOption.TransformPosition) == DumpTreeOption.TransformPosition)
-            {
-                sb.AppendLine(space + "+ position: " + t.position + " localPosition: " + t.localPosition);
-            }
-            if ((options & DumpTreeOption.TransformRotation) == DumpTreeOption.TransformRotation)
-            {
-                sb.AppendLine(space + "+ rotation: " + t.rotation + " localRotation: " + t.localRotation);
-            }
-
-            if ((((int)options & 0x10) == 0))
-                goto skipComponents;
-
-            foreach (Component c in t.gameObject.GetComponents<Component>())
-            {
-
-                if (!typeof(Transform).IsInstanceOfType(c) && ((options & DumpTreeOption.Components) == DumpTreeOption.Components))
-                    sb.AppendLine(space + "+ component:" + c.GetType());
-
-                if (typeof(Renderer).IsInstanceOfType(c) && (options & DumpTreeOption.Materials) == DumpTreeOption.Materials)
-                    foreach (Material m in t.renderer.sharedMaterials)
-                        sb.AppendLine(space + "++ mat:" + m.name);
-
-                if (typeof(MeshFilter).IsInstanceOfType(c) && (options & DumpTreeOption.Mesh) == DumpTreeOption.Mesh)
-                {
-                    MeshFilter filter = (MeshFilter)c;
-                    if (filter != null)
-                        sb.AppendLine(space + "++ mesh:" + ((filter.sharedMesh == null) ? "*null*" : (filter.sharedMesh.name + " verts:" + filter.sharedMesh.vertexCount)));
-                }
-
-                if (typeof(MeshCollider).IsInstanceOfType(c) && (options & DumpTreeOption.Mesh) == DumpTreeOption.Mesh)
-                {
-                    MeshCollider collider = (MeshCollider)c;
-                    if (collider != null)
-                        sb.AppendLine(space + "++ mesh:" + ((collider.sharedMesh == null) ? "*null*" : (collider.sharedMesh.name + " verts:" + collider.sharedMesh.vertexCount)));
-                }
-
-                if (typeof(Rigidbody).IsInstanceOfType(c) && (options & DumpTreeOption.Rigidbody) == DumpTreeOption.Rigidbody) 
-                {
-                    Rigidbody body = (Rigidbody)c;
-                    sb.AppendLine(space + "++ Mass:" + body.mass.ToString("F3"));
-                    sb.AppendLine(space + "++ CoM:" + body.centerOfMass.ToString("F3"));
-                }
-                if (typeof(Joint).IsInstanceOfType(c) && (options & DumpTreeOption.Rigidbody) == DumpTreeOption.Rigidbody)
-                {
-                    Joint joint = (Joint)c;
-                    sb.AppendLine(space + "++ anchor:" + joint.anchor.ToString("F3"));
-
-                    sb.AppendLine(space + "++ connectedBody: " + (joint.connectedBody != null));
-                    if (joint.connectedBody != null)
-                        DumpTree(joint.connectedBody.transform, options, level+1, sb);
-                }
-            }
-
-        skipComponents:
-            for (int i = 0; i < t.childCount; ++i)
-                DumpTree(t.GetChild(i), options, level + 1, sb);
-        }
-
-        public static string DumpMesh(this Mesh mesh)
-        {
-            Vector3[] verticies = mesh.vertices;
-            Vector3[] normals = mesh.normals;
-            Vector4[] tangents = mesh.tangents;
-            Vector2[] uv = mesh.uv;
-
-            StringBuilder sb = new StringBuilder().AppendLine();
-            for (int i = 0; i < mesh.vertexCount; ++i)
-            {
-                sb
-                    .Append(verticies[i].ToString("F4")).Append(", ")
-                    .Append(uv[i].ToString("F4")).Append(", ")
-                    .Append(normals[i].ToString("F4")).Append(", ")
-                    .Append(tangents[i].ToString("F4")).AppendLine();
-            }
-            sb.Replace("(", "").Replace(")", "");
-            sb.AppendLine();
-
-            for (int i = 0; i < mesh.triangles.Length; i += 3)
-            {
-                sb
-                    .Append(mesh.triangles[i]).Append(',')
-                    .Append(mesh.triangles[i + 1]).Append(',')
-                    .Append(mesh.triangles[i + 2]).AppendLine();
-            }
-
-           return sb.ToString();
-        }
-
-        public static string DumpObjectFields(this object obj, BindingFlags flags = BindingFlags.Default)
-        {
-            StringBuilder sb = new StringBuilder();
-            Type type = obj.GetType();
-
-            foreach (FieldInfo field in type.GetFields(flags))
-            {
-                object value = field.GetValue(obj);
-                if (value == null)
-                    sb.AppendLine(field.FieldType.Name + " " + field.Name + "is null");
-                else
-                    sb.AppendLine(field.FieldType.Name + " " + field.Name + " = " + value);
-            }
-            return sb.ToString();
-        }
-
-        public static string DumpNotEqualFields<T>(this T obj, T that, BindingFlags flags = BindingFlags.Default)
-        {
-            StringBuilder sb = new StringBuilder();
-            if (ReferenceEquals(obj, that))
-                sb.AppendLine("Same object");
-
-            Type type = typeof(T);
-
-            foreach (FieldInfo field in type.GetFields(flags))
-            {
-                object thisValue = field.GetValue(obj);
-                object thatValue = field.GetValue(that);
-
-                if (field.FieldType.IsPrimitive && Equals(thisValue, thatValue))
-                    continue;
-                if (ReferenceEquals(thisValue, thatValue))
-                    continue;
-                sb.AppendLine("Different fields: " + field.FieldType.Name + " " + field.Name + (Equals(thisValue, thatValue) ? "(compute equal)" : (" " + thisValue + " != " + thatValue)));
-            }
-            return sb.ToString();
-        }
-        #endregion
-
         #region transforms and geometry
         public static string ToStringAngleAxis(this Quaternion q, string format = "F3")
         {
@@ -212,12 +48,124 @@ namespace KSPAPIExtensions
             {
                 inBetween.Add(track.name);
                 if (track.parent == null)
-                    throw new ArgumentException("Passed transform is not a child of this part");
+                    throw new ArgumentException("Passed transform is not a module of this part");
             }
             inBetween.Reverse();
             return string.Join("/", inBetween.ToArray());
         }
         #endregion
+    }
+
+
+    /// <summary>
+    /// Be aware this will not prevent a non singleton constructor
+    ///   such as `T myT = new T();`
+    /// To prevent that, add `protected T () {}` to your singleton class.
+    /// 
+    /// As a note, this is made as MonoBehaviour because we need Coroutines.
+    /// </summary>
+    public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
+    {
+        private static T _instance;
+
+        private static object _lock = new object();
+
+        public static T Instance
+        {
+            get
+            {
+                if (applicationIsQuitting)
+                {
+                    Debug.LogWarning("[Singleton] Instance '" + typeof(T) +
+                        "' already destroyed on application quit." +
+                        " Won't create again - returning null.");
+                    return null;
+                }
+
+                lock (_lock)
+                {
+                    if (_instance == null)
+                    {
+                        _instance = (T)FindObjectOfType(typeof(T));
+
+                        if (FindObjectsOfType(typeof(T)).Length > 1)
+                        {
+                            Debug.LogError("[Singleton] Something went really wrong " +
+                                " - there should never be more than 1 singleton!" +
+                                " Reopenning the scene might fix it.");
+                            return _instance;
+                        }
+
+                        if (_instance == null)
+                        {
+                            GameObject singleton = new GameObject();
+                            _instance = singleton.AddComponent<T>();
+                            singleton.name = "(singleton) " + typeof(T).ToString();
+
+                            DontDestroyOnLoad(singleton);
+
+                            Debug.Log("[Singleton] An instance of " + typeof(T) +
+                                " is needed in the scene, so '" + singleton +
+                                "' was created with DontDestroyOnLoad.");
+                        }
+                        else
+                        {
+                            Debug.Log("[Singleton] Using instance already created: " +
+                                _instance.gameObject.name);
+                        }
+                    }
+
+                    return _instance;
+                }
+            }
+        }
+
+        private static bool applicationIsQuitting = false;
+        /// <summary>
+        /// When Unity quits, it destroys objects in a random order.
+        /// In principle, a Singleton is only destroyed when application quits.
+        /// If any script calls Instance after it have been destroyed, 
+        ///   it will create a buggy ghost object that will stay on the Editor scene
+        ///   even after stopping playing the Application. Really bad!
+        /// So, this was made to be sure we're not creating that buggy ghost object.
+        /// </summary>
+        public void OnDestroy()
+        {
+            applicationIsQuitting = true;
+        }
+    }
+
+    /// <summary>
+    /// Flags to determine relationship between two parts.
+    /// </summary>
+    [Flags]
+    public enum PartRelationship
+    {
+        Vessel = 0x1,
+        Self = 0x2 | 0x1,
+        Symmetry = 0x4 | 0x1,
+        Decendent = 0x8 | 0x1,
+        Child = 0x10 | 0x8 | 0x1,
+        Ancestor = 0x20 | 0x1,
+        Parent = 0x40 | 0x20 | 0x1,
+        Sibling = 0x80 | 0x1,
+        Unrelated = 0x0,
+    }
+
+    [Flags]
+    public enum GameSceneFilter
+    {
+        Loading = 1 << (int)GameScenes.LOADING,
+        MainMenu = 1 << (int)GameScenes.MAINMENU,
+        SpaceCenter = 1 << (int)GameScenes.SPACECENTER,
+        Editor = 1 << (int)GameScenes.EDITOR | 1 << (int)GameScenes.SPH,
+        VAB = 1 << (int)GameScenes.EDITOR,
+        SPH = 1 << (int)GameScenes.SPH,
+        Flight = 1 << (int)GameScenes.FLIGHT,
+        TrackingStation = 1 << (int)GameScenes.TRACKSTATION,
+        Settings = 1 << (int)GameScenes.SETTINGS,
+        Credits = 1 << (int)GameScenes.CREDITS, 
+        All = 0xFFFF
     }
 
     public static class PartUtils
@@ -250,6 +198,38 @@ namespace KSPAPIExtensions
                     return window;
 
             return null;
+        }
+
+        public static PartRelationship RelationTo(this Part part, Part other)
+        {
+            if (other == part)
+                return PartRelationship.Self;
+            if (part.localRoot != other.localRoot)
+                return PartRelationship.Unrelated;
+            if (part.parent == other)
+                return PartRelationship.Child;
+            if (other.parent == part)
+                return PartRelationship.Parent;
+            if (other.parent == part.parent)
+                return PartRelationship.Sibling;
+            for (Part tmp = part.parent; tmp != null; tmp = tmp.parent)
+                if (tmp == other)
+                    return PartRelationship.Decendent;
+            for (Part tmp = other.parent; tmp != null; tmp = tmp.parent)
+                if (tmp == part)
+                    return PartRelationship.Ancestor;
+            // By exclusion
+            return PartRelationship.Vessel;            
+        }
+
+        public static GameSceneFilter AsFilter(this GameScenes scene)
+        {
+            return (GameSceneFilter)(1 << (int)scene);
+        }
+
+        public static bool IsLoaded(this GameSceneFilter filter)
+        {
+            return (int)(filter & HighLogic.LoadedScene.AsFilter()) != 0;
         }
     }
 
