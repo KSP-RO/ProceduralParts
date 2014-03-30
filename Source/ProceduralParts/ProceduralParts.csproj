@@ -67,6 +67,7 @@
     <Compile Include="ProceduralAbstractShape.cs" />
     <Compile Include="ProceduralPart.cs" />
     <Compile Include="ProceduralAbstractSoRShape.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TankContentSwitcher.cs" />
     <Compile Include="TransformFollower.cs" />
     <Compile Include="zzVersionChecker.cs" />
