@@ -4,9 +4,18 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
+using KSPAPIExtensions.PartMessage;
 
 namespace ProceduralParts
 {
+    [PartMessageEvent]
+    public delegate void ChangePartVolumeDelegate(float volume);
+
+    [PartMessageEvent]
+    public delegate void ChangeAttachNodeSizeDelegate(string name, float minDia, float area, int size);
+
+    [PartMessageEvent]
+    public delegate void ChangeTextureScaleDelegate(string name, Material material, Vector2 targetScale);
 
     public class ProceduralPart : PartModule
     {
@@ -304,8 +313,9 @@ namespace ProceduralParts
         [KSPField]
         public bool allowCurveTweaking = true;
 
+        // This should be private, only KSP is daft sometimes.
         [SerializeField]
-        private byte[] techLimitsSerialized;
+        public byte[] techLimitsSerialized;
 
         private void LoadTechLimits(ConfigNode node)
         {
@@ -603,12 +613,11 @@ namespace ProceduralParts
         [SerializeField]
         private Vector2 sideTextureScale = Vector2.one;
 
-        [PartMessageListener]
+        [PartMessageListener(typeof(ChangeTextureScaleDelegate))]
         private void ChangeTextureScale(string name, Material material, Vector2 targetScale)
         {
-            if (name != "sides")
+            if (!PartMessageService.SourceInfo.isSourceSamePart(part) || name != "sides")
                 return;
-
             this.sideTextureScale = targetScale;
             oldTextureSet = null;
             UpdateTexture();

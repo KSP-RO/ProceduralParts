@@ -1,4 +1,5 @@
 ﻿using KSPAPIExtensions;
+using KSPAPIExtensions.PartMessage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -134,10 +135,10 @@ namespace ProceduralParts
 
         // Plugs into procedural parts.
         // I may well change this message to something else in the fullness of time.
-        [PartMessageListener]
+        [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), GameSceneFilter.Editor)]
         private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
-            if (name != textureMessageName)
+            if (!PartMessageService.SourceInfo.isSourceSamePart(part) || name != textureMessageName)
                 return;
 
             UI_FloatEdit ejectionForceEdit = (UI_FloatEdit)Fields["ejectionForce"].uiControlEditor;
@@ -167,10 +168,10 @@ namespace ProceduralParts
             ejectionForce = Mathf.Round(maxForce * oldForceRatio * 5f) / 5f;
         }
 
-        [PartMessageListener]
+        [PartMessageListener(typeof(ChangePartVolumeDelegate), GameSceneFilter.Editor)]
         private void ChangeVolume(float volume)
         {
-            if (density > 0)
+            if (PartMessageService.SourceInfo.isSourceSamePart(part) && density > 0)
                 part.mass = mass = density * volume;
         }
     }

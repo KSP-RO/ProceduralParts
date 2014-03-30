@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
+using KSPAPIExtensions.PartMessage;
 
 namespace ProceduralParts
 {
@@ -63,6 +64,28 @@ namespace ProceduralParts
 
         #endregion
 
+        #region Events
+
+        // Events. These will get bound up automatically
+
+        public event ChangePartVolumeDelegate ChangeVolume;
+        public event ChangeTextureScaleDelegate ChangeTextureScale;
+        public event ChangeAttachNodeSizeDelegate ChangeAttachNodeSize;
+
+        protected void RaiseChangeTextureScale(string name, Material material, Vector2 targetScale)
+        {
+            if(ChangeTextureScale != null)
+                ChangeTextureScale(name, material, targetScale);
+        }
+        
+        protected void RaiseChangeAttachNodeSize(string name, float minDia, float area, int size)
+        {
+            if(ChangeAttachNodeSize != null)
+                ChangeAttachNodeSize(name, minDia, area, size);
+        }
+
+        #endregion
+
         #region Callbacks
 
         private bool forceNextUpdate = true;
@@ -89,7 +112,7 @@ namespace ProceduralParts
 
                 if (volumeChanged || wasForce)
                 {
-                    part.SendPartMessage(PartMessageScope.Self | PartMessageScope.IgnoreAttribute, "ChangeVolume", MathUtils.RoundTo(volume * pPart.volumeScale, 0.001f * pPart.volumeScale));
+                    ChangeVolume(MathUtils.RoundTo(volume * pPart.volumeScale, 0.001f * pPart.volumeScale));
                     volumeChanged = false;
                 }
             }

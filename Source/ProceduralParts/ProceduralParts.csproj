@@ -69,7 +69,7 @@
     <Compile Include="ProceduralAbstractSoRShape.cs" />
     <Compile Include="TankContentSwitcher.cs" />
     <Compile Include="TransformFollower.cs" />
-    <Compile Include="Checkers.cs" />
+    <Compile Include="zzVersionChecker.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\KSPAPIExtensions\KSPAPIExtensions.csproj">
