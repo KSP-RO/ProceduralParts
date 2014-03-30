@@ -34,6 +34,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Debugging.cs" />
     <Compile Include="PartMessageUtils.cs" />
     <Compile Include="PhysicsDebugger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -41,7 +42,7 @@
     <Compile Include="UIPartActionChooseOption.cs" />
     <Compile Include="RegistrationAddon.cs" />
     <Compile Include="UIPartActionFloatEdit.cs" />
-    <Compile Include="Checkers.cs" />
+    <Compile Include="zzVersionChecker.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
