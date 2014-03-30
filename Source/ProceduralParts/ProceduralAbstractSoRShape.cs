@@ -512,7 +512,7 @@ namespace ProceduralParts
             //print("ULength=" + tankULength + " VLength=" + tankVLength);
 
             // set the texture scale.
-            part.SendPartMessage("ChangeTextureScale", "sides", pPart.sidesMaterial, new Vector2(tankULength, tankVLength));
+            RaiseChangeTextureScale("sides", pPart.sidesMaterial, new Vector2(tankULength, tankVLength));
 
             m.WriteTo(sidesMesh);
 
@@ -628,10 +628,10 @@ namespace ProceduralParts
             node.breakingTorque = node.breakingForce = Mathf.Max(50 * node.size * node.size, 50);
 
             // Send messages for the changing of the ends
-            part.SendPartMessage("ChangeAttachNodeSize", nodeName, pt.dia, Mathf.PI * pt.dia * pt.dia * 0.25f, node.size);
+            RaiseChangeAttachNodeSize(nodeName, pt.dia, Mathf.PI * pt.dia * pt.dia * 0.25f, node.size);
 
             // TODO: separate out the meshes for each end so we can use the scale for texturing.
-            part.SendPartMessage("ChangeTextureScale", nodeName, pPart.endsMaterial, new Vector2(pt.dia, pt.dia));
+            RaiseChangeTextureScale(nodeName, pPart.endsMaterial, new Vector2(pt.dia, pt.dia));
         }
 
         #endregion

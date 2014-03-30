@@ -1,11 +1,12 @@
 ﻿using System;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
+using KSPAPIExtensions.PartMessage;
 
 namespace ProceduralParts
 {
@@ -98,17 +99,21 @@ namespace ProceduralParts
             }
         }
 
-        [PartMessageListener]
-        private void ResourcesChanged()
+        [PartMessageListener(typeof(PartResourceMaxAmountChanged))]
+        private void ResourcesChanged(PartResource resource)
         {
+            if (!PartMessageService.SourceInfo.isSourceSamePart(part))
+                return;
             if (selectedBell == null)
                 return;
             UpdateThrust(true);
         }
 
-        [PartMessageListener]
+        [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate))]
         private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
+            if (!PartMessageService.SourceInfo.isSourceSamePart(part))
+                return;
             if (name != "bottom")
                 return;
 
@@ -144,8 +149,9 @@ namespace ProceduralParts
         private SRBBellConfig selectedBell;
         private Dictionary<string, SRBBellConfig> srbConfigs;
 
+        // Needs to be public because of a bug in KSP.
         [SerializeField]
-        private ConfigNode[] srbConfigsSerialized;
+        public ConfigNode[] srbConfigsSerialized;
 
         private float maxBellChokeDiameter = float.PositiveInfinity;
         private Transform thrustTransform;
@@ -198,15 +204,19 @@ namespace ProceduralParts
             if (HighLogic.LoadedScene != GameScenes.LOADING)
                 return;
 
-            srbConfigs = new Dictionary<string, SRBBellConfig>();
             srbConfigsSerialized = node.GetNodes("SRB_BELL");
+            LoadSRBConfigs();
+        }
+
+        private void LoadSRBConfigs()
+        {
+            srbConfigs = new Dictionary<string, SRBBellConfig>();
             foreach (ConfigNode srbNode in srbConfigsSerialized)
             {
                 SRBBellConfig conf = new SRBBellConfig();
                 conf.Load(srbNode);
                 srbConfigs.Add(conf.displayName, conf);
             }
-
         }
 
         private void InitializeBells()
@@ -214,13 +224,7 @@ namespace ProceduralParts
             // Initialize the configs.
             if (srbConfigs == null)
             {
-                srbConfigs = new Dictionary<string, SRBBellConfig>();
-                foreach (ConfigNode srbNode in srbConfigsSerialized)
-                {
-                    SRBBellConfig conf = new SRBBellConfig();
-                    conf.Load(srbNode);
-                    srbConfigs.Add(conf.displayName, conf);
-                }
+                LoadSRBConfigs();
             }
 
             BaseField field = Fields["selectedBellName"];

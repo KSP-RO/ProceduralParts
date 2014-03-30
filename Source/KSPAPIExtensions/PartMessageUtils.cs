@@ -5,25 +5,10 @@ using System.Text;
 using System.Reflection;
 using UnityEngine;
 using System.Linq.Expressions;
+using System.Collections;
 
 namespace KSPAPIExtensions.PartMessage
 {
-
-    /// <summary>
-    /// Scope to send part messages. The message can go to various heirachy members.
-    /// </summary>
-    [Flags]
-    public enum PartRelationship
-    {
-        Self = 0x1,
-        Symmetry = 0x2,
-        Children = 0x4,
-        Decendents = 0xC,
-        Parent = 0x10,
-        Ancestors = 0x30,
-        Vessel = 0xFF,
-    }
-
     /// <summary>
     /// Apply this attribute to any method you wish to recieve messages. 
     /// 
@@ -32,18 +17,18 @@ namespace KSPAPIExtensions.PartMessage
     /// Internal messages are internal to a particular Assembly, will pass messages to internal listeners in the
     /// same assembly, and should use internal delegates.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple=true, Inherited=true)]
-    public class PartMessageListener : Attribute 
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
+    public class PartMessageListener : Attribute
     {
-        public PartMessageListener(Type message, UI_Scene scene = UI_Scene.All)
+        public PartMessageListener(Type message, GameSceneFilter scenes = GameSceneFilter.All)
         {
-            if(message == null || !message.IsSubclassOf(typeof(Delegate)))
+            if (message == null || !message.IsSubclassOf(typeof(Delegate)))
                 throw new ArgumentException("Message is not a delegate type");
-            if(message.GetCustomAttributes(typeof(PartMessageEvent), true).Length == 0)
+            if (message.GetCustomAttributes(typeof(PartMessageEvent), true).Length == 0)
                 throw new ArgumentException("Message does not have the PartMessageEvent attribute");
 
             this.message = message;
-            this.scene = scene;
+            this.scenes = scenes;
         }
 
         /// <summary>
@@ -53,58 +38,86 @@ namespace KSPAPIExtensions.PartMessage
         /// <summary>
         /// Scene to listen for message in. Defaults to All.
         /// </summary>
-        public readonly UI_Scene scene;
+        public readonly GameSceneFilter scenes;
     }
 
     /// <summary>
     /// 
     /// </summary>
     [AttributeUsage(AttributeTargets.Delegate)]
-    public class PartMessageEvent : Attribute { }
+    public class PartMessageEvent : Attribute
+    {
+        public PartMessageEvent(Type parent = null)
+        {
+            if (parent != null)
+            {
+                if (!parent.IsSubclassOf(typeof(Delegate)))
+                    throw new ArgumentException("Parent is not a delegate type");
+                if (parent.GetCustomAttributes(typeof(PartMessageEvent), true).Length != 1)
+                    throw new ArgumentException("Parent does not have the PartMessageEvent attribute");
+            }
+            this.parent = parent;
+        }
+
+        readonly public Type parent;
+    }
 
 
     /// <summary>
     /// PartMessageListeners can use the properties in this class to examine the source of the message
     /// </summary>
-    public static class PartMessageCallerInfo
+    public class PartMessageSourceInfo
     {
-        public static object source 
-        { 
-            get { 
-                return curr.Peek().source; 
-            } 
+        internal PartMessageSourceInfo() { }
+
+        public object source
+        {
+            get
+            {
+                return curr.Peek().source;
+            }
         }
 
-        public static EventInfo srcEvent 
-        {   
+        public EventInfo srcEvent
+        {
             get
             {
                 return curr.Peek().evt;
             }
         }
 
-        public static Part srcPart { 
-            get { 
+        public Part srcPart
+        {
+            get
+            {
                 object src = source;
-                if(src is Part)
+                if (src is Part)
                     return (Part)src;
-                if(src is PartModule)
+                if (src is PartModule)
                     return ((PartModule)src).part;
                 return null;
-            } 
+            }
         }
 
-        public static PartModule srcModule
+        public PartModule srcModule
         {
             get { return source as PartModule; }
         }
 
-        public static Type srcDelegateType 
-        { 
-            get { return srcEvent.EventHandlerType; } 
+        public Type srcMessage
+        {
+            get { return srcEvent.EventHandlerType; }
         }
 
-        public static bool isSourcePartRelation(Part listener, PartRelationship relation)
+        public IEnumerable<Type> srcAllMessages
+        {
+            get
+            {
+                return curr.Peek();
+            }
+        }
+
+        public bool isSourcePartRelation(Part listener, PartRelationship relation)
         {
             Part src = srcPart;
             if (src == null)
@@ -116,22 +129,22 @@ namespace KSPAPIExtensions.PartMessage
             if (TestFlag(relation, PartRelationship.Self) && src == listener)
                 return true;
 
-            if (TestFlag(relation, PartRelationship.Ancestors)) 
+            if (TestFlag(relation, PartRelationship.Ancestor))
             {
-                for (Part upto = listener.parent; upto != null; upto = upto.parent) 
-                    if(upto == src)
+                for (Part upto = listener.parent; upto != null; upto = upto.parent)
+                    if (upto == src)
                         return true;
             }
             else if (TestFlag(relation, PartRelationship.Parent) && src == listener.parent)
-                    return true;
+                return true;
 
-            if (TestFlag(relation, PartRelationship.Decendents))
+            if (TestFlag(relation, PartRelationship.Decendent))
             {
                 for (Part upto = src.parent; upto != null; upto = upto.parent)
                     if (upto == listener)
                         return true;
             }
-            else if (TestFlag(relation, PartRelationship.Children) && src.parent == listener)
+            else if (TestFlag(relation, PartRelationship.Child) && src.parent == listener)
                 return true;
 
             if (TestFlag(relation, PartRelationship.Symmetry))
@@ -142,39 +155,51 @@ namespace KSPAPIExtensions.PartMessage
             return false;
         }
 
-        public static bool isSourceSamePart(Part listener)
+        public bool isSourceSamePart(Part listener)
         {
             return srcPart == listener;
         }
 
-        public static bool isSourceSameVessel(Part listener)
+        public bool isSourceSameVessel(Part listener)
         {
             return srcPart.localRoot == listener.localRoot;
         }
 
         #region Internal Bits
-        private static Stack<Info> curr = new Stack<Info>();
+        private Stack<Info> curr = new Stack<Info>();
 
-        static internal IDisposable Push(object source, EventInfo evt)
+        internal IDisposable Push(object source, EventInfo evt)
         {
-            return new Info(source, evt);
+            return new Info(this, source, evt);
         }
 
-        private class Info : IDisposable
+        private class Info : IDisposable, IEnumerable<Type>
         {
-            internal Info(object source, EventInfo evt)
+            internal Info(PartMessageSourceInfo info, object source, EventInfo evt)
             {
                 this.source = source;
                 this.evt = evt;
-                curr.Push(this);
+                this.info = info;
+                info.curr.Push(this);
             }
 
+            internal PartMessageSourceInfo info;
             internal object source;
             internal EventInfo evt;
 
             void IDisposable.Dispose()
             {
-                curr.Pop();
+                info.curr.Pop();
+            }
+
+            IEnumerator<Type> IEnumerable<Type>.GetEnumerator()
+            {
+                return new MessageEnumerator(evt.EventHandlerType);
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return new MessageEnumerator(evt.EventHandlerType);
             }
         }
 
@@ -182,329 +207,252 @@ namespace KSPAPIExtensions.PartMessage
         {
             return (e & flags) == flags;
         }
+
+        private class MessageEnumerator : IEnumerator<Type>
+        {
+
+            public MessageEnumerator(Type top)
+            {
+                this.current = this.top = top;
+            }
+            private int pos = -1;
+            private Type current;
+            private Type top;
+
+            object IEnumerator.Current
+            {
+                get {
+                    if (pos != 0)
+                        throw new InvalidOperationException();
+                    return current; 
+                }
+            }
+
+            Type IEnumerator<Type>.Current
+            {
+                get
+                {
+                    if (pos != 0)
+                        throw new InvalidOperationException();
+                    return current;
+                }
+            }
+
+            bool IEnumerator.MoveNext()
+            {
+                switch (pos)
+                {
+                    case -1:
+                        current = top;
+                        pos = 0;
+                        break;
+                    case 1:
+                        return false;
+                    case 0:
+                        PartMessageEvent evt = (PartMessageEvent)current.GetCustomAttributes(typeof(PartMessageEvent), true)[0];
+                        current = evt.parent;
+                        break;
+                    case 2:
+                        throw new InvalidOperationException("Enumerator disposed");
+                }
+                if (current == null)
+                {
+                    pos = 1;
+                    return false;
+                }
+                return true;
+            }
+
+            void IEnumerator.Reset()
+            {
+                pos = -1;
+                current = null;
+            }
+
+            void IDisposable.Dispose() {
+                current = top = null;
+                pos = 2;
+            }
+        }
+
         #endregion
     }
 
     // Delegates for some standard events
 
     /// <summary>
-    /// Message for when the part's mass is modified.
+    /// Listen for this to get notification when any physical constant is changed
+    /// including the mass, CoM, moments of inertia, boyancy, ect.
     /// </summary>
     [PartMessageEvent]
+    public delegate void PartPhysicsChanged();
+
+    /// <summary>
+    /// Message for when the part's mass is modified.
+    /// </summary>
+    [PartMessageEvent(typeof(PartPhysicsChanged))]
     public delegate void PartMassChanged();
 
     /// <summary>
     /// Message for when the part's CoMOffset changes.
     /// </summary>
-    [PartMessageEvent]
+    [PartMessageEvent(typeof(PartPhysicsChanged))]
     public delegate void PartCoMOffsetChanged();
+
+    /// <summary>
+    /// Message for when the part's moments of intertia change.
+    /// </summary>
+    [PartMessageEvent(typeof(PartPhysicsChanged))]
+    public delegate void PartMomentsChanged();
+
+
+    /// <summary>
+    /// Message for when the part's mass is modified.
+    /// </summary>
+    [PartMessageEvent]
+    public delegate void PartResourcesChanged();
 
     /// <summary>
     /// Message for when the part's resource list is modified (added to or subtracted from).
     /// </summary>
-    [PartMessageEvent]
-    public delegate void PartResourceListModified();
+    [PartMessageEvent(typeof(PartResourcesChanged))]
+    public delegate void PartResourceListChanged();
 
     /// <summary>
     /// Message for when the max amount of a resource is modified.
     /// </summary>
-    [PartMessageEvent]
-    public delegate void PartResourceMaxAmountModified(PartResource resource);
+    [PartMessageEvent(typeof(PartResourcesChanged))]
+    public delegate void PartResourceMaxAmountChanged(PartResource resource);
 
     /// <summary>
-    /// Message for when some change has been made to the part's model or collider.
+    /// Message for when some change has been made to the part's rendering model.
     /// </summary>
     [PartMessageEvent]
-    public delegate void PartModelModified();
+    public delegate void PartModelChanged();
 
-    internal class PartMessageManager : PartModule
+    /// <summary>
+    /// Message for when some change has been made to the part's collider.
+    /// </summary>
+    [PartMessageEvent]
+    public delegate void PartColliderChanged();
+
+    #region Implementation
+    internal class ListenerInfo
     {
-        public override void OnInitialize()
-        {
-            if(HighLogic.LoadedScene != GameScenes.EDITOR)
-                return;
-            ScanAndAttach();
-        }
+        public WeakReference targetRef;
+        public MethodInfo method;
 
-        public override void OnLoad(ConfigNode node)
-        {
-            if (HighLogic.LoadedScene != GameScenes.FLIGHT)
-                return;
-            // We need to delay the initialization of the listeners until on load in flight mode, since the root
-            // gets munged.
-            ScanAndAttach();
-        }
+        public LinkedListNode<ListenerInfo> node;
 
-        private void ScanAndAttach()
+        public object target
         {
-            ScanAndAttach(part, null);
-            foreach (PartModule child in part.Modules)
-                ScanAndAttach(child, child);
-        }
-
-        private void ScanAndAttach(object obj, PartModule module) 
-        {
-            Type t = obj.GetType();
-
-            foreach (EventInfo evt in t.GetEvents(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            get
             {
-                Type deleg = evt.EventHandlerType;
-                foreach (PartMessageEvent attr in deleg.GetCustomAttributes(typeof(PartMessageEvent), true))
-                    GenerateEventHandoff(obj, module, evt, attr);
-            }
-
-            foreach (MethodInfo meth in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-            {
-                foreach (PartMessageListener attr in meth.GetCustomAttributes(typeof(PartMessageListener), true))
-                    AddListener(module, meth, attr);
+                return targetRef.Target;
             }
         }
 
-        private class ListenerInfo
+        public Part part
         {
-            public PartModule module;
-            public MethodInfo method;
-
-            public PartMessageListener listenerAttr;
-        }
-
-        private Dictionary<Type, List<ListenerInfo>> listeners = new Dictionary<Type, List<ListenerInfo>>();
-
-        private void AddListener(PartModule module, MethodInfo meth, PartMessageListener attr)
-        {
-            switch (HighLogic.LoadedScene)
+            get
             {
-                case GameScenes.EDITOR:
-                    if ((attr.scene & UI_Scene.Editor) != UI_Scene.Editor)
-                        return;
-                    break;
-                case GameScenes.FLIGHT:
-                    if ((attr.scene & UI_Scene.Flight) != UI_Scene.Flight)
-                        return;
-                    break;
-                default:
-                    return;
-            }
-
-            Type message = attr.message;
-
-            if (Delegate.CreateDelegate(attr.message, meth, false) == null)
-            {
-                Debug.LogError(string.Format("PartMessageListener method {0}.{1} does not support the delegate type {2} as declared in the attribute", meth.DeclaringType, meth.Name, attr.message.Name));
-                return;
-            }
-
-            List<ListenerInfo> listenerList;
-            if (!listeners.TryGetValue(message, out listenerList))
-            {
-                listenerList = new List<ListenerInfo>();
-                listeners.Add(message, listenerList);
-            }
-
-            ListenerInfo info = new ListenerInfo();
-            info.module = module;
-            info.method = meth;
-            info.listenerAttr = attr;
-
-            listenerList.Add(info);
-        }
-
-        private void GenerateEventHandoff(object source, PartModule module, EventInfo evt, PartMessageEvent attr)
-        {
-            MethodAttributes addAttrs = evt.GetAddMethod(true).Attributes;
-
-            if ((uint)(addAttrs & (MethodAttributes.Public | MethodAttributes.Assembly)) == 0)
-            {
-                Debug.LogWarning(string.Format("Event {0} in class {1} is not public or internal, cannot generate message manager.", evt.Name, source.GetType().Name));
-                return;
-            }
-
-            bool internalCall = ((addAttrs & MethodAttributes.Assembly) == MethodAttributes.Assembly);
-            Assembly internalAssem = Assembly.GetAssembly(source.GetType());
-
-            // This generates a dynamic method that pulls the properties of the event
-            // plus the arguments passed and hands it off to the EventHandler method below.
-            Type message = evt.EventHandlerType;
-            MethodInfo m = message.GetMethod("Invoke");
-
-            ParameterInfo[] pLst = m.GetParameters();
-            ParameterExpression[] peLst = new ParameterExpression[pLst.Length];
-            Expression[] cvrt = new Expression[pLst.Length];
-            for (int i = 0; i < pLst.Length; i++)
-            {
-                peLst[i] = Expression.Parameter(pLst[i].ParameterType, pLst[i].Name);
-                cvrt[i] = Expression.Convert(peLst[i], typeof(object));
-            }
-
-            Expression createArr = Expression.NewArrayInit(typeof(object), cvrt);
-
-            Expression invoke = Expression.Call(Expression.Constant(this), GetType().GetMethod("EventHandler"),
-                Expression.Constant(message), Expression.Constant(module), Expression.Constant(evt), Expression.Constant(attr), Expression.Constant(internalCall), Expression.Constant(internalAssem), createArr);
-            Delegate d = Expression.Lambda(message, invoke, peLst).Compile();
-
-            // Shouldn't need to use a weak delegate here.
-            evt.AddEventHandler(source, d);
-        }
-
-        private void EventHandler(Type message, PartModule module, EventInfo evt, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args)
-        {
-            using (var info = new PartMessageCallerInfo.Info(part, module, evt, attr))
-            {
-                if (TestFlag(attr.scope, PartRelationship.Vessel))
-                {
-                    EventHandlerDecendants(message, attr, internalCall, internalAssem, args, false, part.localRoot);
-                }
-                else if (TestFlag(attr.scope, PartRelationship.Symmetry) && part.symmetryCounterparts != null && part.symmetryCounterparts.Count > 0)
-                {
-                    EventHandlerSymmetry(message, attr, internalCall, internalAssem, args);
-                }
-                else
-                {
-                    if (TestFlag(attr.scope, PartRelationship.Ancestors))
-                        EventHandlerAncestors(message, attr, internalCall, internalAssem, args, part);
-                    else if (TestFlag(attr.scope, PartRelationship.Parent) && part.parent != null)
-                        IfExistsInvokeHandler(part.parent, message, attr, internalCall, internalAssem, args);
-
-                    if (TestFlag(attr.scope, PartRelationship.Self))
-                        EventHandlerSelf(message, attr, internalCall, internalAssem, args);
-
-                    if (TestFlag(attr.scope, PartRelationship.Decendents))
-                        EventHandlerDecendants(message, attr, internalCall, internalAssem, args, true, part);
-                    else if (TestFlag(attr.scope, PartRelationship.Children))
-                        EventHandlerDecendants(message, attr, internalCall, internalAssem, args, false, part);
-                }
+                object target = this.target;
+                if (target is PartModule)
+                    return ((PartModule)target).part;
+                return target as Part;
             }
         }
 
-        private void EventHandlerSymmetry(Type message, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args)
+        public PartModule module
         {
-            // Invoke the ancestors first, then the symmetrical bits.
-            if ((uint)(attr.scope & PartRelationship.Ancestors) != 0)
+            get
             {
-                // so at some point between here and the common ancestor, ancestors may merge
-                // Consider (parts A, B, C. Bx2 represents symmetry)  A -> ( Bx2 -> ( Cx3, Cx3, Cx3 ), Bx2 -> ( Cx3, Cx3, Cx3 ) )
-
-                // So build a list of all the parents through to the root.
-
-                LinkedList<Part> toInvoke = new LinkedList<Part>();
-                HashSet<Part> inList = new HashSet<Part>();
-
-                // Add the direct parents to the list.
-                foreach (Part p in part.symmetryCounterparts)
-                    if(!inList.Add(part.parent))
-                        toInvoke.AddLast(p.parent);
-
-                if(TestFlag(attr.scope, PartRelationship.Ancestors)) 
-                    for (var next = toInvoke.First; next != null; )
-                    {
-                        // if not already present, add the parent to the list
-                        if (next.Value.parent != null && !inList.Add(next.Value.parent))
-                            toInvoke.AddLast(next.Value.parent);
-
-                        // Remove any element from the list that doesn't have a message manager
-                        if (next.Value.transform.GetComponent<PartMessageManager>() == null)
-                        {
-                            var tmp = next;
-                            next = next.Next;
-                            toInvoke.Remove(tmp);
-                        }
-                        else
-                        {
-                            next = next.Next;
-                        }
-                    }
-
-                // go backwards down the list and call the event handler
-                for (var next = toInvoke.Last; next != null; next = next.Previous)
-                {
-                    PartMessageManager mgr = next.Value.transform.GetComponent<PartMessageManager>();
-                    mgr.EventHandlerSelf(message, attr, internalCall, internalAssem, args);
-                }
-            }
-
-            // Just build a new attribute that doesn't include the parents or the symmetry, and invoke the handler again.
-            PartMessageEvent symAttr = new PartMessageEvent((attr.scope & ~(PartRelationship.Symmetry | PartRelationship.Ancestors)) | PartRelationship.Self);
-
-            foreach (Part sym in part.symmetryCounterparts)
-            {
-                PartMessageManager symMgr = sym.GetComponent<PartMessageManager>();
-                symMgr.EventHandler(message, PartMessageCallerInfo.srcModule, PartMessageCallerInfo.srcEvent, symAttr, internalCall, internalAssem, args);
-            }
-
-            if(TestFlag(attr.scope, PartRelationship.Self))
-                EventHandler(message, PartMessageCallerInfo.srcModule, PartMessageCallerInfo.srcEvent, symAttr, internalCall, internalAssem, args);
-        }
-
-        private static void EventHandlerAncestors(Type message, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args, Part part)
-        {
-            if (part.parent == null)
-                return;
-            part = part.parent;
-            EventHandlerAncestors(message, attr, internalCall, internalAssem, args, part);
-            IfExistsInvokeHandler(part, message, attr, internalCall, internalAssem, args);
-        }
-
-        private static void EventHandlerDecendants(Type message, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args, bool recurse, Part part)
-        {
-            foreach (Part child in part.children)
-            {
-                IfExistsInvokeHandler(part, message, attr, internalCall, internalAssem, args);
-                if (recurse)
-                    EventHandlerDecendants(message, attr, internalCall, internalAssem, args, true, child);
+                return target as PartModule;
             }
         }
 
-        private static void IfExistsInvokeHandler(Part part, Type message, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args)
+        public void Invoke(object[] args)
         {
-            PartMessageManager childManager = part.transform.GetComponent<PartMessageManager>();
-            if (childManager != null)
-                childManager.EventHandlerSelf(message, attr, internalCall, internalAssem, args);
-        }
-
-        internal void EventHandlerSelf(Type message, PartMessageEvent attr, bool internalCall, Assembly internalAssem, object[] args)
-        {
-            List<ListenerInfo> listeners;
-            if (!this.listeners.TryGetValue(message, out listeners))
+            object target = this.target;
+            if (target == null)
                 return;
 
-            foreach (ListenerInfo info in listeners)
-            {
-                // Access levels must match, and internals match only the same assembly
-                bool internalListener = (info.method.Attributes & MethodAttributes.Assembly) == MethodAttributes.Assembly;
-                if (internalCall != internalListener || (internalCall && internalAssem != ((object)info.module ?? part).GetType().Assembly))
-                    continue;
+            PartModule module = target as PartModule;
+            if (module != null && !(module.isEnabled && module.enabled))
+                return;
 
-                // Module needs to be enabled
-                if (info.module != null && (!info.module.isEnabled || !info.module.enabled))
-                    continue;
-
-                object target = (object)info.module ?? part;
-
-                if (info.listenerAttr != null)
-                {
-                    try
-                    {
-                        info.method.Invoke(target, args);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogError("Exception when invoking event handler:");
-                        Debug.LogException(ex);
-                    }
-                }
-            }
+            method.Invoke(target, args);
         }
-
-        private static bool TestFlag(PartRelationship e, PartRelationship flags)
-        {
-            return (e & flags) == flags;
-        }
-
     }
 
-    [KSPAddon(KSPAddon.Startup.MainMenu, true)]
-    internal class PartMessageActivator : MonoBehaviour
+    public class PartMessageManager : PartModule
     {
+        public override string GetInfo()
+        {
+            if (HighLogic.LoadedScene != GameScenes.LOADING)
+                return "";
+            Debug.LogWarning("Scanning part: " + part.name + " in scene " + HighLogic.LoadedScene);
+            try
+            {
+                PartMessageService.Instance.ScanPartInternal(part, this);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+            return "";
+        }
+
+        public override void OnInitialize()
+        {
+            if (!HighLogic.LoadedSceneIsEditor)
+                return;
+            Debug.LogWarning("Scanning part in OnInitialize: " + part.name + " in scene " + HighLogic.LoadedScene);
+            PartMessageService.Instance.ScanPartInternal(part, this);
+            //part.Modules.Remove(this);
+        }
+
+        public override void OnStart(PartModule.StartState state)
+        {
+            if (!HighLogic.LoadedSceneIsEditor || modulesScanned.Count > 0)
+                return;
+            Debug.LogWarning("Scanning part in OnStart: " + part.name + " in scene " + HighLogic.LoadedScene);
+            PartMessageService.Instance.ScanPartInternal(part, this);
+            //part.Modules.Remove(this);
+        }
+
+        
+        public override void OnLoad(ConfigNode node) 
+        {
+            if (!HighLogic.LoadedSceneIsFlight)
+                return;
+            Debug.LogWarning("Scanning part: " + part.name + " in scene " + HighLogic.LoadedScene);
+            PartMessageService.Instance.ScanPartInternal(part, this);
+            //part.Modules.Remove(this);
+        }
+
+        internal List<PartModule> modulesScanned = new List<PartModule>();
+    }
+
+    [KSPAddon(KSPAddon.Startup.Instantly, true)]
+    public class PartMessageService : MonoBehaviour
+    {
+        // The singleton instance of the service.
+        public static PartMessageService Instance
+        {
+            get;
+            private set;
+        }
+
+        public static PartMessageSourceInfo SourceInfo
+        {
+            get;
+            private set;
+        }
+
+        private Dictionary<string, LinkedList<ListenerInfo>> listeners = new Dictionary<string, LinkedList<ListenerInfo>>();
+
+        #region Startup and instance management
         // Version of the compatibility checker itself.
         private static int _version = 1;
 
@@ -514,47 +462,106 @@ namespace KSPAPIExtensions.PartMessage
                 .Where(t => t.FieldType == typeof(List<PartModule>))
                 .First();
 
-        public void Start()
+        protected PartMessageService() { }
+
+        internal void Start()
         {
             // Checkers are identified by the type name and version field name.
-            FieldInfo[] fields =
-                getAllTypes()
-                .Where(t => t.Name == typeof(PartMessageActivator).Name)
-                .Select(t => t.GetField("_version", BindingFlags.Static | BindingFlags.NonPublic))
-                .Where(f => f != null)
-                .Where(f => f.FieldType == typeof(int))
-                .ToArray();
+            var allTypes = getAllTypes();
+
+            var fields = from t in allTypes
+                         where t.FullName == typeof(PartMessageService).FullName
+                         let f = t.GetField("_version", BindingFlags.Static | BindingFlags.NonPublic)
+                         where f != null && f.FieldType == typeof(int)
+                         select f;
 
             // Let the latest version of the checker execute.
-            if (_version != fields.Max(f => (int)f.GetValue(null))) { return; }
+            if (_version != fields.Max(f => (int)f.GetValue(null)))
+                return;
 
-            Debug.Log(String.Format("[PartMessageActivator] Running {3} version {0} from '{1}'", _version, Assembly.GetExecutingAssembly().GetName().Name, typeof(PartMessageActivator).Name));
+            Debug.Log(String.Format("[PartMessageService] Running {0} version {1} from '{2}'", typeof(PartMessageService).Name, _version, Assembly.GetExecutingAssembly().GetName().Name));
 
             // Other checkers will see this version and not run.
             // This accomplishes the same as an explicit "ran" flag with fewer moving parts.
             _version = int.MaxValue;
 
-            // Run through all the available parts, and add the message manager to any that send messages.
-            foreach (AvailablePart p in PartLoader.LoadedPartsList)
+            UnityEngine.Object.DontDestroyOnLoad(gameObject);
+            Instance = this;
+            SourceInfo = new PartMessageSourceInfo();
+
+            // Clear the listeners list when reloaded.
+            GameEvents.onGameSceneLoadRequested.Add(scene => listeners.Clear());
+
+            var parts = (from t in allTypes
+                         where typeof(Part).IsAssignableFrom(t)
+                         select t).ToLookup(t => t.Name);
+
+            var modules = (from t in allTypes
+                           where typeof(PartModule).IsAssignableFrom(t)
+                           select t).ToLookup(t => t.Name);
+
+            foreach (UrlDir.UrlConfig urlConf in GameDatabase.Instance.root.AllConfigs)
             {
-                Part part = p.partPrefab;
-
-                bool needsManager = NeedsManager(part.GetType());
-                if (!needsManager)
-                    foreach (PartModule module in part.Modules)
-                        if (needsManager = NeedsManager(module.GetType()))
-                            break;
-
-                if (!needsManager)
+                if (urlConf.type != "PART")
                     continue;
 
-                PartMessageManager manager = p.partPrefab.gameObject.AddComponent<PartMessageManager>();
+                ConfigNode part = urlConf.config;
 
-                // Need to do a bit of reflection to stick it first in the module list.
-                List<PartModule> moduleList = (List<PartModule>)moduleListListField.GetValue(part);
-                moduleList.Insert(0, manager);
+                string partModule = part.GetValue("module");
+                Type partType = parts[partModule].FirstOrDefault();
+
+                if (partType == null)
+                    continue;
+
+                if (NeedsManager(partType))
+                    goto addmanager;
+
+                foreach (ConfigNode module in part.GetNodes("MODULE"))
+                {
+                    string moduleName = module.GetValue("name");
+                    Type moduleType = modules[moduleName].FirstOrDefault();
+
+                    if (moduleType == null)
+                        continue;
+
+                    if (NeedsManager(moduleType))
+                        goto addmanager;
+                }
+                continue;
+                
+                addmanager:
+
+                Debug.LogWarning("[PartMessageService] Adding part message manager to part " + part.GetValue("name"));
+
+                try
+                {
+                    ConfigNode orig = part.CreateCopy();
+                    part.ClearNodes();
+
+                    ConfigNode myModule = new ConfigNode("MODULE");
+                    myModule.AddValue("name", typeof(PartMessageManager).Name);
+                    part.AddNode(myModule);
+
+                    foreach (ConfigNode node in orig.nodes)
+                        part.AddNode(node);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError(ex.ToString());
+                }
+
             }
+        }
+        
+        private static PartMessageManager AddManagerModule(Part part)
+        {
+            PartMessageManager manager = part.gameObject.AddComponent<PartMessageManager>();
 
+            // Need to do a bit of reflection to stick it first in the module list.
+            List<PartModule> moduleList = (List<PartModule>)moduleListListField.GetValue(part);
+            moduleList.Insert(0, manager);
+
+            return manager;
         }
 
         private static bool NeedsManager(Type t)
@@ -569,8 +576,6 @@ namespace KSPAPIExtensions.PartMessage
 
             return false;
         }
-
-
 
         private static IEnumerable<Type> getAllTypes()
         {
@@ -592,5 +597,202 @@ namespace KSPAPIExtensions.PartMessage
                 }
             }
         }
+        #endregion
+
+        #region Object scanning
+
+        /// <summary>
+        /// Scan an object for message events and message listeners and hook them up.
+        /// Note that all references are dumped on game scene change, so objects must be rescanned when reloaded.
+        /// </summary>
+        /// <param name="obj">the object to scan</param>
+        public void ScanObject(object obj)
+        {
+            if (obj is PartModule)
+                ScanModule((PartModule)obj);
+            else if (obj is Part)
+                ScanPart((Part)obj);
+            else
+                ScanObjectInternal(obj);
+        }
+
+        /// <summary>
+        /// Scan a module for message events and listeners. 
+        /// </summary>
+        /// <param name="module"></param>
+        public void ScanModule(PartModule module)
+        {
+            if (!NeedsManager(module.GetType()))
+                return;
+
+            PartMessageManager manager = module.GetComponent<PartMessageManager>();
+            if (manager == null)
+            {
+                if (!NeedsManager(module.GetType()))
+                    return;
+                manager = AddManagerModule(module.part);
+            }
+                
+            if (manager.modulesScanned.Contains(module))
+                return;
+
+            ScanObjectInternal((object)module);
+            manager.modulesScanned.Add(module);
+        }
+
+        public void ScanPart(Part part)
+        {
+            PartMessageManager manager = part.GetComponent<PartMessageManager>();
+            if (manager != null)
+                return;
+            manager = AddManagerModule(part);
+            ScanPartInternal(part, manager);
+        }
+
+        internal void ScanPartInternal(Part part, PartMessageManager manager)
+        {
+            ScanObjectInternal(part);
+            foreach (PartModule module in part.Modules)
+            {
+                if (module == manager)
+                    continue;
+
+                ScanObjectInternal(module);
+                manager.modulesScanned.Add(module);
+            }
+        }
+
+        private void ScanObjectInternal(object obj)
+        {
+            Type t = obj.GetType();
+
+            foreach (MethodInfo meth in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                foreach (PartMessageListener attr in meth.GetCustomAttributes(typeof(PartMessageListener), true))
+                    AddListener(obj, meth, attr);
+            }
+
+            foreach (EventInfo evt in t.GetEvents(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                Type deleg = evt.EventHandlerType;
+                foreach (PartMessageEvent attr in deleg.GetCustomAttributes(typeof(PartMessageEvent), true))
+                    GenerateEventHandoff(obj, evt);
+            }
+        }
+
+        internal void AddListener(object target, MethodInfo meth, PartMessageListener attr)
+        {
+            //Debug.LogWarning(string.Format("[PartMessageUtils] {0}.{1} Adding listener for {2}", target.GetType().Name, meth.Name, attr.message.FullName));
+
+            if (!attr.scenes.IsLoaded())
+                return;
+
+            string message = attr.message.FullName;
+            if (Delegate.CreateDelegate(attr.message, target, meth, false) == null)
+            {
+                Debug.LogError(string.Format("PartMessageListener method {0}.{1} does not support the delegate type {2} as declared in the attribute", meth.DeclaringType, meth.Name, attr.message.Name));
+                return;
+            }
+
+            LinkedList<ListenerInfo> listenerList;
+            if (!listeners.TryGetValue(message, out listenerList))
+            {
+                listenerList = new LinkedList<ListenerInfo>();
+                listeners.Add(message, listenerList);
+            }
+
+            ListenerInfo info = new ListenerInfo();
+            info.targetRef = new WeakReference(target);
+            info.method = meth;
+            info.node = listenerList.AddLast(info);
+        }
+
+        private void GenerateEventHandoff(object source, EventInfo evt)
+        {
+            MethodAttributes addAttrs = evt.GetAddMethod(true).Attributes;
+
+            // This generates a dynamic method that pulls the properties of the event
+            // plus the arguments passed and hands it off to the EventHandler method below.
+            Type message = evt.EventHandlerType;
+            MethodInfo m = message.GetMethod("Invoke", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+            //Debug.LogWarning(string.Format("[PartMessageUtils] {0}.{1} Adding event handler for {2}", source.GetType().Name, evt.Name, message.FullName));
+            
+            ParameterInfo[] pLst = m.GetParameters();
+            ParameterExpression[] peLst = new ParameterExpression[pLst.Length];
+            Expression[] cvrt = new Expression[pLst.Length];
+            for (int i = 0; i < pLst.Length; i++)
+            {
+                peLst[i] = Expression.Parameter(pLst[i].ParameterType, pLst[i].Name);
+                cvrt[i] = Expression.Convert(peLst[i], typeof(object));
+            }
+            Expression createArr = Expression.NewArrayInit(typeof(object), cvrt);
+
+            Expression invoke = Expression.Call(Expression.Constant(this), GetType().GetMethod("HandleMessage", BindingFlags.NonPublic | BindingFlags.Instance),
+                Expression.Constant(source), Expression.Constant(evt), createArr);
+            
+            Delegate d = Expression.Lambda(message, invoke, peLst).Compile();
+
+            // Shouldn't need to use a weak delegate here.
+            evt.AddEventHandler(source, d);
+        }
+        #endregion
+
+        #region Message Handler
+        private void HandleMessage(object source, EventInfo evt, object[] args)
+        {
+            //Debug.LogWarning(string.Format("[PartMessageUtils] {0}.{1} Event invoked", source.GetType().Name, evt.Name));
+            
+            using (SourceInfo.Push(source, evt))
+            {
+                foreach (Type messageCls in SourceInfo.srcAllMessages)
+                {
+                    string message = messageCls.FullName;
+
+                    LinkedList<ListenerInfo> listenerList;
+                    if (!listeners.TryGetValue(message, out listenerList))
+                        continue;
+
+                    // Shorten parameter list if required
+                    ParameterInfo[] methodParams = messageCls.GetMethod("Invoke").GetParameters();
+                    if (args.Length > methodParams.Length)
+                    {
+                        object[] newArgs = new object[methodParams.Length];
+                        Array.Copy(args, newArgs, methodParams.Length);
+                        args = newArgs;
+                    }
+
+                    for (var node = listenerList.First; node != null; )
+                    {
+                        // hold reference for duration of call
+                        object target = node.Value.target;
+                        if (target == null)
+                        {
+                            // Remove dead links from the list
+                            var tmp = node;
+                            node = node.Next;
+                            listenerList.Remove(tmp);
+                            continue;
+                        }
+                        //Debug.LogWarning(string.Format("Invoking {0}.{1} to handle message {2} .", target.GetType(), node.Value.method.Name, SourceInfo.srcMessage));
+
+                        try
+                        {
+                            node.Value.Invoke(args);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogError(string.Format("Invoking {0}.{1} to handle message {2} resulted in an exception.", target.GetType(), node.Value.method, SourceInfo.srcMessage));
+                            Debug.LogException(ex);
+                        }
+                        node = node.Next;
+                    }
+                }
+            }
+        }
+        #endregion
+
     }
+    #endregion
+
 }
