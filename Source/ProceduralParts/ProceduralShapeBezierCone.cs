@@ -23,15 +23,15 @@ namespace ProceduralParts
         };
 
         private static string[] shapeNames =
-    {
-        "Straight",
-        "Round #1",
-        "Round #2",
-        "Peaked #1",
-        "Peaked #2",
-        "Sharp #1",
-        "Sharp #2"
-    };
+        {
+            "Straight",
+            "Round #1",
+            "Round #2",
+            "Peaked #1",
+            "Peaked #2",
+            "Sharp #1",
+            "Sharp #2"
+        };
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Curve"),
          UI_ChooseOption(scene = UI_Scene.Editor)]
