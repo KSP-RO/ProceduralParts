@@ -1,6 +1,10 @@
 
 ============= Changelog for ProceduralParts  =========
 
+=== 0.8.0 ===
+Implementation of new messaging system.
+Better support for Real Fuels.
+
 === 0.7.0 ===
 Support for bezier cones - cone shapes with smoothed sides
 Show correct images in VAB

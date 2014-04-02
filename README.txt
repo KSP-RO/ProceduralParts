@@ -15,21 +15,6 @@ ProceduralParts allows you to procedurally generate (currently) fuel tanks, SRBs
 * Deprecation support for StretchySRB - you can continue to use stretchy SRBs for your existing ships, but hide all the tanks so they don't appear in the VAB
 * A Module - TankContentSwitcher that can be applied to existing tanks (with say module manager) and allow their contents to be tweaked. Tweak any tank in the VAB into a Liquid fuel only or oxidizer tank.
 
-==== Acknowlagements ====
-
-ProceduralParts has an extended family tree:
-
-* StretchyTanks is the original module by the great Ancient Gammoner.
-* StretchySRBs was created and updated by NathanKell and e-dog.
-* ProceduralParts is a near complete re-write by Swamp Ig. 
-
-Also featuring:
-
-* Models by Tiberion 
-* Further textures by Chestburster and Dante80.
-* Config code by jsimmonds
-
-
 ==== Installation ====
 
 Just put the ProceduralParts folder into your GameData folder and you should be away.
@@ -52,9 +37,16 @@ There is the scope for adding your own tank shapes, however if you want to do th
 
 ==== Integration with other mods ====
 
-Proper integration with Modular Fuel Tanks or Real Fuels (REQUIRES MFT v4/RF v4 or above!) - when done stretching, go into action editor->tank setup and update each fuel amount the desired amount to get your final amount.
+Real Fuels integration is a work in progress, but does currently work fairly reasonably.
 
-Note when using with Real Fuels: Stretchy SRB is ModularEngines enabled, so your thrust will be corrected when not in vacuum. It is also techlevel enabled, although only Isp will change (not casing mass). Given this the tweakable interface will change slightly between stock and using modular engines - burn time will be tweakable rather than thrust.
+I have created several different tank types including Standard, Cryo, Balloon, BalloonCryo, and Service. If you use my updated real fuels DLL, then the information display in the tweaker and the real fuels dialog will be synched up, this will be in the next RF release.
+
+For the SRBs, there are two parts available, one for surface and one for vac. You can tweak the sea-level thrust, but all the information displays as available in stock stretchy SRBs will require an update to Real Fuels to get it working.
+
+Ultimately all the different tank types will be rolled into one part, with a tweaker to switch between the different tank types available to RF. Similar treatment will be given to the SRBs. When this happens the existing parts will be deprecated and optionally either hidden in the VAB, or removed entirely (if you have no flying ships).
+
+Getting this to work will require some updates to real fuels, there's no specific time-frame, I will need to collaborate with the RF developers. Be patient :)
+
 
 
 ==== Plans for the future ====
@@ -69,6 +61,20 @@ Tank types:
 
 Other parts:
 - Procedural command module, possibly with rescaling / tweakable IVA.
+
+==== Acknowlagements ====
+
+ProceduralParts has an extended family tree:
+
+* StretchyTanks is the original module by the great Ancient Gammoner.
+* StretchySRBs was created and updated by NathanKell and e-dog.
+* ProceduralParts is a near complete re-write by Swamp Ig. 
+
+Also featuring:
+
+* Models by Tiberion 
+* Further textures by Chestburster and Dante80.
+* Config code by jsimmonds
 
 ==== Licence ====
 
