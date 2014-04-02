@@ -142,14 +142,15 @@ namespace KSPAPIExtensions
     public enum PartRelationship
     {
         Vessel = 0x1,
-        Self = 0x2 | 0x1,
-        Symmetry = 0x4 | 0x1,
-        Decendent = 0x8 | 0x1,
-        Child = 0x10 | 0x8 | 0x1,
-        Ancestor = 0x20 | 0x1,
-        Parent = 0x40 | 0x20 | 0x1,
-        Sibling = 0x80 | 0x1,
-        Unrelated = 0x0,
+        Self = 0x2,
+        Symmetry = 0x4,
+        Decendent = 0x8 ,
+        Child = 0x10,
+        Ancestor = 0x20,
+        Parent = 0x40,
+        Sibling = 0x80,
+        Unrelated = 0x100,
+        Unknown = 0x0
     }
 
     [Flags]
@@ -202,6 +203,9 @@ namespace KSPAPIExtensions
 
         public static PartRelationship RelationTo(this Part part, Part other)
         {
+            if (other == null)
+                return PartRelationship.Unknown;
+
             if (other == part)
                 return PartRelationship.Self;
             if (part.localRoot != other.localRoot)
@@ -218,8 +222,54 @@ namespace KSPAPIExtensions
             for (Part tmp = other.parent; tmp != null; tmp = tmp.parent)
                 if (tmp == part)
                     return PartRelationship.Ancestor;
-            // By exclusion
-            return PartRelationship.Vessel;            
+            if(part.localRoot == other.localRoot)
+                return PartRelationship.Vessel;
+            return PartRelationship.Unrelated;
+        }
+
+        public static bool RelationTest(this Part part, Part other, PartRelationship relation)
+        {
+            if (relation == PartRelationship.Unknown)
+                return true;
+            if (part == null || other == null)
+                return false;
+
+            if (TestFlag(relation, PartRelationship.Self) && part == other)
+                return true;
+            if (TestFlag(relation, PartRelationship.Vessel) && part.localRoot == other.localRoot)
+                return true;
+            if (TestFlag(relation, PartRelationship.Unrelated) && part.localRoot != other.localRoot)
+                return true;
+            if (TestFlag(relation, PartRelationship.Sibling) && part.parent == other.parent)
+                return true;
+            if (TestFlag(relation, PartRelationship.Ancestor))
+            {
+                for (Part upto = other.parent; upto != null; upto = upto.parent)
+                    if (upto == part)
+                        return true;
+            }
+            else if (TestFlag(relation, PartRelationship.Parent) && part == other.parent)
+                return true;
+
+            if (TestFlag(relation, PartRelationship.Decendent))
+            {
+                for (Part upto = part.parent; upto != null; upto = upto.parent)
+                    if (upto == other)
+                        return true;
+            }
+            else if (TestFlag(relation, PartRelationship.Child) && part.parent == other)
+                return true;
+
+            if (TestFlag(relation, PartRelationship.Symmetry))
+                foreach (Part sym in other.symmetryCounterparts)
+                    if (part == sym)
+                        return true;
+            return false;
+        }
+
+        public static bool TestFlag(this PartRelationship e, PartRelationship flags)
+        {
+            return (e & flags) == flags;
         }
 
         public static GameSceneFilter AsFilter(this GameScenes scene)

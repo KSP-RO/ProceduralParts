@@ -68,8 +68,6 @@ namespace ProceduralParts
                 return;
             }
 
-            Debug.LogWarning("coneTopMode=" + coneTopMode);
-
             UI_FloatEdit bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
             bottomDiameterEdit.incrementLarge = pPart.diameterLargeStep;
             bottomDiameterEdit.incrementSmall = pPart.diameterSmallStep;

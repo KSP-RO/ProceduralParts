@@ -19,7 +19,7 @@ namespace ProceduralParts
     /// One can set this module up on any existing fuel pPart (Maybe with module manager if you like) 
     /// if you set the volume property in the config file.
     /// 
-    /// The class also accepts the message ChangeVolume(float volume) if attached to a dynamic resizing pPart
+    /// The class also accepts the messageName ChangeVolume(float volume) if attached to a dynamic resizing pPart
     /// such as ProceeduralTanks.
     /// </summary>
     public class TankContentSwitcher : PartModule
@@ -94,12 +94,9 @@ namespace ProceduralParts
         /// <summary>
         /// Message sent from ProceduralAbstractShape when it updates.
         /// </summary>
-        [PartMessageListener(typeof(ChangePartVolumeDelegate), ~GameSceneFilter.Flight)]
+        [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:~GameSceneFilter.Flight)]
         private void ChangeVolume(float volume)
         {
-            if (!PartMessageService.SourceInfo.isSourceSamePart(part))
-                return;
-
             if (!useVolume)
             {
                 Debug.LogError("Updating pPart volume when this is not expected. Set useVolume = true in config file");
@@ -412,12 +409,31 @@ namespace ProceduralParts
         public string[] typesAvailable;
     #endif
 
-        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Mass")]
+        /// <summary>
+        /// Volume of pPart in kilolitres. 
+        /// </summary>
+        [KSPField(guiActive = true, guiActiveEditor = true, guiName = "Volume", guiFormat = "F3", guiUnits = "kL")]
+        public float tankVolume = 0.0f;
+
+        [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Mass")]
         public string massDisplay;
 
         [KSPField(isPersistant = false, guiActiveEditor = true, guiActive = false, guiName = "Real Fuels"),
          UI_Toggle(enabledText="GUI", disabledText="GUI")]
         public bool showRFGUI = false;
+
+        /// <summary>
+        /// Real Fuels uses larger volumes than is really there. This factor is applied to the volume prior to it
+        /// arriving in real fuels.
+        /// </summary>
+        [KSPField]
+        public float volumeScale = 867.7219117f;
+
+        /// <summary>
+        /// Utilized fraction of the tank.
+        /// </summary>
+        [KSPField]
+        public float utilization = 1.0f;
 
         public override void OnSave(ConfigNode node)
         {
@@ -427,6 +443,7 @@ namespace ProceduralParts
 
         private object moduleFuelTanks;
         private MethodInfo fuelManagerGUIMethod;
+        private MethodInfo changeVolume;
 
         public override void OnStart(PartModule.StartState state)
         {
@@ -439,6 +456,7 @@ namespace ProceduralParts
 
             moduleFuelTanks = part.Modules["ModuleFuelTanks"];
             fuelManagerGUIMethod = moduleFuelTanks.GetType().GetMethod("fuelManagerGUI", BindingFlags.Public | BindingFlags.Instance);
+            changeVolume = moduleFuelTanks.GetType().GetMethod("ChangeVolume", BindingFlags.Public | BindingFlags.Instance);
 
             GameEvents.onPartActionUIDismiss.Add(p => { if (p == part) showRFGUI = false; });
 
@@ -458,6 +476,8 @@ namespace ProceduralParts
             }
             UpdateTankType();
     #endif
+            if (tankVolume > 0)
+                ChangeVolume(tankVolume);
 
             isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
         }
@@ -491,13 +511,13 @@ namespace ProceduralParts
         /// <summary>
         /// Message sent from ProceduralAbstractShape when it updates.
         /// </summary>
-        [PartMessageListener(typeof(ChangePartVolumeDelegate), GameSceneFilter.Editor)]
+        [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:GameSceneFilter.Editor)]
         private void ChangeVolume(float volume)
         {
-            if (!PartMessageService.SourceInfo.isSourceSamePart(part) || moduleFuelTanks == null)
-                return;
-
-            UpdateMassDisplay();
+            // Need to call ChangeVolume in Modular Fuel Tanks
+            tankVolume = volume;
+            if (tankVolume > 0 && moduleFuelTanks != null)
+                changeVolume.Invoke(moduleFuelTanks, new object[] { Math.Round(tankVolume * volumeScale * utilization) });
         }
 
         [KSPEvent (guiActive=false, active = true)]
