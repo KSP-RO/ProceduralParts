@@ -258,12 +258,14 @@ namespace ProceduralParts
             InitModulesFromBell();
 
             // Config for Real Fuels.
-            usingME = part.Modules.Contains("ModuleEngineConfigs");
-
-            Fields["thrust"].guiActiveEditor = !usingME;
-            Fields["burnTime"].guiActiveEditor = !usingME;
-            Fields["burnTimeME"].guiActiveEditor = usingME;
-            Fields["thrustME"].guiActiveEditor = usingME;
+            if( part.Modules.Contains("ModuleEngineConfigs") ) 
+            {
+                var mEC = part.Modules["ModuleEngineConfigs"];
+                ChangeThrust = (Action<float>)Delegate.CreateDelegate(typeof(Action<float>), mEC, "ChangeThrust");
+                Fields["burnTime"].guiActiveEditor = false;
+                Fields["srbISP"].guiActiveEditor = false;
+                Fields["heatProduction"].guiActiveEditor = false;
+            }
 
             // Call change thrust to initialize the bell scale.
             UpdateThrustNoMoving();
@@ -344,7 +346,11 @@ namespace ProceduralParts
 
         #region Thrust and heat production
 
-        private bool usingME = false;
+        private bool usingME
+        {
+            get { return ChangeThrust != null; }
+        }
+        private Action<float> ChangeThrust;
 
         [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "F0", guiUnits = "kN"),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 0, incrementSlide = 1f)]
@@ -353,14 +359,6 @@ namespace ProceduralParts
 
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Burn Time")]
         public string burnTime;
-
-        [KSPField(isPersistant = true, guiName = "Burn Time", guiActive = false, guiActiveEditor = false, guiFormat = "F2", guiUnits = "s"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 600f, incrementLarge = 60f, incrementSmall = 0, incrementSlide = 1f)]
-        public float burnTimeME = 60;
-        private float oldBurnTimeME;
-
-        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = false, guiName = "Thrust")]
-        public string thrustME;
 
         [KSPField(isPersistant = false, guiName = "Heat", guiActive = false, guiActiveEditor = true, guiFormat = "F2", guiUnits = "K/s")]
         public float heatProduction;
@@ -379,37 +377,17 @@ namespace ProceduralParts
             float maxThrustSqrt = maxBellChokeDiameter * Mathf.Sqrt(selectedBell.thrustScaleFactor) / selectedBell.bellChokeDiameter;
             float maxThrust = maxThrustSqrt * maxThrustSqrt;
 
-            if (!usingME)
+            ((UI_FloatEdit)Fields["thrust"].uiControlEditor).maxValue = maxThrust;
+            if (thrust > maxThrust)
             {
-                ((UI_FloatEdit)Fields["thrust"].uiControlEditor).maxValue = maxThrust;
-                if (thrust > maxThrust)
-                {
-                    thrust = maxThrust;
-                    UpdateThrust();
-                }
-            }
-            else
-            {
-                PartResource solidFuel = part.Resources["SolidFuel"];
-                ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
-
-                float minISP, maxISP;
-                (selectedBell.atmosphereCurve ?? mE.atmosphereCurve).FindMinMaxValue(out minISP, out maxISP);
-                float minBurnTime = (float)(maxISP * solidFuel.maxAmount * solidFuel.info.density * mE.g / maxThrust);
-
-                ((UI_FloatEdit)Fields["burnTimeME"].uiControlEditor).minValue = minBurnTime;
-
-                if (burnTimeME < minBurnTime)
-                {
-                    burnTimeME = minBurnTime;
-                    UpdateThrust();
-                }
+                thrust = maxThrust;
+                UpdateThrust();
             }
         }
 
         private void UpdateThrust(bool force = false)
         {
-            if (!force && oldThrust == thrust && burnTimeME == oldBurnTimeME)
+            if (!force && oldThrust == thrust)
                 return;
 
             Vector3 oldAttach = selectedBell.srbAttach.position;
@@ -428,16 +406,17 @@ namespace ProceduralParts
             else
                 solidFuelMassG = solidFuel.maxAmount * solidFuel.info.density * mE.g;
 
-            FloatCurve atmosphereCurve = (selectedBell.atmosphereCurve ?? mE.atmosphereCurve);
+            mE.maxThrust = thrust;
 
             if (!usingME)
             {
+                FloatCurve atmosphereCurve = (selectedBell.atmosphereCurve ?? mE.atmosphereCurve);
+
                 float burnTime0 = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
                 float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
 
                 burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
 
-                mE.maxThrust = thrust;
                 // This equation is much easier
                 if (useOldHeatEquation)
                     mE.heatProduction = heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((Math.Min(burnTime0, burnTime1) + 20f), 0.75f)) * 0.5f);
@@ -447,22 +426,8 @@ namespace ProceduralParts
             }
             else
             {
-                float thrust0 = mE.maxThrust = thrust =  (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
-                float thrust1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / burnTimeME);
-
-                thrustME = string.Format("{0:F1}s ({1:F1}s Vac)", thrust1, thrust0);
-
-                // This equation is much easier
-                if (useOldHeatEquation)
-                    mE.heatProduction = heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((burnTimeME + 20f), 0.75f)) * 0.5f);
-                // The heat production is directly proportional to the thrust on part mass.
-                else
-                    mE.heatProduction = heatProduction = thrust * heatPerThrust / (part.mass + part.GetResourceMass());
-
-                Debug.LogWarning("Calling change thrust: " + thrust);
-                var mEC = part.Modules["ModuleEngineConfigs"];
-                Type engineType = mEC.GetType();
-                engineType.GetMethod("ChangeThrust").Invoke(mEC, new object[] { thrust });
+                Debug.LogWarning("Invoking change thrust:" + thrust);
+                ChangeThrust(thrust);
             }
 
             // Rescale the bell.
@@ -470,7 +435,6 @@ namespace ProceduralParts
             selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
 
             oldThrust = thrust;
-            oldBurnTimeME = burnTimeME;
         }
 
         #endregion
