@@ -4,6 +4,7 @@
 === 0.8.0 ===
 Implementation of new messaging system.
 Better support for Real Fuels.
+Procedural Nose Cones
 
 === 0.7.0 ===
 Support for bezier cones - cone shapes with smoothed sides
