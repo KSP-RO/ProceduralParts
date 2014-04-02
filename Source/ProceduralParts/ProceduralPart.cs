@@ -8,13 +8,13 @@ using KSPAPIExtensions.PartMessage;
 
 namespace ProceduralParts
 {
-    [PartMessageEvent]
+    [PartMessage]
     public delegate void ChangePartVolumeDelegate(float volume);
 
-    [PartMessageEvent]
+    [PartMessage]
     public delegate void ChangeAttachNodeSizeDelegate(string name, float minDia, float area, int size);
 
-    [PartMessageEvent]
+    [PartMessage]
     public delegate void ChangeTextureScaleDelegate(string name, Material material, Vector2 targetScale);
 
     public class ProceduralPart : PartModule
@@ -283,13 +283,6 @@ namespace ProceduralParts
         /// </summary>
         [KSPField]
         public float volumeMin = 0.01f;
-
-        /// <summary>
-        /// Real Fuels uses larger volumes than is really there. This factor is applied to the volume in ChangeVolume.
-        /// It does *not* get applied prior to the volume limit.
-        /// </summary>
-        [KSPField]
-        public float volumeScale = 1.0f;
 
         /// <summary>
         /// Minimum aspect ratio - min ratio of length / diameter.
@@ -616,7 +609,7 @@ namespace ProceduralParts
         [PartMessageListener(typeof(ChangeTextureScaleDelegate))]
         private void ChangeTextureScale(string name, Material material, Vector2 targetScale)
         {
-            if (!PartMessageService.SourceInfo.isSourceSamePart(part) || name != "sides")
+            if (name != "sides")
                 return;
             this.sideTextureScale = targetScale;
             oldTextureSet = null;

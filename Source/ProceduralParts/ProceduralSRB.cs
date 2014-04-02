@@ -15,27 +15,11 @@ namespace ProceduralParts
     {
         #region callbacks
 
-        public override void OnInitialize()
-        {
-            try
-            {
-                if (part.Modules.Contains("ModuleEngineConfigs"))
-                    UpdateThrust(true);
-            }
-            catch (Exception ex)
-            {
-                print("OnInitialize exception: " + ex);
-                throw ex;
-            }
-        }
-
         public override void OnLoad(ConfigNode node)
         {
             try
             {
                 LoadBells(node);
-                if (part.Modules.Contains("ModuleEngineConfigs"))
-                    UpdateThrust(true);
             }
             catch (Exception ex)
             {
@@ -61,11 +45,7 @@ namespace ProceduralParts
         {
             try
             {
-                InitializeBells();
-
-                // Need to update the thrust at least once, then disable
-                if (!HighLogic.LoadedSceneIsEditor)
-                    isEnabled = enabled = false;
+                InitializeBells();                    
             }
             catch (Exception ex)
             {
@@ -102,8 +82,6 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartResourceMaxAmountChanged))]
         private void ResourcesChanged(PartResource resource)
         {
-            if (!PartMessageService.SourceInfo.isSourceSamePart(part))
-                return;
             if (selectedBell == null)
                 return;
             UpdateThrust(true);
@@ -112,8 +90,6 @@ namespace ProceduralParts
         [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate))]
         private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
-            if (!PartMessageService.SourceInfo.isSourceSamePart(part))
-                return;
             if (name != "bottom")
                 return;
 
@@ -174,7 +150,7 @@ namespace ProceduralParts
             [Persistent]
             public FloatCurve atmosphereCurve;
             [Persistent]
-            public float gimbalRange;
+            public float gimbalRange = -1;
 
             [Persistent]
             public float thrustScaleFactor = 256f;
@@ -279,11 +255,18 @@ namespace ProceduralParts
 
             selectedBell = srbConfigs[selectedBellName];
 
-            // Set the bell active and do the bits and pieces.
-            selectedBell.model.gameObject.SetActive(true);
-            GetComponent<ModuleEngines>().atmosphereCurve = selectedBell.atmosphereCurve;
-            GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
-            srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", selectedBell.atmosphereCurve.Evaluate(1), selectedBell.atmosphereCurve.Evaluate(0));
+            InitModulesFromBell();
+
+            // Config for Real Fuels.
+            usingME = part.Modules.Contains("ModuleEngineConfigs");
+
+            Fields["thrust"].guiActiveEditor = !usingME;
+            Fields["burnTime"].guiActiveEditor = !usingME;
+            Fields["burnTimeME"].guiActiveEditor = usingME;
+            Fields["thrustME"].guiActiveEditor = usingME;
+
+            // Call change thrust to initialize the bell scale.
+            UpdateThrustNoMoving();
 
             // Break out at this stage during loading scene
             if (HighLogic.LoadedScene == GameScenes.LOADING)
@@ -292,9 +275,6 @@ namespace ProceduralParts
             // Attach the bell. In the config file this isn't in normalized position, move it into normalized position first.
             srbBell.position = pPart.transform.TransformPoint(0, -0.5f, 0);
             pPart.AddAttachment(srbBell, true);
-
-            // Call change thrust to initialize the bell scale.
-            UpdateThrustNoMoving();
 
             // Move thrust transform to the end of the bell
             thrustTransform.position = selectedBell.srbAttach.position;
@@ -322,13 +302,6 @@ namespace ProceduralParts
             BaseField thrustLimiter = GetComponent<ModuleEngines>().Fields["thrustPercentage"];
             thrustLimiter.guiActive = false;
             thrustLimiter.guiActiveEditor = false;
-
-            usingME = part.Modules.Contains("ModuleEngineConfigs");
-
-            Fields["thrust"].guiActiveEditor = !usingME;
-            Fields["burnTime"].guiActiveEditor = !usingME;
-            Fields["burnTimeME"].guiActiveEditor = usingME;
-            Fields["thrustME"].guiActiveEditor = usingME;
         }
 
         private void UpdateBell()
@@ -350,13 +323,21 @@ namespace ProceduralParts
 
             MoveBottomAttachmentAndNode(selectedBell.srbAttach.position - oldSelectedBell.srbAttach.position);
 
-            // Set the bits and pieces
-            selectedBell.model.gameObject.SetActive(true);
-            GetComponent<ModuleEngines>().atmosphereCurve = selectedBell.atmosphereCurve;
-            GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
-            srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", selectedBell.atmosphereCurve.Evaluate(1), selectedBell.atmosphereCurve.Evaluate(0));
+            InitModulesFromBell();
 
             UpdateMaxThrust();
+        }
+
+        private void InitModulesFromBell()
+        {
+            // Set the bits and pieces
+            selectedBell.model.gameObject.SetActive(true);
+            ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
+            if (selectedBell.atmosphereCurve != null)
+                GetComponent<ModuleEngines>().atmosphereCurve = selectedBell.atmosphereCurve;
+            if (selectedBell.gimbalRange >= 0)
+                GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
+            srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", mE.atmosphereCurve.Evaluate(1), mE.atmosphereCurve.Evaluate(0));
         }
 
         #endregion
@@ -374,7 +355,7 @@ namespace ProceduralParts
         public string burnTime;
 
         [KSPField(isPersistant = true, guiName = "Burn Time", guiActive = false, guiActiveEditor = false, guiFormat = "F2", guiUnits = "s"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 0, incrementSlide = 1f)]
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 600f, incrementLarge = 60f, incrementSmall = 0, incrementSlide = 1f)]
         public float burnTimeME = 60;
         private float oldBurnTimeME;
 
@@ -413,12 +394,14 @@ namespace ProceduralParts
                 ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
 
                 float minISP, maxISP;
-                mE.atmosphereCurve.FindMinMaxValue(out minISP, out maxISP);
-                float maxBurnTime = (float)(maxISP * solidFuel.maxAmount * solidFuel.info.density * mE.g / maxThrust);
+                (selectedBell.atmosphereCurve ?? mE.atmosphereCurve).FindMinMaxValue(out minISP, out maxISP);
+                float minBurnTime = (float)(maxISP * solidFuel.maxAmount * solidFuel.info.density * mE.g / maxThrust);
 
-                if (burnTimeME > maxBurnTime)
+                ((UI_FloatEdit)Fields["burnTimeME"].uiControlEditor).minValue = minBurnTime;
+
+                if (burnTimeME < minBurnTime)
                 {
-                    burnTimeME = maxBurnTime;
+                    burnTimeME = minBurnTime;
                     UpdateThrust();
                 }
             }
@@ -445,10 +428,12 @@ namespace ProceduralParts
             else
                 solidFuelMassG = solidFuel.maxAmount * solidFuel.info.density * mE.g;
 
+            FloatCurve atmosphereCurve = (selectedBell.atmosphereCurve ?? mE.atmosphereCurve);
+
             if (!usingME)
             {
-                float burnTime0 = burnTimeME = (float)(selectedBell.atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
-                float burnTime1 = (float)(selectedBell.atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
+                float burnTime0 = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
+                float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
 
                 burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
 
@@ -462,12 +447,8 @@ namespace ProceduralParts
             }
             else
             {
-                float thrust0 = (float)(selectedBell.atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
-                float thrust1 = (float)(selectedBell.atmosphereCurve.Evaluate(1) * solidFuelMassG / burnTimeME);
-
-                float minISP, maxISP;
-                selectedBell.atmosphereCurve.FindMinMaxValue(out minISP, out maxISP);
-                mE.maxThrust = thrust = (float)(maxISP * solidFuelMassG / burnTimeME);
+                float thrust0 = mE.maxThrust = thrust =  (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
+                float thrust1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / burnTimeME);
 
                 thrustME = string.Format("{0:F1}s ({1:F1}s Vac)", thrust1, thrust0);
 
@@ -478,6 +459,7 @@ namespace ProceduralParts
                 else
                     mE.heatProduction = heatProduction = thrust * heatPerThrust / (part.mass + part.GetResourceMass());
 
+                Debug.LogWarning("Calling change thrust: " + thrust);
                 var mEC = part.Modules["ModuleEngineConfigs"];
                 Type engineType = mEC.GetType();
                 engineType.GetMethod("ChangeThrust").Invoke(mEC, new object[] { thrust });

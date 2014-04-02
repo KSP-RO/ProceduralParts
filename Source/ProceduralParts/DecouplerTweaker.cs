@@ -44,13 +44,13 @@ namespace ProceduralParts
 
 
         /// <summary>
-        /// Density of the decoupler. This is for use with Procedural Parts. Listens for ChangeVolume message
+        /// Density of the decoupler. This is for use with Procedural Parts. Listens for ChangeVolume messageName
         /// </summary>
         [KSPField]
         public float density = 0.0f;
 
         /// <summary>
-        /// Listen for a specific texture message, again for use with proceedural parts. If set, then listens for ChangeAttachNodeSize message.
+        /// Listen for a specific texture messageName, again for use with proceedural parts. If set, then listens for ChangeAttachNodeSize messageName.
         /// </summary>
         [KSPField]
         public string textureMessageName;
@@ -134,11 +134,11 @@ namespace ProceduralParts
         }
 
         // Plugs into procedural parts.
-        // I may well change this message to something else in the fullness of time.
-        [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), GameSceneFilter.Editor)]
+        // I may well change this messageName to something else in the fullness of time.
+        [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), scenes:GameSceneFilter.Editor)]
         private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
-            if (!PartMessageService.SourceInfo.isSourceSamePart(part) || name != textureMessageName)
+            if (name != textureMessageName)
                 return;
 
             UI_FloatEdit ejectionForceEdit = (UI_FloatEdit)Fields["ejectionForce"].uiControlEditor;
@@ -168,10 +168,10 @@ namespace ProceduralParts
             ejectionForce = Mathf.Round(maxForce * oldForceRatio * 5f) / 5f;
         }
 
-        [PartMessageListener(typeof(ChangePartVolumeDelegate), GameSceneFilter.Editor)]
+        [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:GameSceneFilter.Editor)]
         private void ChangeVolume(float volume)
         {
-            if (PartMessageService.SourceInfo.isSourceSamePart(part) && density > 0)
+            if (density > 0)
                 part.mass = mass = density * volume;
         }
     }

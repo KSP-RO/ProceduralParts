@@ -566,6 +566,8 @@ namespace ProceduralParts
             {
                 pPart.colliderMesh = sidesMesh;
             }
+
+            RaiseModelAndColliderChanged();
         }
 
         private Mesh colliderMesh;

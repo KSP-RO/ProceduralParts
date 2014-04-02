@@ -72,16 +72,23 @@ namespace ProceduralParts
         public event ChangeTextureScaleDelegate ChangeTextureScale;
         public event ChangeAttachNodeSizeDelegate ChangeAttachNodeSize;
 
+        public event PartModelChanged ModelChanged;
+        public event PartColliderChanged ColliderChanged;
+
         protected void RaiseChangeTextureScale(string name, Material material, Vector2 targetScale)
         {
-            if(ChangeTextureScale != null)
-                ChangeTextureScale(name, material, targetScale);
+            ChangeTextureScale(name, material, targetScale);
         }
         
         protected void RaiseChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
-            if(ChangeAttachNodeSize != null)
-                ChangeAttachNodeSize(name, minDia, area, size);
+            ChangeAttachNodeSize(name, minDia, area, size);
+        }
+
+        protected void RaiseModelAndColliderChanged()
+        {
+            ModelChanged();
+            ColliderChanged();
         }
 
         #endregion
@@ -105,15 +112,18 @@ namespace ProceduralParts
         {
             try
             {
-                bool wasForce = forceNextUpdate;
-                forceNextUpdate = false;
-
-                UpdateShape(wasForce);
-
-                if (volumeChanged || wasForce)
+                using (PartMessageService.Instance.MessageConsolidate(this))
                 {
-                    ChangeVolume(MathUtils.RoundTo(volume * pPart.volumeScale, 0.001f * pPart.volumeScale));
-                    volumeChanged = false;
+                    bool wasForce = forceNextUpdate;
+                    forceNextUpdate = false;
+
+                    UpdateShape(wasForce);
+
+                    if (volumeChanged || wasForce)
+                    {
+                        ChangeVolume(volume);
+                        volumeChanged = false;
+                    }
                 }
             }
             catch (Exception ex)
