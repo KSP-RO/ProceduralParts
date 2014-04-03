@@ -62,7 +62,7 @@ namespace ProceduralParts
 
             if (HighLogic.LoadedSceneIsEditor)
             {
-                MaintainApectRatio();
+                MaintainParameterRelations();
 
                 UpdateVolumeRange();
             }
@@ -107,15 +107,13 @@ namespace ProceduralParts
 
                 volume = CalcVolume();
             }
-            else if (topDiameter != oldTopDiameter)
-            {
-                IterateLimitVolume(ref topDiameter, vol, inc);
-            }
             else if (bottomDiameter != oldBottomDiameter)
             {
                 IterateLimitVolume(ref bottomDiameter, vol, inc);
-
-                UpdateTopDiameterLimit();
+            }
+            else if (topDiameter != oldTopDiameter)
+            {
+                IterateLimitVolume(ref topDiameter, vol, inc);
             }
         }
 

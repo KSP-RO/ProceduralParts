@@ -11,7 +11,7 @@ namespace ProceduralParts
     public class ProceduralShapeCone : ProceduralAbstractSoRShape
     {
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, maxValue = 10.0f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
         public float topDiameter = 1.25f;
         protected float oldTopDiameter;
 
@@ -31,8 +31,6 @@ namespace ProceduralParts
         {
             CanZero, LimitMin, Constant,
         }
-
-        private UI_FloatEdit topDiameterEdit;
 
         public override void OnLoad(ConfigNode node)
         {
@@ -82,16 +80,20 @@ namespace ProceduralParts
             }
             else
             {
-                topDiameterEdit = (UI_FloatEdit)Fields["topDiameter"].uiControlEditor;
+                UI_FloatEdit topDiameterEdit = (UI_FloatEdit)Fields["topDiameter"].uiControlEditor;
                 topDiameterEdit.incrementLarge = pPart.diameterLargeStep;
                 topDiameterEdit.incrementSmall = pPart.diameterSmallStep;
                 topDiameterEdit.minValue = (coneTopMode == ConeTopMode.CanZero) ? 0 : pPart.diameterMin;
-                topDiameterEdit.maxValue = bottomDiameter;
             }
         }
 
-        protected void MaintainApectRatio()
+        protected void MaintainParameterRelations()
         {
+            // Bottom pushes top in (nothing to do with aspects)
+            if (topDiameter > bottomDiameter)
+                topDiameter = bottomDiameter;
+
+            // Aspect ratio stuff
             if (pPart.aspectMin == 0 && float.IsPositiveInfinity(pPart.aspectMax))
                 return;
 
@@ -130,25 +132,15 @@ namespace ProceduralParts
             }
         }
 
-        protected void UpdateTopDiameterLimit()
-        {
-            if (topDiameterEdit == null)
-                return;
-
-            topDiameterEdit.maxValue = bottomDiameter;
-        }
-
         protected override void UpdateShape(bool force)
         {
             if (!force && oldTopDiameter == topDiameter && oldBottomDiameter == bottomDiameter && oldLength == length)
                 return;
 
-            //Debug.LogWarning("Cone.UpdateShape");
-
             // Maxmin the volume.
             if (HighLogic.LoadedSceneIsEditor)
             {
-                MaintainApectRatio();
+                MaintainParameterRelations();
 
                 float volume = (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
 
@@ -156,17 +148,7 @@ namespace ProceduralParts
                 {
                     if (oldLength != length)
                         length = volume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter));
-                    else if (oldTopDiameter != topDiameter)
-                    {
-                        // this becomes solving the quadratic on topDiameter
-                        float a = length * Mathf.PI;
-                        float b = length * Mathf.PI * bottomDiameter;
-                        float c = length * Mathf.PI * bottomDiameter * bottomDiameter - volume * 12f;
-
-                        float det = Mathf.Sqrt(b * b - 4 * a * c);
-                        topDiameter = (det - b) / (2f * a);
-                    }
-                    else
+                    else if(oldBottomDiameter != bottomDiameter)
                     {
                         // this becomes solving the quadratic on bottomDiameter
                         float a = length * Mathf.PI;
@@ -176,10 +158,18 @@ namespace ProceduralParts
                         float det = Mathf.Sqrt(b * b - 4 * a * c);
                         bottomDiameter = (det - b) / (2f * a);
                     }
+                    else 
+                    {
+                        // this becomes solving the quadratic on topDiameter
+                        float a = length * Mathf.PI;
+                        float b = length * Mathf.PI * bottomDiameter;
+                        float c = length * Mathf.PI * bottomDiameter * bottomDiameter - volume * 12f;
+
+                        float det = Mathf.Sqrt(b * b - 4 * a * c);
+                        topDiameter = (det - b) / (2f * a);
+                    }
                 }
                 this.volume = volume;
-
-                UpdateTopDiameterLimit();
             }
             else
             {
