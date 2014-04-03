@@ -3,25 +3,34 @@ ProceduralParts allows you to procedurally generate (currently) fuel tanks, SRBs
 
 ====  Features  =====
 
+The features include:
 * Everything accessible by tweaking
 * A broad range of shapes including cylinders, truncated cones, filleted cylinders, bezier cones.
 * New part shapes are easy to develop and plug in, so cuboid / pill shaped / whatever else you want shaped will be able to be created.
 * Most stuff configurable in the config file, including resources and fill ratios, tech levels, available shapes
 * Diverse support for career mode - tank shapes, dimensions, and contents all limited by researched tech
 * Multiple textures available for part surfaces. These are fully compatible with StretchySRB textures.
-
-* Tanks - to allow tech limiting different parts available for different 'groups' of fuels (Liquid fuels, SRBs, Monoprop). 
-* SRBs - tweakable bells that are designed for surface or vacuum, with variable ISP, and tweakable thrust (or burn time for real fuels)
-* Deprecation support for StretchySRB - you can continue to use stretchy SRBs for your existing ships, but hide all the tanks so they don't appear in the VAB
+* Deprecation support for StretchySRB - see below for details.
 * A Module - TankContentSwitcher that can be applied to existing tanks (with say module manager) and allow their contents to be tweaked. Tweak any tank in the VAB into a Liquid fuel only or oxidizer tank.
+
+Parts available:
+* Tanks Different parts supplied for different 'groups' of fuels (Liquid fuels, SRBs, Monoprop). The multiple part approach is to allow for tech limiting of sizes and volumes.
+* SRBs Tweakable thrust (or burn time for real fuels). Tweak between a choice of two bells that are designed for surface or vacuum, with varying ISPs.
+* Decoupler Tweakable diameters (with tech defined limits), ejection force, and can be in either decoupler or separator mode (again tech dependent).
+* Structural Part Good for fuselage, adapters, whatever. Half as light as the equivalent tank.
+* Nose Cone Specialized structural part for nose cones. The shape is limited to a smooth cone with a bounded ratio of diameter to length. 
 
 ==== Installation ====
 
 Just put the ProceduralParts folder into your GameData folder and you should be away.
 
-If you have been using StretchySRBs, you can just delete the old GameData folder but that will cause any ships in current save games to be destroyed. 
+==== Compatibility with StretchyTanks / StretchySRBs ====
 
-If you just want to hide the tanks in the VAB so they don't clutter up the list, unzip StretchySRBDeprecated.zip into the GameData/StretchySRB/Parts folder and overwrite the existing config files. All this does is sets the category for the part to -1 instead of Propulsion so that they aren't visible in the VAB, so just undo this to reverse it.
+This is essentially a completely new mod and can run alongside either of the previous mods. This is useful if you have preexisting ships in your save file still using those parts. If you don't have any ships using those parts, then you can delete the old mod.
+
+If you do have ships still flying using StretchySRBs/StretchyTanks, and you want to hide the tanks in the VAB so they don't clutter up the list, unzip StretchySRBDeprecated.zip into the GameData/StretchyTanks/Parts folder and overwrite the existing config files. 
+
+If you want to do this by hand, go through each .cfg file in the Parts folder for the mod. Find the line category=Propulsion, and change it to category=-1.
 
 
 ==== Customization ====
@@ -47,20 +56,26 @@ Ultimately all the different tank types will be rolled into one part, with a twe
 
 Getting this to work will require some updates to real fuels, there's no specific time-frame, I will need to collaborate with the RF developers. Be patient :)
 
+Here's the parts for RF: https://github.com/Swamp-Ig/ProceduralParts/releases/download/v0.8.0/ProceduralParts.RealFuelsSupport.0.8.0.zip
+
+And here's the replacement DLL: https://github.com/Swamp-Ig/ProceduralParts/releases/download/v0.8.0/modularFuelTanks.dll
+You'll need to go into your GameData/RealFuels/Plugins directory and replace the DLL. If you don't do this it's not a huge deal, it will just mean that the tweaking dialog won't update in sync with the real fuels window.
 
 
 ==== Plans for the future ====
 
-New shapes:
-- Add optional mounting pod for surface mounts to pod tank. 
-- Cuboid parts, with customizable side lengths
-- Extruded parts, such as hexagonal and octagonal pieces
+* Improve functionality with Real Fuels. This will need some code changes on the real fuels end.
+* Cuboid parts, with customizable side lengths
+* Extruded parts, such as hexagonal and octagonal pieces
+* Add optional mounting pod for surface mounts to pod tank. 
+* Xenon tank
+* Procedural command module, possibly with rescaling / tweakable IVA.
 
-Tank types:
-- Xenon tank
+==== Features That Are Not Planned ====
 
-Other parts:
-- Procedural command module, possibly with rescaling / tweakable IVA.
+* Shapes with 'holes' in them and concave shapes - including toroids. 
+* Procedural wings, procedural fairings - there's good mods for these already.
+* Procedural engines - May happen one day, but not a priority.
 
 ==== Acknowlagements ====
 
