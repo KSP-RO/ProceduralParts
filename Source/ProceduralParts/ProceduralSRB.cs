@@ -426,7 +426,6 @@ namespace ProceduralParts
             }
             else
             {
-                Debug.LogWarning("Invoking change thrust:" + thrust);
                 ChangeThrust(thrust);
             }
 
