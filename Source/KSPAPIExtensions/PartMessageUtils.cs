@@ -6,6 +6,7 @@ using System.Reflection;
 using UnityEngine;
 using System.Linq.Expressions;
 using System.Collections;
+using System.Text.RegularExpressions;
 
 namespace KSPAPIExtensions.PartMessage
 {
@@ -15,7 +16,7 @@ namespace KSPAPIExtensions.PartMessage
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
     public class PartMessageListener : Attribute
     {
-        public PartMessageListener(Type message, PartRelationship relations = PartRelationship.Self, GameSceneFilter scenes = GameSceneFilter.All)
+        public PartMessageListener(Type message, PartRelationship relations = PartRelationship.Self, GameSceneFilter scenes = GameSceneFilter.Any)
         {
             if (message == null || !message.IsSubclassOf(typeof(Delegate)))
                 throw new ArgumentException("Message is not a delegate type");
@@ -39,6 +40,14 @@ namespace KSPAPIExtensions.PartMessage
         /// Filter for relation between the sender and the reciever.
         /// </summary>
         public readonly PartRelationship relations;
+    }
+
+    /// <summary>
+    /// Marker attribute to apply to events using proxyPart messages.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Event)]
+    public class PartMessageEvent : Attribute
+    {
     }
 
     /// <summary>
@@ -70,14 +79,48 @@ namespace KSPAPIExtensions.PartMessage
         readonly public Type parent;
     }
 
+    /// <summary>
+    /// Interface to implement on things that aren't either Parts or PartModules to enable them to send/recieve messages
+    /// using the event system as a proxy for an actual part. This interface is not required, however if not implemented
+    /// the part relationship filter will not work.
+    /// You will need to call PartMessageService.ScanObject(object) in the Awake method.
+    /// </summary>
+    public interface PartMessagePartProxy
+    {
+        Part proxyPart { get; }
+    }
+
 
     /// <summary>
-    /// PartMessageListeners can use the properties in this class to examine the source of the message
+    /// PartMessageListeners can use the properties in this class to examine details about the current message being
+    /// handled
     /// </summary>
     public class PartMessageSourceInfo
     {
         internal PartMessageSourceInfo() { }
 
+        /// <summary>
+        /// The message type
+        /// </summary>
+        public Type message
+        {
+            get { return curr.Peek().message; }
+        }
+
+        /// <summary>
+        /// All messages this represents, from most specific to most general
+        /// </summary>
+        public IEnumerable<Type> allMessages
+        {
+            get
+            {
+                return curr.Peek();
+            }
+        }
+
+        /// <summary>
+        /// The source of the event
+        /// </summary>
         public object source
         {
             get
@@ -86,6 +129,9 @@ namespace KSPAPIExtensions.PartMessage
             }
         }
 
+        /// <summary>
+        /// The source part. This may be null if the source was not a Part or PartModule
+        /// </summary>
         public Part srcPart
         {
             get
@@ -95,47 +141,31 @@ namespace KSPAPIExtensions.PartMessage
                     return (Part)src;
                 if (src is PartModule)
                     return ((PartModule)src).part;
+                if (src is PartMessagePartProxy)
+                    return ((PartMessagePartProxy)src).proxyPart;
                 return null;
             }
         }
 
+        /// <summary>
+        /// The source PartModule. This will be null if the source was not a PartModule
+        /// </summary>
         public PartModule srcModule
         {
             get { return source as PartModule; }
         }
 
-        public Type srcMessage
-        {
-            get { return curr.Peek().message; }
-        }
-
-        public IEnumerable<Type> srcAllMessages
-        {
-            get
-            {
-                return curr.Peek();
-            }
-        }
-
-        public PartRelationship SourceRelation(Part listener)
+        /// <summary>
+        /// Find relationship between the message source and the specified part.
+        /// </summary>
+        /// <param name="destPart"></param>
+        /// <returns>The relationship. This will be PartRelationship.Unknown if the dest part is null.</returns>
+        public PartRelationship SourceRelationTo(Part destPart)
         {
             Part src = srcPart;
             if (src == null)
                 return PartRelationship.Unknown;
-            return src.RelationTo(listener);
-        }
-
-        public bool isSourceSamePart(Part listener)
-        {
-            return srcPart == listener;
-        }
-
-        public bool isSourceSameVessel(Part listener)
-        {
-            Part src = srcPart;
-            if (src == null)
-                return false;
-            return src.localRoot == listener.localRoot;
+            return src.RelationTo(destPart);
         }
 
         #region Internal Bits
@@ -178,32 +208,32 @@ namespace KSPAPIExtensions.PartMessage
     public delegate void PartPhysicsChanged();
 
     /// <summary>
-    /// Message for when the part's mass is modified.
+    /// Message for when the proxyPart's mass is modified.
     /// </summary>
     [PartMessage(typeof(PartPhysicsChanged))]
     public delegate void PartMassChanged();
 
     /// <summary>
-    /// Message for when the part's CoMOffset changes.
+    /// Message for when the proxyPart's CoMOffset changes.
     /// </summary>
     [PartMessage(typeof(PartPhysicsChanged))]
     public delegate void PartCoMOffsetChanged();
 
     /// <summary>
-    /// Message for when the part's moments of intertia change.
+    /// Message for when the proxyPart's moments of intertia change.
     /// </summary>
     [PartMessage(typeof(PartPhysicsChanged))]
     public delegate void PartMomentsChanged();
 
 
     /// <summary>
-    /// Message for when the part's mass is modified.
+    /// Message for when the proxyPart's resource list is modified in some way.
     /// </summary>
     [PartMessage]
     public delegate void PartResourcesChanged();
 
     /// <summary>
-    /// Message for when the part's resource list is modified (added to or subtracted from).
+    /// Message for when the proxyPart's resource list is modified (added to or subtracted from).
     /// </summary>
     [PartMessage(typeof(PartResourcesChanged))]
     public delegate void PartResourceListChanged();
@@ -215,13 +245,19 @@ namespace KSPAPIExtensions.PartMessage
     public delegate void PartResourceMaxAmountChanged(PartResource resource);
 
     /// <summary>
-    /// Message for when some change has been made to the part's rendering model.
+    /// Message for when the initial amount of a resource is modified (only raised in the editor)
+    /// </summary>
+    [PartMessage(typeof(PartResourcesChanged))]
+    public delegate void PartResourceInitialAmountChanged(PartResource resource);
+
+    /// <summary>
+    /// Message for when some change has been made to the proxyPart's rendering model.
     /// </summary>
     [PartMessage]
     public delegate void PartModelChanged();
 
     /// <summary>
-    /// Message for when some change has been made to the part's collider.
+    /// Message for when some change has been made to the proxyPart's collider.
     /// </summary>
     [PartMessage]
     public delegate void PartColliderChanged();
@@ -286,7 +322,8 @@ namespace KSPAPIExtensions.PartMessage
             {
                 if (!NeedsManager(module.GetType()))
                     return;
-                manager = AddManagerModule(module.part);
+                manager = module.gameObject.AddComponent<PartMessageManager>();
+                ScanObjectInternal(module.part);
             }
                 
             if (manager.modulesScanned.Contains(module))
@@ -301,7 +338,7 @@ namespace KSPAPIExtensions.PartMessage
             PartMessageManager manager = part.GetComponent<PartMessageManager>();
             if (manager != null)
                 return;
-            manager = AddManagerModule(part);
+            manager = part.gameObject.AddComponent<PartMessageManager>();
             ScanPartInternal(part, manager);
         }
 
@@ -314,9 +351,14 @@ namespace KSPAPIExtensions.PartMessage
                 if (module == manager)
                     continue;
 
-                ScanObjectInternal(module);
-                manager.modulesScanned.Add(module);
+                ScanModuleInternal(module, manager);
             }
+        }
+
+        internal void ScanModuleInternal(PartModule module, PartMessageManager manager)
+        {
+            ScanObjectInternal(module);
+            manager.modulesScanned.Add(module);
         }
 
         private void ScanObjectInternal(object obj)
@@ -332,6 +374,13 @@ namespace KSPAPIExtensions.PartMessage
             foreach (EventInfo evt in t.GetEvents(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
                 Type deleg = evt.EventHandlerType;
+                if (evt.GetCustomAttributes(typeof(PartMessageEvent), true).Length == 0)
+                {
+                    // sanity check
+                    if (deleg.GetCustomAttributes(typeof(PartMessage), true).Length > 0)
+                        Debug.LogWarning(string.Format("[PartMessageManager] Event: {0} in class: {1} declares an event with a proxyPart message, but does not have the PartMessageEvent attribute. Will ignore", evt.Name, t.FullName));
+                    continue;
+                }
                 foreach (PartMessage attr in deleg.GetCustomAttributes(typeof(PartMessage), true))
                     GenerateEventHandoff(obj, evt);
             }
@@ -358,9 +407,13 @@ namespace KSPAPIExtensions.PartMessage
                 get
                 {
                     object target = this.target;
+                    if (target is Part)
+                        return target as Part;
                     if (target is PartModule)
                         return ((PartModule)target).part;
-                    return target as Part;
+                    if (target is PartMessagePartProxy)
+                        return ((PartMessagePartProxy)target).proxyPart;
+                    return null;
                 }
             }
 
@@ -621,7 +674,7 @@ namespace KSPAPIExtensions.PartMessage
                         return;
 
                 // Send the message
-                foreach (Type messageCls in SourceInfo.srcAllMessages)
+                foreach (Type messageCls in SourceInfo.allMessages)
                 {
                     string messageName = messageCls.FullName;
 
@@ -659,7 +712,7 @@ namespace KSPAPIExtensions.PartMessage
                             catch (TargetException ex)
                             {
                                 // Swallow target exceptions, but not anything else.
-                                Debug.LogError(string.Format("Invoking {0}.{1} to handle messageName {2} resulted in an exception.", target.GetType(), node.Value.method, SourceInfo.srcMessage));
+                                Debug.LogError(string.Format("Invoking {0}.{1} to handle messageName {2} resulted in an exception.", target.GetType(), node.Value.method, SourceInfo.message));
                                 Debug.LogException(ex.InnerException);
                             }
                         }
@@ -686,14 +739,6 @@ namespace KSPAPIExtensions.PartMessage
         #endregion
 
         #region Internal - Startup and instance management
-        // Version of the compatibility checker itself.
-        private static int _version = 1;
-
-        private static FieldInfo moduleListListField
-            = typeof(PartModuleList)
-                .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
-                .Where(t => t.FieldType == typeof(List<PartModule>))
-                .First();
 
         protected PartMessageService() { }
 
@@ -702,22 +747,16 @@ namespace KSPAPIExtensions.PartMessage
             // Checkers are identified by the type name and version field name.
             var allTypes = getAllTypes();
 
-            var fields = from t in allTypes
-                         where t.FullName == typeof(PartMessageService).FullName
-                         let f = t.GetField("_version", BindingFlags.Static | BindingFlags.NonPublic)
-                         where f != null && f.FieldType == typeof(int)
-                         select f;
+            string [] locations = (from t in allTypes
+                                   where t.FullName == typeof(PartMessageService).FullName
+                                   let a = t.Assembly
+                                   select a.Location).ToArray();
 
-            // Let the latest version of the checker execute.
-            if (_version != fields.Max(f => (int)f.GetValue(null)))
-                return;
-
-            Debug.Log(String.Format("[PartMessageService] Running {0} version {1} from '{2}'", typeof(PartMessageService).Name, _version, Assembly.GetExecutingAssembly().GetName().Name));
+            if (locations.Length > 1)
+                PopupDialog.SpawnPopupDialog("Multiple copies of KSPAPIExtensions", "There are multiple copies of the KSPAPIExtensions present, please delete the extras in the following locations:\n\n" + String.Join("\n", locations), "OK", false, HighLogic.Skin);
 
             // Other checkers will see this version and not run.
             // This accomplishes the same as an explicit "ran" flag with fewer moving parts.
-            _version = int.MaxValue;
-
             UnityEngine.Object.DontDestroyOnLoad(gameObject);
             Instance = this;
             SourceInfo = new PartMessageSourceInfo();
@@ -728,7 +767,7 @@ namespace KSPAPIExtensions.PartMessage
             var parts = (from t in allTypes
                          where typeof(Part).IsAssignableFrom(t)
                          select t).ToLookup(t => t.Name);
-
+            
             var modules = (from t in allTypes
                            where typeof(PartModule).IsAssignableFrom(t)
                            select t).ToLookup(t => t.Name);
@@ -764,37 +803,20 @@ namespace KSPAPIExtensions.PartMessage
 
             addmanager:
 
-                Debug.LogWarning("[PartMessageService] Adding part messageName manager to part " + part.GetValue("name"));
+                Debug.Log("[PartMessageService] Adding support for proxyPart messages to proxyPart " + part.GetValue("name"));
 
                 try
                 {
-                    ConfigNode orig = part.CreateCopy();
-                    part.ClearNodes();
-
                     ConfigNode myModule = new ConfigNode("MODULE");
-                    myModule.AddValue("name", typeof(PartMessageManager).Name);
+                    myModule.AddValue("name", typeof(PartMessageBootstrap).Name);
                     part.AddNode(myModule);
-
-                    foreach (ConfigNode node in orig.nodes)
-                        part.AddNode(node);
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError(ex.ToString());
+                    Debug.LogException(ex);
                 }
 
             }
-        }
-
-        private static PartMessageManager AddManagerModule(Part part)
-        {
-            PartMessageManager manager = part.gameObject.AddComponent<PartMessageManager>();
-
-            // Need to do a bit of reflection to stick it first in the module list.
-            List<PartModule> moduleList = (List<PartModule>)moduleListListField.GetValue(part);
-            moduleList.Insert(0, manager);
-
-            return manager;
         }
 
         private static bool NeedsManager(Type t)
@@ -925,50 +947,66 @@ namespace KSPAPIExtensions.PartMessage
         }
     }
 
-    public class PartMessageManager : PartModule
+    public class PartMessageBootstrap : PartModule
     {
-        public override string GetInfo()
+        public override void OnAwake()
         {
-            if (HighLogic.LoadedScene != GameScenes.LOADING)
-                return "";
-            //Debug.LogWarning("Scanning part: " + part.name + " in scene " + HighLogic.LoadedScene);
-            try
-            {
-                PartMessageService.Instance.ScanPartInternal(part, this);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
-            }
-            return "";
-        }
+            if (gameObject.GetComponent<PartMessageManager>() == null)
+                gameObject.AddComponent<PartMessageManager>();
 
-        public override void OnInitialize()
-        {
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
-            //Debug.LogWarning("Scanning part in OnInitialize: " + part.name + " in scene " + HighLogic.LoadedScene);
-            PartMessageService.Instance.ScanPartInternal(part, this);
-            //part.Modules.Remove(this);
+            if (GameSceneFilter.AnyEditor.IsLoaded())
+                part.RemoveModule(this);
         }
-
-        public override void OnStart(PartModule.StartState state)
-        {
-            if (!HighLogic.LoadedSceneIsEditor || modulesScanned.Count > 0)
-                return;
-            //Debug.LogWarning("Scanning part in OnStart: " + part.name + " in scene " + HighLogic.LoadedScene);
-            PartMessageService.Instance.ScanPartInternal(part, this);
-            //part.Modules.Remove(this);
-        }
-
 
         public override void OnLoad(ConfigNode node)
         {
-            if (!HighLogic.LoadedSceneIsFlight)
+            // So hopefully this is the last module in the list, and we can successfully add the
+            // manager here. The only case (major edge case) where this wouldn't work would be 
+            // if another KSPAddon adds in a different module at the end of the list, and then
+            // uses proxyPart messages in the GetInfo method. 
+
+            if (gameObject.GetComponent<PartMessageManager>() == null)
+                gameObject.AddComponent<PartMessageManager>();
+
+            if (GameSceneFilter.Flight.IsLoaded())
+                part.RemoveModule(this);
+        }
+
+        public override string GetInfo()
+        {
+            // There's a chance the manager was not last on the list. If it 
+            List<PartModule> partModuleList = (List<PartModule>)moduleListList.GetValue(part.Modules);
+            if (partModuleList[partModuleList.Count - 1] != this)
+            {
+                PartMessageService svc = PartMessageService.Instance;
+                PartMessageManager manager = gameObject.GetComponent<PartMessageManager>();
+                // Just scan any modules that have been put in after this one.
+                for (int i = partModuleList.IndexOf(this) + 1; i < partModuleList.Count; ++i)
+                {
+                    svc.ScanModuleInternal(partModuleList[i], manager);
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static FieldInfo moduleListList = (from fld in typeof(PartModuleList).GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+                                                   where fld.FieldType == typeof(List<PartModule>)
+                                                   select fld).First();
+    }
+
+    public class PartMessageManager : MonoBehaviour
+    {
+        public void Awake()
+        {
+            Part part = gameObject.GetComponent<Part>();
+            // No part in editor icons. Might as well remove this behaviour.
+            if (part == null)
+            {
+                DestroyObject(this);
                 return;
-            //Debug.LogWarning("Scanning part: " + part.name + " in scene " + HighLogic.LoadedScene);
+            }
             PartMessageService.Instance.ScanPartInternal(part, this);
-            //part.Modules.Remove(this);
         }
 
         internal List<PartModule> modulesScanned = new List<PartModule>();

@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using System.Globalization;
 
 namespace KSPAPIExtensions
 {
@@ -238,7 +239,7 @@ namespace KSPAPIExtensions
 
             SetSliderValue(value);
 
-            fieldValue.Text = value.ToString(field.guiFormat) + " " + field.guiUnits;
+            fieldValue.Text = value.ToStringExt(field.guiFormat) + field.guiUnits;
             fieldName.Text = field.guiName;
             if (fieldInfo.incrementLarge == 0.0)
             {
