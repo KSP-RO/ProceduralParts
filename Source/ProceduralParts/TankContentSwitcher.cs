@@ -10,16 +10,16 @@ using UnityEngine;
 namespace ProceduralParts
 {
     /// <summary>
-    /// Module that allows switching the contents of a pPart between different resources.
+    /// Module that allows switching the contents of a part between different resources.
     /// The possible contents are set up in the config file, and the user may switch beween
     /// the different possiblities.
     /// 
     /// This is a bit of a light-weight version of RealFuels.
     /// 
-    /// One can set this module up on any existing fuel pPart (Maybe with module manager if you like) 
+    /// One can set this module up on any existing fuel part (Maybe with module manager if you like) 
     /// if you set the volume property in the config file.
     /// 
-    /// The class also accepts the messageName ChangeVolume(float volume) if attached to a dynamic resizing pPart
+    /// The class also accepts the messageName ChangeVolume(float volume) if attached to a dynamic resizing part
     /// such as ProceeduralTanks.
     /// </summary>
     public class TankContentSwitcher : PartModule
@@ -28,7 +28,7 @@ namespace ProceduralParts
 
         public override void OnLoad(ConfigNode node)
         {
-            if (HighLogic.LoadedScene != GameScenes.LOADING)
+            if (!GameSceneFilter.AnyInitializing.IsLoaded())
                 return;
         
             tankTypeOptions = new List<TankTypeOption>();
@@ -77,9 +77,9 @@ namespace ProceduralParts
         #region Tank Volume
 
         /// <summary>
-        /// Volume of pPart in kilolitres. 
+        /// Volume of part in kilolitres. 
         /// </summary>
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Volume", guiFormat = "F3", guiUnits = "kL")]
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Volume", guiFormat="S4+3", guiUnits="L")]
         public float tankVolume = 0.0f;
 
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Mass")]
@@ -99,14 +99,15 @@ namespace ProceduralParts
         {
             if (!useVolume)
             {
-                Debug.LogError("Updating pPart volume when this is not expected. Set useVolume = true in config file");
+                Debug.LogError("Updating part volume when this is not expected. Set useVolume = true in config file");
                 return;
             }
 
             if (volume <= 0f)
                 throw new ArgumentOutOfRangeException("volume");
 
-            this.tankVolume = volume;
+            tankVolume = volume;
+
             UpdateMassAndResources(false);
         }
     
@@ -183,16 +184,16 @@ namespace ProceduralParts
 
         private void InitializeTankType()
         {
-            // Have to DIY to get the pPart options deserialized
+            // Have to DIY to get the part options deserialized
             if (tankTypeOptionsSerialized != null)
                 ObjectSerializer.Deserialize(tankTypeOptionsSerialized, out tankTypeOptions);
 
-            Fields["tankVolume"].guiActiveEditor = useVolume;
+            Fields["tankVolume"].guiActiveEditor = useVolume; 
             Fields["massDisplay"].guiActiveEditor = useVolume;
 
             if (tankTypeOptions == null || tankTypeOptions.Count == 0)
             {
-                Debug.LogError("*TCS* No pPart type options available");
+                Debug.LogError("*TCS* No part type options available");
                 return;
             }
 
@@ -220,13 +221,13 @@ namespace ProceduralParts
             {
                 if (oldTankType == null)
                 {
-                    Debug.LogWarning("*TCS* Initially selected pPart type '" + tankType + "' does not exist, reverting to default");
+                    Debug.LogWarning("*TCS* Initially selected part type '" + tankType + "' does not exist, reverting to default");
                     selectedTankType = tankTypeOptions[0];
                     tankType = selectedTankType.name;
                 }
                 else 
                 {
-                    Debug.LogWarning("*TCS* Selected pPart type '" + tankType + "' does not exist, reverting to previous");
+                    Debug.LogWarning("*TCS* Selected part type '" + tankType + "' does not exist, reverting to previous");
                     selectedTankType = oldTankType;
                     tankType = selectedTankType.name;
                     return;
@@ -245,8 +246,11 @@ namespace ProceduralParts
 
         #region Resources
 
+        [PartMessageEvent]
         public event PartMassChanged MassChanged;
+        [PartMessageEvent]
         public event PartResourceListChanged ListModified;
+        [PartMessageEvent]
         public event PartResourceMaxAmountChanged AmountModified;
 
         private void UpdateMassAndResources(bool typeChanged)
@@ -257,7 +261,7 @@ namespace ProceduralParts
 
             if (useVolume)
             {
-                part.mass = mass = Mathf.Round(selectedTankType.dryDensity * tankVolume * 1000f) / 1000f;
+                part.mass = mass = selectedTankType.dryDensity * tankVolume;
                 MassChanged();
             }
 
@@ -269,13 +273,21 @@ namespace ProceduralParts
             if (useVolume)
             {
                 if (selectedTankType.isStructural)
-                    massDisplay = part.mass.FormatFixedDigits(3) + "t";
+                    massDisplay = FormatMass(part.mass);
                 else
                 {
                     float totalMass = part.mass + part.GetResourceMass();
-                    massDisplay = "Dry: " + part.mass.FormatFixedDigits(3) + "t / Wet: " + totalMass.FormatFixedDigits(3) + "t";
+                    massDisplay = "Dry: " + FormatMass(part.mass) + " / Wet: " + FormatMass(totalMass);
                 }
             }
+        }
+
+        private static string FormatMass(float mass)
+        {
+            if (mass < 1.0f)
+                return mass.ToStringSI(4, 6, "g");
+            else
+                return mass.ToStringSI(4, unit:"t");
         }
 
         private bool UpdateResources(UIPartActionWindow window)
@@ -326,7 +338,7 @@ namespace ProceduralParts
 
             // Build them afresh. This way we don't need to do all the messing around with reflection
             // The downside is the UIPartActionWindow gets maked dirty and rebuit, so you can't use 
-            // the sliders that affect pPart contents properly cos they get recreated underneith you and the drag dies.
+            // the sliders that affect part contents properly cos they get recreated underneith you and the drag dies.
             foreach (TankResource res in selectedTankType.resources)
             {
                 double maxAmount = (double)Math.Round(tankVolume * res.unitsPerKL + part.mass * res.unitsPerT, 2);
@@ -386,8 +398,8 @@ namespace ProceduralParts
         foundEditor:
 
             // Fortunatly as we're keeping proportions, we don't need to update the slider.
-            editor.resourceMax.Text = res.maxAmount.ToString("F1");
-            editor.resourceAmnt.Text = res.amount.ToString("F1");
+            //editor.resourceMax.Text = res.maxAmount.ToString("F1");
+            //editor.resourceAmnt.Text = res.amount.ToString("F1");
 
             return true;
         }
@@ -410,9 +422,9 @@ namespace ProceduralParts
     #endif
 
         /// <summary>
-        /// Volume of pPart in kilolitres. 
+        /// Volume of part in kilolitres. 
         /// </summary>
-        [KSPField(guiActive = true, guiActiveEditor = true, guiName = "Volume", guiFormat = "F3", guiUnits = "kL")]
+        [KSPField(guiActive = true, guiActiveEditor = true, guiName = "Volume", guiFormat = "S3+3", guiUnits = "L")]
         public float tankVolume = 0.0f;
 
         [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Mass")]
@@ -511,7 +523,7 @@ namespace ProceduralParts
         /// <summary>
         /// Message sent from ProceduralAbstractShape when it updates.
         /// </summary>
-        [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:GameSceneFilter.Editor)]
+        [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:GameSceneFilter.AnyEditor)]
         private void ChangeVolume(float volume)
         {
             // Need to call ChangeVolume in Modular Fuel Tanks
@@ -559,12 +571,21 @@ namespace ProceduralParts
                 return;
 
             if (part.Resources.Count == 0)
-                massDisplay = part.mass.FormatFixedDigits(3) + "t";
+                massDisplay = FormatMass(part.mass);
             else
             {
                 float totalMass = part.mass + part.GetResourceMass();
-                massDisplay = "Dry: " + part.mass.FormatFixedDigits(3) + "t / Wet: " + totalMass.FormatFixedDigits(3) + "t";
+                massDisplay = "Dry: " + FormatMass(part.mass) + " / Wet: " + FormatMass(totalMass);
             }
         }
+
+        private static string FormatMass(float mass)
+        {
+            if (mass < 1.0f)
+                return mass.ToStringSI(4, 6, "g");
+            else
+                return mass.ToStringSI(4, unit:"t");
+        }
+
     }
 }
