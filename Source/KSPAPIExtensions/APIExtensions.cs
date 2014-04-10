@@ -48,91 +48,12 @@ namespace KSPAPIExtensions
             {
                 inBetween.Add(track.name);
                 if (track.parent == null)
-                    throw new ArgumentException("Passed transform is not a module of this part");
+                    throw new ArgumentException("Passed transform is not a module of this proxyPart");
             }
             inBetween.Reverse();
             return string.Join("/", inBetween.ToArray());
         }
         #endregion
-    }
-
-
-    /// <summary>
-    /// Be aware this will not prevent a non singleton constructor
-    ///   such as `T myT = new T();`
-    /// To prevent that, add `protected T () {}` to your singleton class.
-    /// 
-    /// As a note, this is made as MonoBehaviour because we need Coroutines.
-    /// </summary>
-    public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
-    {
-        private static T _instance;
-
-        private static object _lock = new object();
-
-        public static T Instance
-        {
-            get
-            {
-                if (applicationIsQuitting)
-                {
-                    Debug.LogWarning("[Singleton] Instance '" + typeof(T) +
-                        "' already destroyed on application quit." +
-                        " Won't create again - returning null.");
-                    return null;
-                }
-
-                lock (_lock)
-                {
-                    if (_instance == null)
-                    {
-                        _instance = (T)FindObjectOfType(typeof(T));
-
-                        if (FindObjectsOfType(typeof(T)).Length > 1)
-                        {
-                            Debug.LogError("[Singleton] Something went really wrong " +
-                                " - there should never be more than 1 singleton!" +
-                                " Reopenning the scene might fix it.");
-                            return _instance;
-                        }
-
-                        if (_instance == null)
-                        {
-                            GameObject singleton = new GameObject();
-                            _instance = singleton.AddComponent<T>();
-                            singleton.name = "(singleton) " + typeof(T).ToString();
-
-                            DontDestroyOnLoad(singleton);
-
-                            Debug.Log("[Singleton] An instance of " + typeof(T) +
-                                " is needed in the scene, so '" + singleton +
-                                "' was created with DontDestroyOnLoad.");
-                        }
-                        else
-                        {
-                            Debug.Log("[Singleton] Using instance already created: " +
-                                _instance.gameObject.name);
-                        }
-                    }
-
-                    return _instance;
-                }
-            }
-        }
-
-        private static bool applicationIsQuitting = false;
-        /// <summary>
-        /// When Unity quits, it destroys objects in a random order.
-        /// In principle, a Singleton is only destroyed when application quits.
-        /// If any script calls Instance after it have been destroyed, 
-        ///   it will create a buggy ghost object that will stay on the Editor scene
-        ///   even after stopping playing the Application. Really bad!
-        /// So, this was made to be sure we're not creating that buggy ghost object.
-        /// </summary>
-        public void OnDestroy()
-        {
-            applicationIsQuitting = true;
-        }
     }
 
     /// <summary>
@@ -159,14 +80,16 @@ namespace KSPAPIExtensions
         Loading = 1 << (int)GameScenes.LOADING,
         MainMenu = 1 << (int)GameScenes.MAINMENU,
         SpaceCenter = 1 << (int)GameScenes.SPACECENTER,
-        Editor = 1 << (int)GameScenes.EDITOR | 1 << (int)GameScenes.SPH,
         VAB = 1 << (int)GameScenes.EDITOR,
         SPH = 1 << (int)GameScenes.SPH,
         Flight = 1 << (int)GameScenes.FLIGHT,
         TrackingStation = 1 << (int)GameScenes.TRACKSTATION,
         Settings = 1 << (int)GameScenes.SETTINGS,
-        Credits = 1 << (int)GameScenes.CREDITS, 
-        All = 0xFFFF
+        Credits = 1 << (int)GameScenes.CREDITS,
+
+        AnyEditor = VAB | SPH, 
+        AnyInitializing = 0xFFFF & ~(AnyEditor | Flight), 
+        Any = 0xFFFF
     }
 
     public static class PartUtils
@@ -332,6 +255,196 @@ namespace KSPAPIExtensions
             return Mathf.Round(value / precision) * precision;
         }
 
+        /// <summary>
+        /// Format a numeric value using SI prefexes. 
+        /// 
+        /// eg: 13401 -> 13.4 k
+        /// 
+        /// </summary>
+        /// <param name="d">value to format</param>
+        /// <param name="unit">unit string</param>
+        /// <param name="exp">Exponennt to the existing value. eg: if value was km rather than m this would be 3.</param>
+        /// <param name="sigFigs">number of signifigant figures to display</param>
+        /// <returns></returns>
+        public static string ToStringSI(this double value, int sigFigs = 3, int exponent = 0, string unit = null)
+        {
+            SIPrefix prefix = value.GetSIPrefix(exponent);
+            return prefix.FormatSI(value, sigFigs, exponent, unit);
+        }
+
+        /// <summary>
+        /// Format a numeric value using SI prefexes. 
+        /// 
+        /// eg: 13401 -> 13.4 k
+        /// 
+        /// </summary>
+        /// <param name="d">value to format</param>
+        /// <param name="unit">unit string</param>
+        /// <param name="exp">Exponennt to the existing value. eg: if value was km rather than m this would be 3.</param>
+        /// <param name="sigFigs">number of signifigant figures to display</param>
+        /// <returns></returns>
+        public static string ToStringSI(this float value, int sigFigs = 3, int exponent = 0, string unit = null)
+        {
+            SIPrefix prefix = value.GetSIPrefix(exponent);
+            return prefix.FormatSI(value, sigFigs, exponent, unit);
+        }
+
+        public static string ToStringExt(this double value, string format)
+        {
+            if (format[0] == 'S' || format[0] == 's')
+            {
+                if (format.Length == 1)
+                    return ToStringSI(value);
+                int pmi = format.IndexOf('+');
+                int sigFigs;
+                if (pmi < 0)
+                {
+                    pmi = format.IndexOf('-');
+                    if (pmi < 0)
+                    {
+                        sigFigs = int.Parse(format.Substring(1));
+                        return ToStringSI(value, sigFigs);
+                    }
+                }
+                sigFigs = int.Parse(format.Substring(1, pmi - 1));
+                int exponent = int.Parse(format.Substring(pmi));
+                return ToStringSI(value, sigFigs, exponent);
+            }
+            return value.ToString(format);
+        }
+
+        public static string ToStringExt(this float value, string format)
+        {
+            return ToStringExt((double)value, format);
+        }
+
+        /// <summary>
+        /// Round a number to a set number of significant figures.
+        /// </summary>
+        /// <param name="d">number to round</param>
+        /// <param name="sigFigs">number of significant figures, defaults to 3</param>
+        /// <returns></returns>
+        public static float RoundSigFigs(this float d, int sigFigs = 3)
+        {
+            
+            int exponent = (int)Math.Floor(Math.Log10(Math.Abs(d))) - sigFigs;
+            float div = Mathf.Pow(10, exponent);
+            return Mathf.Round(d / div) * div;
+        }
+
+        /// <summary>
+        /// Round a number to a set number of significant figures.
+        /// </summary>
+        /// <param name="d">number to round</param>
+        /// <param name="sigFigs">number of significant figures, defaults to 3</param>
+        /// <returns></returns>
+        public static double RoundSigFigs(this double value, int sigFigs = 3)
+        {
+            int exponent = (int)Math.Floor(Math.Log10(Math.Abs(value))) - sigFigs;
+            double div = Mathf.Pow(10, exponent);
+            return Math.Round(value / div) * div;
+        }
+
+        /// <summary>
+        /// Find the SI prefix for a number
+        /// </summary>
+        public static SIPrefix GetSIPrefix(this double value, int exponent = 0)
+        {
+            int exp = (int)Math.Floor(Math.Log10(Math.Abs(value))) + exponent;
+
+            if (exp <= 3 && exp >= -1)
+                return SIPrefix.None;
+            if (exp < 0)
+                return (SIPrefix)((exp-2) / 3 * 3);
+            return (SIPrefix)(exp / 3 * 3);
+        }
+
+        /// <summary>
+        /// Find the SI prefix for a number
+        /// </summary>
+        public static SIPrefix GetSIPrefix(this float value, int exponent = 0)
+        {
+            return GetSIPrefix((double)value, exponent);
+        }
+
+        public static string PrefixString(this SIPrefix pfx)
+        {
+            switch (pfx)
+            {
+                case SIPrefix.None: return "";
+                case SIPrefix.Kilo: return "k";
+                case SIPrefix.Mega: return "M";
+                case SIPrefix.Giga: return "G";
+                case SIPrefix.Tera: return "T";
+                case SIPrefix.Peta: return "P";
+                case SIPrefix.Exa: return "E";
+                case SIPrefix.Zotta: return "Z";
+                case SIPrefix.Yotta: return "Y";
+                case SIPrefix.Milli: return "m";
+                case SIPrefix.Micro: return "mic";
+                case SIPrefix.Nano: return "n";
+                case SIPrefix.Pico: return "p";
+                case SIPrefix.Femto: return "f";
+                case SIPrefix.Atto: return "a";
+                case SIPrefix.Zepto: return "z";
+                case SIPrefix.Yocto: return "y";
+                default: throw new ArgumentException("Illegal prefix", "pfx");
+            }
+        }
+
+        public static float Round(this SIPrefix pfx, float value, int sigFigs = 3, int exponent = 0)
+        {
+            float div = Mathf.Pow(10, (int)pfx - sigFigs + exponent);
+            return Mathf.Round(value / div) * div;
+        }
+
+        public static double Round(this SIPrefix pfx, double value, int sigFigs = 3, int exponent = 0)
+        {
+            double div = Math.Pow(10, (int)pfx - sigFigs + exponent);
+            return Math.Round(value / div) * div;
+        }
+
+        public static string FormatSI(this SIPrefix pfx, double value, int sigFigs = 3, int exponent = 0, string unit = null)
+        {
+            return string.Format("{0} {1}{2}", pfx.GetFormatter(value, sigFigs, exponent)(value), pfx.PrefixString(), unit);
+        }
+
+        public static Func<double, string> GetFormatter(this SIPrefix pfx, double value, int sigFigs = 3, int exponent = 0)
+        {
+            int exp = (int)(Math.Floor(Math.Log10(Math.Abs(value)))) - (int)pfx + exponent;
+            double div = Math.Pow(10, (int)pfx - exponent);
+
+            if (exp < 0)
+                return v => (v/div).ToString("F" + (sigFigs-1));
+            if (exp >= sigFigs)
+            {
+                double mult = Math.Pow(10, exp - sigFigs + 1);
+                return v => (Math.Round(v / div / mult) * mult).ToString("F0");
+            }
+            return v => (v/div).ToString("F" + (sigFigs - exp - 1));
+        }
+
+    }
+
+    public enum SIPrefix
+    {
+        None = 0,
+        Kilo = 3,
+        Mega = 6,
+        Giga = 9,
+        Tera = 12,
+        Peta = 15,
+        Exa = 18,
+        Zotta = 21,
+        Yotta = 24,
+        Milli = -3,
+        Micro = -6,
+        Nano = -9,
+        Pico = -12,
+        Femto = -15,
+        Atto = -18,
+        Zepto = -21,
+        Yocto = -24
     }
 
     /// <summary>
@@ -405,5 +518,84 @@ namespace KSPAPIExtensions
             return sb.ToString();
         }
     }
+
+    /// <summary>
+    /// Be aware this will not prevent a non singleton constructor
+    ///   such as `T myT = new T();`
+    /// To prevent that, add `protected T () {}` to your singleton class.
+    /// 
+    /// As a note, this is made as MonoBehaviour because we need Coroutines.
+    /// </summary>
+    public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
+    {
+        private static T _instance;
+
+        private static object _lock = new object();
+
+        public static T Instance
+        {
+            get
+            {
+                if (applicationIsQuitting)
+                {
+                    Debug.LogWarning("[Singleton] Instance '" + typeof(T) +
+                        "' already destroyed on application quit." +
+                        " Won't create again - returning null.");
+                    return null;
+                }
+
+                lock (_lock)
+                {
+                    if (_instance == null)
+                    {
+                        _instance = (T)FindObjectOfType(typeof(T));
+
+                        if (FindObjectsOfType(typeof(T)).Length > 1)
+                        {
+                            Debug.LogError("[Singleton] Something went really wrong " +
+                                " - there should never be more than 1 singleton!" +
+                                " Reopenning the scene might fix it.");
+                            return _instance;
+                        }
+
+                        if (_instance == null)
+                        {
+                            GameObject singleton = new GameObject();
+                            _instance = singleton.AddComponent<T>();
+                            singleton.name = "(singleton) " + typeof(T).ToString();
+
+                            DontDestroyOnLoad(singleton);
+
+                            Debug.Log("[Singleton] An instance of " + typeof(T) +
+                                " is needed in the scene, so '" + singleton +
+                                "' was created with DontDestroyOnLoad.");
+                        }
+                        else
+                        {
+                            Debug.Log("[Singleton] Using instance already created: " +
+                                _instance.gameObject.name);
+                        }
+                    }
+
+                    return _instance;
+                }
+            }
+        }
+
+        private static bool applicationIsQuitting = false;
+        /// <summary>
+        /// When Unity quits, it destroys objects in a random order.
+        /// In principle, a Singleton is only destroyed when application quits.
+        /// If any script calls Instance after it have been destroyed, 
+        ///   it will create a buggy ghost object that will stay on the Editor scene
+        ///   even after stopping playing the Application. Really bad!
+        /// So, this was made to be sure we're not creating that buggy ghost object.
+        /// </summary>
+        public void OnDestroy()
+        {
+            applicationIsQuitting = true;
+        }
+    }
+
 
 }
