@@ -66,12 +66,8 @@ namespace KSPAPIExtensions
             // can expect a future update to be available.
             //
 
-            if (Versioning.version_minor != 23)
-            {
-                return false;
-            }
-            return true;
-
+            return Versioning.version_major == 0 && Versioning.version_minor == 23 && Versioning.Revision <= 5;
+            
             /*-----------------------------------------------*\
             | IMPLEMENTERS SHOULD NOT EDIT BEYOND THIS POINT! |
             \*-----------------------------------------------*/
