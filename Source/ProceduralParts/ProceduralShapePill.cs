@@ -10,17 +10,17 @@ namespace ProceduralParts
     public class ProceduralShapePill
         : ProceduralAbstractSoRShape
     {
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "S4", guiUnits = "m"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
         public float diameter = 1.25f;
         private float oldDiameter;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "S4", guiUnits = "m"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
         public float length = 1f;
         private float oldLength;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fillet", guiFormat = "F3", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fillet", guiFormat = "S4", guiUnits = "m"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
         public float fillet = 1f;
         private float oldFillet;
@@ -203,7 +203,7 @@ namespace ProceduralParts
 
             if (fillet == 0)
             {
-                // Reduces down to a cylinder pPart.
+                // Reduces down to a cylinder part.
                 points.AddLast(new ProfilePoint(diameter, -0.5f * length, 0f, new Vector2(1, 0)));
                 points.AddLast(new ProfilePoint(diameter, 0.5f * length, 1f, new Vector2(1, 0)));
             }
@@ -251,7 +251,7 @@ namespace ProceduralParts
 
         private float CalcVolume()
         {
-            // To get formula for pPart volume: l = length, d = diameter, f = fillet
+            // To get formula for part volume: l = length, d = diameter, f = fillet
             // body cylinder = pi * r^2 * h 
             //               = pi (d/2)^2 (l-f)
             // ends cylinder = pi * r^2 * h 

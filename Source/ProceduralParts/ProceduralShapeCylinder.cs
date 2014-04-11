@@ -11,12 +11,12 @@ namespace ProceduralParts
     public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
     {
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "S4", guiUnits = "m"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
         public float diameter = 1.25f;
         private float oldDiameter;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "S4", guiUnits = "m"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
         public float length = 1f;
         private float oldLength;
