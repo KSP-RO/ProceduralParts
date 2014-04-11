@@ -41,7 +41,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="APIExtensions.cs" />
     <Compile Include="UIPartActionChooseOption.cs" />
-    <Compile Include="RegistrationAddon.cs" />
+    <Compile Include="UIPartActionsExtended.cs" />
     <Compile Include="UIPartActionFloatEdit.cs" />
     <Compile Include="zzVersionChecker.cs" />
   </ItemGroup>
