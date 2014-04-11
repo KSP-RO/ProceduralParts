@@ -68,11 +68,19 @@ namespace ProceduralParts
 
         // Events. These will get bound up automatically
 
+        [PartMessageEvent]
         public event ChangePartVolumeDelegate ChangeVolume;
+
+        [PartMessageEvent]
         public event ChangeTextureScaleDelegate ChangeTextureScale;
+
+        [PartMessageEvent]
         public event ChangeAttachNodeSizeDelegate ChangeAttachNodeSize;
 
+        [PartMessageEvent]
         public event PartModelChanged ModelChanged;
+
+        [PartMessageEvent]
         public event PartColliderChanged ColliderChanged;
 
         protected void RaiseChangeTextureScale(string name, Material material, Vector2 targetScale)
@@ -143,8 +151,8 @@ namespace ProceduralParts
         #region Attachments
 
         /// <summary>
-        /// Add object attached to the surface of this pPart.
-        /// Base classes should proportionally move the location and orientation (rotation) as the pPart stretches.
+        /// Add object attached to the surface of this part.
+        /// Base classes should proportionally move the location and orientation (rotation) as the part stretches.
         /// The return value will be passed back to removeTankAttachment when i's detached
         /// </summary>
         /// <param name="child">Transform offset follower for the attachment</param>
@@ -154,7 +162,7 @@ namespace ProceduralParts
         public abstract object AddAttachment(TransformFollower attach, bool normalized = false);
 
         /// <summary>
-        /// Remove object attached to the surface of this pPart.
+        /// Remove object attached to the surface of this part.
         /// </summary>
         /// <param name="data">Data returned from child method</param>
         /// <param name="normalize">If true, the transform positon follower will be relocated to a 'normalized' 

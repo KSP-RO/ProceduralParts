@@ -7,26 +7,26 @@ using UnityEngine;
 
 namespace KSPAPIExtensions.DebuggingUtils
 {
+    [Flags]
+    public enum DumpTreeOption
+    {
+        None = 0x0,
+        Default = 0x0,
+
+        Active = 0x1,
+        TransformPosition = 0x2,
+        TransformRotation = 0x4,
+
+        // Optons that require iterating through components should have the 0x10 bit set.
+        Components = 0x30,
+        Materials = 0x50,
+        Mesh = 0x90,
+
+        Rigidbody = 0x110,
+    }
+
     public static class Debugging
     {
-        [Flags]
-        public enum DumpTreeOption
-        {
-            None = 0x0,
-            Default = 0x0,
-
-            Active = 0x1,
-            TransformPosition = 0x2,
-            TransformRotation = 0x4,
-
-            // Optons that require iterating through components should have the 0x10 bit set.
-            Components = 0x30,
-            Materials = 0x50,
-            Mesh = 0x90,
-
-            Rigidbody = 0x110,
-        }
-
         public static string DumpTree(this Transform t, DumpTreeOption options = DumpTreeOption.Default)
         {
             StringBuilder sb = new StringBuilder();

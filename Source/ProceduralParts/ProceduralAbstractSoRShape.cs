@@ -65,7 +65,7 @@ namespace ProceduralParts
             if (lastProfile == null)
                 throw new InvalidOperationException("Can't child non-normalized attachments prior to the first update");
 
-            // All the code from here down assumes the pPart is a convex shape, which is fair as it needs to be convex for 
+            // All the code from here down assumes the part is a convex shape, which is fair as it needs to be convex for 
             // partCollider purposes anyhow. If we allow concave shapes it will need some refinement.
             Vector3 position = attach.transform.localPosition;
 

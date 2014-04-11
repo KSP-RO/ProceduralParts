@@ -13,7 +13,7 @@ namespace ProceduralParts
     /// Module to allow tweaking of decouplers in the VAB.
     /// 
     /// This fairly flexible module allows tech dependent tweaking of the type and size of modules.
-    /// There are options for it to target just one specific module, or all the modules on a part.
+    /// There are options for it to target just one specific module, or all the modules on a proxyPart.
     /// </summary>
     public class DecouplerTweaker : PartModule
     {
@@ -37,7 +37,7 @@ namespace ProceduralParts
         public string explosiveNodeID;
 
         /// <summary>
-        /// Allow targeting of all ModuleDecouple modules attached to a part, useful for symmetrical separators.
+        /// Allow targeting of all ModuleDecouple modules attached to a proxyPart, useful for symmetrical separators.
         /// </summary>
         [KSPField]
         public bool multipleTargets = false;
@@ -135,7 +135,7 @@ namespace ProceduralParts
 
         // Plugs into procedural parts.
         // I may well change this messageName to something else in the fullness of time.
-        [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), scenes:GameSceneFilter.Editor)]
+        [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), scenes:GameSceneFilter.AnyEditor)]
         private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
             if (name != textureMessageName)
@@ -168,7 +168,7 @@ namespace ProceduralParts
             ejectionForce = Mathf.Round(maxForce * oldForceRatio * 5f) / 5f;
         }
 
-        [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:GameSceneFilter.Editor)]
+        [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:GameSceneFilter.AnyEditor)]
         private void ChangeVolume(float volume)
         {
             if (density > 0)
