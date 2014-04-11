@@ -17,6 +17,9 @@ namespace ProceduralParts
 
         public override void OnLoad(ConfigNode node)
         {
+            if (!GameSceneFilter.AnyInitializing.IsLoaded())
+                return;
+
             try
             {
                 LoadBells(node);
@@ -177,9 +180,6 @@ namespace ProceduralParts
 
         private void LoadBells(ConfigNode node)
         {
-            if (HighLogic.LoadedScene != GameScenes.LOADING)
-                return;
-
             srbConfigsSerialized = node.GetNodes("SRB_BELL");
             LoadSRBConfigs();
         }
@@ -271,7 +271,7 @@ namespace ProceduralParts
             UpdateThrustNoMoving();
 
             // Break out at this stage during loading scene
-            if (HighLogic.LoadedScene == GameScenes.LOADING)
+            if (GameSceneFilter.AnyInitializing.IsLoaded())
                 return;
 
             // Attach the bell. In the config file this isn't in normalized position, move it into normalized position first.
@@ -420,7 +420,7 @@ namespace ProceduralParts
                 // This equation is much easier
                 if (useOldHeatEquation)
                     mE.heatProduction = heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((Math.Min(burnTime0, burnTime1) + 20f), 0.75f)) * 0.5f);
-                // The heat production is directly proportional to the thrust on part mass.
+                // The heat production is directly proportional to the thrust on proxyPart mass.
                 else
                     mE.heatProduction = heatProduction = thrust * heatPerThrust / (part.mass + part.GetResourceMass());
             }
@@ -444,7 +444,7 @@ namespace ProceduralParts
 
         private void UpdateAttachedPart()
         {
-            // When we attach a new part to the bottom node, ProceduralPart sets its reference position to on the surface.
+            // When we attach a new proxyPart to the bottom node, ProceduralPart sets its reference position to on the surface.
             // Since we've moved the node, we need to undo the move that ProceeduralPart does to move it back to
             // the surface when first attached.
             if (oldAttachedPart != bottomAttachNode.attachedPart)
