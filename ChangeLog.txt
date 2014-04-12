@@ -4,6 +4,7 @@
 Ability to display numbers in tweaker interface using SI prefixes and significant figures
 Xenon Tank
 Hiding of parts depending on what addins are installed
+Resource improvements - can set a tank to be empty in the VAB ( waste, Kethane ) or to have a fixed amount of resource
 
 === 0.8.0 ===
 Implementation of new messaging system.
