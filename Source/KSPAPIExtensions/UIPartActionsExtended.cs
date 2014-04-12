@@ -9,10 +9,26 @@ using KSPAPIExtensions.DebuggingUtils;
 
 namespace KSPAPIExtensions
 {
-    [KSPAddon(KSPAddon.Startup.EveryScene, false)]
-    internal class UIPartActionsExtendedRegistrationAddon : MonoBehaviour
+    [KSPAddon(KSPAddon.Startup.EditorAny, false)]
+    internal class UIPartActionsExtendedEditorRegistrationAddon : MonoBehaviour
     {
         public void Start()
+        {
+            UIPartActionsExtendedRegistration.Register(true);
+        }
+    }
+    [KSPAddon(KSPAddon.Startup.Flight, false)]
+    internal class UIPartActionsExtendedFlightRegistrationAddon : MonoBehaviour
+    {
+        public void Start()
+        {
+            UIPartActionsExtendedRegistration.Register(false);
+        }
+    }
+
+    internal static class UIPartActionsExtendedRegistration
+    {
+        internal static void Register(bool editMode)
         {
             if (!HighLogic.LoadedSceneIsEditor && !HighLogic.LoadedSceneIsFlight)
                 return;
@@ -20,7 +36,7 @@ namespace KSPAPIExtensions
             UIPartActionController controller = UIPartActionController.Instance;
             if (controller == null)
             {
-                print("Controller instance is null");
+                Debug.LogError("Controller instance is null");
                 return;
             }
 
@@ -39,10 +55,13 @@ namespace KSPAPIExtensions
             controller.fieldPrefabs.Add(UIPartActionChooseOption.CreateTemplate());
             fieldPrefabTypes.Add(typeof(UI_ChooseOption));
 
-            int idx = controller.fieldPrefabs.FindIndex(item => item.GetType() == typeof(UIPartActionLabel));
-            controller.fieldPrefabs[idx] = UIPartActionLabelImproved.CreateTemplate((UIPartActionLabel)controller.fieldPrefabs[idx]);
+            if (editMode)
+            {
+                int idx = controller.fieldPrefabs.FindIndex(item => item.GetType() == typeof(UIPartActionLabel));
+                controller.fieldPrefabs[idx] = UIPartActionLabelImproved.CreateTemplate((UIPartActionLabel)controller.fieldPrefabs[idx]);
 
-            controller.resourceItemEditorPrefab = UIPartActionResourceEditorImproved.CreateTemplate(controller.resourceItemEditorPrefab);
+                controller.resourceItemEditorPrefab = UIPartActionResourceEditorImproved.CreateTemplate(controller.resourceItemEditorPrefab);
+            }
         }
     }
 
