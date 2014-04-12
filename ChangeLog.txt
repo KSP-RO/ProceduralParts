@@ -1,10 +1,14 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 0.9.0 ===
+Ability to display numbers in tweaker interface using SI prefixes and significant figures
+Xenon Tank
+Hiding of parts depending on what addins are installed
+
 === 0.8.0 ===
 Implementation of new messaging system.
 Better support for Real Fuels.
 Procedural Nose Cones
-Ability to display numbers in tweaker interface using SI prefixes and significant figures
 
 === 0.7.0 ===
 Support for bezier cones - cone shapes with smoothed sides
