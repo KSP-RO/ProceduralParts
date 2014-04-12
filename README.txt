@@ -14,7 +14,7 @@ The features include:
 * A Module - TankContentSwitcher that can be applied to existing tanks (with say module manager) and allow their contents to be tweaked. Tweak any tank in the VAB into a Liquid fuel only or oxidizer tank.
 
 Parts available:
-* Tanks Different parts supplied for different 'groups' of fuels (Liquid fuels, SRBs, Monoprop). The multiple part approach is to allow for tech limiting of sizes and volumes.
+* Tanks Different parts supplied for different 'groups' of fuels (Liquid fuels, SRBs, Monoprop, Xenon). The multiple part approach is to allow for tech limiting of sizes and volumes.
 * SRBs Tweakable thrust (or burn time for real fuels). Tweak between a choice of two bells that are designed for surface or vacuum, with varying ISPs.
 * Decoupler Tweakable diameters (with tech defined limits), ejection force, and can be in either decoupler or separator mode (again tech dependent).
 * Structural Part Good for fuselage, adapters, whatever. Half as light as the equivalent tank.
@@ -64,11 +64,10 @@ You'll need to go into your GameData/RealFuels/Plugins directory and replace the
 
 ==== Plans for the future ====
 
+* Extruded parts, such as hexagonal and octagonal pieces
 * Improve functionality with Real Fuels. This will need some code changes on the real fuels end.
 * Cuboid parts, with customizable side lengths
-* Extruded parts, such as hexagonal and octagonal pieces
 * Add optional mounting pod for surface mounts to pod tank. 
-* Xenon tank
 * Procedural command module, possibly with rescaling / tweakable IVA.
 
 ==== Features That Are Not Planned ====
