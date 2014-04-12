@@ -43,7 +43,7 @@ namespace KSPAPIExtensions.PartMessage
     }
 
     /// <summary>
-    /// Marker attribute to apply to events using proxyPart messages.
+    /// Marker attribute to apply to events using part messages.
     /// </summary>
     [AttributeUsage(AttributeTargets.Event)]
     public class PartMessageEvent : Attribute
@@ -208,32 +208,32 @@ namespace KSPAPIExtensions.PartMessage
     public delegate void PartPhysicsChanged();
 
     /// <summary>
-    /// Message for when the proxyPart's mass is modified.
+    /// Message for when the part's mass is modified.
     /// </summary>
     [PartMessage(typeof(PartPhysicsChanged))]
     public delegate void PartMassChanged();
 
     /// <summary>
-    /// Message for when the proxyPart's CoMOffset changes.
+    /// Message for when the part's CoMOffset changes.
     /// </summary>
     [PartMessage(typeof(PartPhysicsChanged))]
     public delegate void PartCoMOffsetChanged();
 
     /// <summary>
-    /// Message for when the proxyPart's moments of intertia change.
+    /// Message for when the part's moments of intertia change.
     /// </summary>
     [PartMessage(typeof(PartPhysicsChanged))]
     public delegate void PartMomentsChanged();
 
 
     /// <summary>
-    /// Message for when the proxyPart's resource list is modified in some way.
+    /// Message for when the part's resource list is modified in some way.
     /// </summary>
     [PartMessage]
     public delegate void PartResourcesChanged();
 
     /// <summary>
-    /// Message for when the proxyPart's resource list is modified (added to or subtracted from).
+    /// Message for when the part's resource list is modified (added to or subtracted from).
     /// </summary>
     [PartMessage(typeof(PartResourcesChanged))]
     public delegate void PartResourceListChanged();
@@ -251,13 +251,13 @@ namespace KSPAPIExtensions.PartMessage
     public delegate void PartResourceInitialAmountChanged(PartResource resource);
 
     /// <summary>
-    /// Message for when some change has been made to the proxyPart's rendering model.
+    /// Message for when some change has been made to the part's rendering model.
     /// </summary>
     [PartMessage]
     public delegate void PartModelChanged();
 
     /// <summary>
-    /// Message for when some change has been made to the proxyPart's collider.
+    /// Message for when some change has been made to the part's collider.
     /// </summary>
     [PartMessage]
     public delegate void PartColliderChanged();
@@ -275,7 +275,7 @@ namespace KSPAPIExtensions.PartMessage
     /// <returns>True if the message is considered handled and is not to be delivered.</returns>
     public delegate bool PartMessageFilter(object source, Type message, object [] args);
 
-    [KSPAddon(KSPAddon.Startup.Instantly, true)]
+    [KSPAddonFixed(KSPAddon.Startup.Instantly, false, typeof(PartMessageService))]
     public class PartMessageService : MonoBehaviour
     {
         // The singleton instance of the service.
@@ -378,7 +378,7 @@ namespace KSPAPIExtensions.PartMessage
                 {
                     // sanity check
                     if (deleg.GetCustomAttributes(typeof(PartMessage), true).Length > 0)
-                        Debug.LogWarning(string.Format("[PartMessageManager] Event: {0} in class: {1} declares an event with a proxyPart message, but does not have the PartMessageEvent attribute. Will ignore", evt.Name, t.FullName));
+                        Debug.LogWarning(string.Format("[PartMessageManager] Event: {0} in class: {1} declares an event with a part message, but does not have the PartMessageEvent attribute. Will ignore", evt.Name, t.FullName));
                     continue;
                 }
                 foreach (PartMessage attr in deleg.GetCustomAttributes(typeof(PartMessage), true))
@@ -742,21 +742,53 @@ namespace KSPAPIExtensions.PartMessage
 
         protected PartMessageService() { }
 
-        internal void Start()
+        private bool loaded = false;
+
+        internal void OnGUI()
         {
-            // Checkers are identified by the type name and version field name.
+            if (!GameDatabase.Instance.IsReady() && ((HighLogic.LoadedScene == GameScenes.MAINMENU) || (HighLogic.LoadedScene == GameScenes.SPACECENTER)))
+            {
+                return;
+            }
+
+            if (loaded)
+                return;
+            loaded = true;
+            
             var allTypes = getAllTypes();
 
-            string [] locations = (from t in allTypes
-                                   where t.FullName == typeof(PartMessageService).FullName
-                                   let a = t.Assembly
-                                   select a.Location).ToArray();
+            var eligible = from t in allTypes
+                           where t.FullName == this.GetType().FullName
+                           select t.Assembly;
 
-            if (locations.Length > 1)
-                PopupDialog.SpawnPopupDialog("Multiple copies of KSPAPIExtensions", "There are multiple copies of the KSPAPIExtensions present, please delete the extras in the following locations:\n\n" + String.Join("\n", locations), "OK", false, HighLogic.Skin);
+            Assembly currentAssembly = Assembly.GetExecutingAssembly();
 
-            // Other checkers will see this version and not run.
-            // This accomplishes the same as an explicit "ran" flag with fewer moving parts.
+            // Elect the newest loaded version of MM to process all patch files.
+            // If there is a newer version loaded then don't do anything
+            if (eligible.Any(a => a.GetName().Version.CompareTo(currentAssembly.GetName().Version) == 1 || a.Location.CompareTo(currentAssembly.Location) > 0))
+            {
+                print("[PartMessageService] version " + currentAssembly.GetName().Version + " at " + currentAssembly.Location + " lost the election");
+                return;
+            }
+            else
+            {
+                string candidates = "";
+                foreach (Assembly a in eligible)
+                    if (currentAssembly.Location != a.Location)
+                        candidates += "Version " + a.GetName().Version + " " + a.Location + " " + "\n";
+                if (candidates.Length > 0)
+                    Debug.Log("[PartMessageService] version " + currentAssembly.GetName().Version + " at " + currentAssembly.Location + " won the election against\n" + candidates);
+                else
+                    Debug.Log("[PartMessageService] Elected unopposed version= " + currentAssembly.GetName().Version + " at " + currentAssembly.Location);
+            }
+
+            if (Instance != null)
+            {
+                Debug.Log("[PartMessageService] destroying from previous load");
+                UnityEngine.Object.Destroy(Instance.gameObject);
+            }
+
+            // Process the database
             UnityEngine.Object.DontDestroyOnLoad(gameObject);
             Instance = this;
             SourceInfo = new PartMessageSourceInfo();
@@ -772,12 +804,34 @@ namespace KSPAPIExtensions.PartMessage
                            where typeof(PartModule).IsAssignableFrom(t)
                            select t).ToLookup(t => t.Name);
 
+            var assem = AssemblyLoader.loadedAssemblies.ToDictionary(a => a.assembly.GetName().Name);
+
             foreach (UrlDir.UrlConfig urlConf in GameDatabase.Instance.root.AllConfigs)
             {
                 if (urlConf.type != "PART")
                     continue;
 
                 ConfigNode part = urlConf.config;
+                string partName = part.GetValue("name");
+
+                foreach (string keyValue in part.GetValues("RequiresAssembly"))
+                {
+                    foreach (string split in keyValue.Split(','))
+                    {
+                        string value = split.Trim();
+                        if (!string.IsNullOrEmpty(value) && (value[0] == '!' ? assem.ContainsKey(value.Substring(1).Trim()) : !assem.ContainsKey(value)))
+                            goto doHide;
+                    }
+                }
+
+                goto noHide;
+                
+            doHide:
+                Debug.LogWarning("[PartMessageService] removing part " + partName + " due to dependency requirements not met");
+                part.ClearData();
+                
+            noHide:
+                part.RemoveValues("RequiresAssembly");
 
                 string partModule = part.GetValue("module");
                 Type partType = parts[partModule].FirstOrDefault();
@@ -803,7 +857,7 @@ namespace KSPAPIExtensions.PartMessage
 
             addmanager:
 
-                Debug.Log("[PartMessageService] Adding support for proxyPart messages to proxyPart " + part.GetValue("name"));
+                Debug.Log("[PartMessageService] Adding support for part messages to part " + part.GetValue("name"));
 
                 try
                 {
@@ -822,7 +876,7 @@ namespace KSPAPIExtensions.PartMessage
         private static bool NeedsManager(Type t)
         {
             foreach (EventInfo info in t.GetEvents(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-                if (info.GetCustomAttributes(typeof(PartMessage), true).Length > 0)
+                if (info.GetCustomAttributes(typeof(PartMessageEvent), true).Length > 0)
                     return true;
 
             foreach (MethodInfo meth in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
@@ -963,7 +1017,7 @@ namespace KSPAPIExtensions.PartMessage
             // So hopefully this is the last module in the list, and we can successfully add the
             // manager here. The only case (major edge case) where this wouldn't work would be 
             // if another KSPAddon adds in a different module at the end of the list, and then
-            // uses proxyPart messages in the GetInfo method. 
+            // uses part messages in the GetInfo method. 
 
             if (gameObject.GetComponent<PartMessageManager>() == null)
                 gameObject.AddComponent<PartMessageManager>();
