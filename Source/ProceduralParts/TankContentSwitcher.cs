@@ -147,6 +147,7 @@ namespace ProceduralParts
                     resource.Load(resNode);
                     resources.Add(resource);
                 }
+                resources.Sort();
             }
             public void Save(ConfigNode node)
             {
@@ -161,7 +162,7 @@ namespace ProceduralParts
         }
 
         [Serializable]
-        public class TankResource : IConfigNode
+        public class TankResource : IConfigNode, IComparable<TankResource>
         {
             [Persistent]
             public string name;
@@ -170,7 +171,11 @@ namespace ProceduralParts
             [Persistent]
             public float unitsPerT;
             [Persistent]
+            public float unitsConst;
+            [Persistent]
             public bool isTweakable = true;
+            [Persistent]
+            public bool forceEmpty = false;
 
             public void Load(ConfigNode node)
             {
@@ -179,6 +184,13 @@ namespace ProceduralParts
             public void Save(ConfigNode node)
             {
                 ConfigNode.CreateConfigFromObject(this, node);
+            }
+
+            int IComparable<TankResource>.CompareTo(TankResource other)
+            {
+                if (other == null)
+                    return 1;
+                return name.CompareTo(other.name);
             }
         }
 
@@ -249,9 +261,11 @@ namespace ProceduralParts
         [PartMessageEvent]
         public event PartMassChanged MassChanged;
         [PartMessageEvent]
-        public event PartResourceListChanged ListModified;
+        public event PartResourceListChanged ResourceListChanged;
         [PartMessageEvent]
-        public event PartResourceMaxAmountChanged AmountModified;
+        public event PartResourceMaxAmountChanged MaxAmountChanged;
+        [PartMessageEvent]
+        public event PartResourceInitialAmountChanged InitialAmountChanged;
 
         private void UpdateMassAndResources(bool typeChanged)
         {
@@ -266,9 +280,8 @@ namespace ProceduralParts
             }
 
             // Update the resources list.
-            UIPartActionWindow window = part.FindActionWindow();
-            if (window == null || typeChanged || !UpdateResources(window))
-                RebuildResources(window);
+            if (typeChanged || !UpdateResources())
+                RebuildResources();
 
             if (useVolume)
             {
@@ -276,7 +289,11 @@ namespace ProceduralParts
                     massDisplay = FormatMass(part.mass);
                 else
                 {
-                    float totalMass = part.mass + part.GetResourceMass();
+                    double resourceMass = 0;
+                    foreach (PartResource r in part.Resources)
+                        resourceMass += r.maxAmount * r.info.density;
+
+                    float totalMass = part.mass + (float)resourceMass;
                     massDisplay = "Dry: " + FormatMass(part.mass) + " / Wet: " + FormatMass(totalMass);
                 }
             }
@@ -290,7 +307,21 @@ namespace ProceduralParts
                 return mass.ToStringSI(4, unit:"t");
         }
 
-        private bool UpdateResources(UIPartActionWindow window)
+        [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
+        private void ResourceChanged(PartResource resource)
+        {
+            if(selectedTankType == null || PartMessageService.SourceInfo.srcModule == this)
+                return;
+
+            TankResource tankResource = selectedTankType.resources.Find(r => r.name == resource.info.name);
+            if (tankResource != null && tankResource.forceEmpty && resource.amount > 0)
+            {
+                resource.amount = 0;
+                InitialAmountChanged(resource);
+            }
+        }
+
+        private bool UpdateResources()
         {
             // Hopefully we can just fiddle with the existing part resources.
             // This saves having to make the window dirty, which breaks dragging on sliders.
@@ -311,25 +342,30 @@ namespace ProceduralParts
                     return false;
                 }
 
-                double maxAmount = (float)Math.Round(tankVolume * tankRes.unitsPerKL + part.mass * tankRes.unitsPerT, 2);
+                double maxAmount = (float)Math.Round(tankRes.unitsConst + tankVolume * tankRes.unitsPerKL + mass * tankRes.unitsPerT, 2);
 
                 if (partRes.maxAmount == maxAmount)
                     continue;
 
-                double oldFillFraction = partRes.amount / partRes.maxAmount;
-
                 partRes.maxAmount = maxAmount;
-                partRes.amount = double.IsNaN(oldFillFraction) ? maxAmount : Math.Round(maxAmount * oldFillFraction, 2);
-                AmountModified(partRes);
+                if (tankRes.forceEmpty)
+                    partRes.amount = 0;
+                else if (partRes.maxAmount == 0)
+                    partRes.amount = maxAmount;
+                else
+                {
+                    SIPrefix pfx = maxAmount.GetSIPrefix();
+                    partRes.amount = pfx.Round(partRes.amount * maxAmount / partRes.maxAmount, 4);
+                }
 
-                if (partRes.isTweakable && !UpdateWindow(window, partRes))
-                    return false;
+                MaxAmountChanged(partRes);
+                InitialAmountChanged(partRes);
             }
 
             return true;
         }
 
-        private void RebuildResources(UIPartActionWindow window)
+        private void RebuildResources()
         {
             // Purge the old resources
             foreach (PartResource res in part.Resources)
@@ -341,69 +377,22 @@ namespace ProceduralParts
             // the sliders that affect part contents properly cos they get recreated underneith you and the drag dies.
             foreach (TankResource res in selectedTankType.resources)
             {
-                double maxAmount = (double)Math.Round(tankVolume * res.unitsPerKL + part.mass * res.unitsPerT, 2);
+                double maxAmount = (double)Math.Round(res.unitsConst + tankVolume * res.unitsPerKL + part.mass * res.unitsPerT, 2);
 
                 ConfigNode node = new ConfigNode("RESOURCE");
                 node.AddValue("name", res.name);
                 node.AddValue("maxAmount", maxAmount);
-                node.AddValue("amount", maxAmount);
+                node.AddValue("amount", res.forceEmpty ? 0 : maxAmount);
                 node.AddValue("isTweakable", res.isTweakable);
                 part.AddResource(node);
             }
 
+            UIPartActionWindow window = part.FindActionWindow();
             if (window != null)
                 window.displayDirty = true;
 
-            ListModified();
+            ResourceListChanged();
         }
-
-        #endregion
-
-        #region Nasty Reflection Code
-
-        private FieldInfo actionItemListField;
-        private bool UpdateWindow(UIPartActionWindow window, PartResource res)
-        {
-            if (actionItemListField == null)
-            {
-                Type cntrType = typeof(UIPartActionWindow);
-                foreach (FieldInfo info in cntrType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic))
-                {
-                    if (info.FieldType == typeof(List<UIPartActionItem>))
-                    {
-                        actionItemListField = info;
-                        goto foundField;
-                    }
-                }
-                Debug.LogWarning("*TCS* Unable to find UIPartActionWindow list");
-                return false;
-            }
-        foundField:
-
-            UIPartActionResourceEditor editor;
-            foreach (UIPartActionItem item in (List<UIPartActionItem>)actionItemListField.GetValue(window))
-            {
-                UIPartActionResourceEditor ed = item as UIPartActionResourceEditor;
-                if (ed == null)
-                    continue;
-                if (ed.resourceName.Text == res.resourceName)
-                {
-                    editor = ed;
-                    goto foundEditor;
-                }
-            }
-            Debug.LogWarning("*TCS* Unable to find resource editor in window");
-            return false;
-
-        foundEditor:
-
-            // Fortunatly as we're keeping proportions, we don't need to update the slider.
-            //editor.resourceMax.Text = res.maxAmount.ToString("F1");
-            //editor.resourceAmnt.Text = res.amount.ToString("F1");
-
-            return true;
-        }
-
 
         #endregion
     }
@@ -574,7 +563,11 @@ namespace ProceduralParts
                 massDisplay = FormatMass(part.mass);
             else
             {
-                float totalMass = part.mass + part.GetResourceMass();
+                double resourceMass = 0;
+                foreach (PartResource r in part.Resources)
+                    resourceMass += r.maxAmount * r.info.density;
+
+                float totalMass = part.mass + (float)resourceMass;
                 massDisplay = "Dry: " + FormatMass(part.mass) + " / Wet: " + FormatMass(totalMass);
             }
         }

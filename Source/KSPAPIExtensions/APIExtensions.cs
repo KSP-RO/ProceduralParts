@@ -350,6 +350,9 @@ namespace KSPAPIExtensions
         /// </summary>
         public static SIPrefix GetSIPrefix(this double value, int exponent = 0)
         {
+            if (value == 0)
+                return SIPrefix.None;
+
             int exp = (int)Math.Floor(Math.Log10(Math.Abs(value))) + exponent;
 
             if (exp <= 3 && exp >= -1)
