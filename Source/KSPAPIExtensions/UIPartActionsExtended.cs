@@ -66,7 +66,7 @@ namespace KSPAPIExtensions
     }
 
 
-    internal class UIPartActionResourceEditorImproved : UIPartActionResourceEditor, PartMessagePartProxy
+    internal class UIPartActionResourceEditorImproved : UIPartActionResourceEditor
     {
         public override void Setup(UIPartActionWindow window, Part part, UI_Scene scene, UI_Control control, PartResource resource)
         {
@@ -100,14 +100,25 @@ namespace KSPAPIExtensions
 
             SIPrefix prefix = resource.maxAmount.GetSIPrefix();
             resource.amount = prefix.Round((double)slider.Value * this.resource.maxAmount, sigFigs:4);
+            PartMessageService.Instance.SendPartMessage(part, typeof(PartResourceInitialAmountChanged), resource);
             if (this.scene == UI_Scene.Editor)
                 SetSymCounterpartsAmount(resource.amount);
         }
 
-        public Part proxyPart
-        {
-            get { return resource.part; }
-        }
+        protected new void SetSymCounterpartsAmount(double amount)
+	    {
+            if (part == null)
+                return;
+
+            foreach (Part sym in part.symmetryCounterparts)
+            {
+                if (sym == part)
+                    continue;
+                PartResource symResource = sym.Resources[resource.info.name];
+                symResource.amount = amount;
+                PartMessageService.Instance.SendPartMessage(sym, typeof(PartResourceInitialAmountChanged), symResource);
+            }
+	    }
 
         internal static UIPartActionResourceEditorImproved CreateTemplate(UIPartActionResourceEditor oldEditor)
         {
