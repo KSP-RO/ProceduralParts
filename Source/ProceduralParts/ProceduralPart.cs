@@ -797,17 +797,17 @@ namespace ProceduralParts
             {
                 if (childToParent.nodeType != AttachNode.NodeType.Surface)
                 {
-                    // For stack nodes, push the parent up instead of moving the proxyPart down.
+                    // For stack nodes, push the parent up instead of moving the part down.
                     int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
                     root.transform.Translate(trans / siblings, Space.World);
                 }
-                // Push the proxyPart down, we need to delta this childAttachment away so that when the translation from the parent reaches here it ends in the right spot
+                // Push the part down, we need to delta this childAttachment away so that when the translation from the parent reaches here it ends in the right spot
                 part.transform.Translate(-trans, Space.World);
             }
 
             public override void Rotate(Quaternion rotate)
             {
-                // Apply the inverse rotation to the proxyPart itself. Don't involve the parent.
+                // Apply the inverse rotation to the part itself. Don't involve the parent.
                 rotate = rotate.Inverse();
 
                 part.transform.Translate(childToParent.position);
@@ -917,7 +917,7 @@ namespace ProceduralParts
             attach.child = child;
 
             childAttachments.AddLast(attach);
-            //Debug.LogWarning("*ST* Attaching child childAttachment: " + child.transform.name + " from child node " + node.id + " Offset=" + proxyPart.transform.InverseTransformDirection(child.transform.position + worldOffset));
+            //Debug.LogWarning("*ST* Attaching child childAttachment: " + child.transform.name + " from child node " + node.id + " Offset=" + part.transform.InverseTransformDirection(child.transform.position + worldOffset));
         }
 
         private PartAttachment AddPartAttachment(Vector3 position, TransformFollower.Transformable target, bool normalized = false)
@@ -947,7 +947,7 @@ namespace ProceduralParts
         private LinkedList<ModelAttachment> attachments = new LinkedList<ModelAttachment>();
 
         /// <summary>
-        /// Attach a gameObject to the surface of the proxyPart. The object must have a transform that is a child of the proxyPart.
+        /// Attach a gameObject to the surface of the part. The object must have a transform that is a child of the part.
         /// </summary>
         public void AddAttachment(Transform child, bool normalized)
         {

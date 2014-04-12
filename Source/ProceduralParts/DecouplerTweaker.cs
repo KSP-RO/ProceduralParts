@@ -13,7 +13,7 @@ namespace ProceduralParts
     /// Module to allow tweaking of decouplers in the VAB.
     /// 
     /// This fairly flexible module allows tech dependent tweaking of the type and size of modules.
-    /// There are options for it to target just one specific module, or all the modules on a proxyPart.
+    /// There are options for it to target just one specific module, or all the modules on a part.
     /// </summary>
     public class DecouplerTweaker : PartModule
     {
@@ -37,7 +37,7 @@ namespace ProceduralParts
         public string explosiveNodeID;
 
         /// <summary>
-        /// Allow targeting of all ModuleDecouple modules attached to a proxyPart, useful for symmetrical separators.
+        /// Allow targeting of all ModuleDecouple modules attached to a part, useful for symmetrical separators.
         /// </summary>
         [KSPField]
         public bool multipleTargets = false;

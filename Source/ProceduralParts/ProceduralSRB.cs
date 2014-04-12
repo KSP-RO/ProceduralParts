@@ -420,7 +420,7 @@ namespace ProceduralParts
                 // This equation is much easier
                 if (useOldHeatEquation)
                     mE.heatProduction = heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((Math.Min(burnTime0, burnTime1) + 20f), 0.75f)) * 0.5f);
-                // The heat production is directly proportional to the thrust on proxyPart mass.
+                // The heat production is directly proportional to the thrust on part mass.
                 else
                     mE.heatProduction = heatProduction = thrust * heatPerThrust / (part.mass + part.GetResourceMass());
             }
@@ -444,7 +444,7 @@ namespace ProceduralParts
 
         private void UpdateAttachedPart()
         {
-            // When we attach a new proxyPart to the bottom node, ProceduralPart sets its reference position to on the surface.
+            // When we attach a new part to the bottom node, ProceduralPart sets its reference position to on the surface.
             // Since we've moved the node, we need to undo the move that ProceeduralPart does to move it back to
             // the surface when first attached.
             if (oldAttachedPart != bottomAttachNode.attachedPart)
