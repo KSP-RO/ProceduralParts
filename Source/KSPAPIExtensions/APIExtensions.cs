@@ -48,7 +48,7 @@ namespace KSPAPIExtensions
             {
                 inBetween.Add(track.name);
                 if (track.parent == null)
-                    throw new ArgumentException("Passed transform is not a module of this proxyPart");
+                    throw new ArgumentException("Passed transform is not a module of this part");
             }
             inBetween.Reverse();
             return string.Join("/", inBetween.ToArray());
@@ -520,6 +520,40 @@ namespace KSPAPIExtensions
     }
 
     /// <summary>
+    /// KSPAddon with equality checking using an additional type parameter. Fixes the issue where AddonLoader prevents multiple start-once addons with the same start scene.
+    /// </summary>
+    public class KSPAddonFixed : KSPAddon, IEquatable<KSPAddonFixed>
+    {
+        private readonly Type type;
+
+        public KSPAddonFixed(KSPAddon.Startup startup, bool once, Type type)
+            : base(startup, once)
+        {
+            this.type = type;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj.GetType() != this.GetType()) { return false; }
+            return Equals((KSPAddonFixed)obj);
+        }
+
+        public bool Equals(KSPAddonFixed other)
+        {
+            if (this.once != other.once) { return false; }
+            if (this.startup != other.startup) { return false; }
+            if (this.type != other.type) { return false; }
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            return this.startup.GetHashCode() ^ this.once.GetHashCode() ^ this.type.GetHashCode();
+        }
+    }
+
+#if false
+    /// <summary>
     /// Be aware this will not prevent a non singleton constructor
     ///   such as `T myT = new T();`
     /// To prevent that, add `protected T () {}` to your singleton class.
@@ -596,6 +630,6 @@ namespace KSPAPIExtensions
             applicationIsQuitting = true;
         }
     }
-
+#endif
 
 }
