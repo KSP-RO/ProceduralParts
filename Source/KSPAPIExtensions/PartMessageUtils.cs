@@ -742,18 +742,16 @@ namespace KSPAPIExtensions.PartMessage
 
         protected PartMessageService() { }
 
-        private bool loaded = false;
-
-        internal void OnGUI()
+        internal void Update()
         {
+            // Use the Update method to be sure this runs *after* module manager. (MM used OnGUI)
             if (!GameDatabase.Instance.IsReady() && ((HighLogic.LoadedScene == GameScenes.MAINMENU) || (HighLogic.LoadedScene == GameScenes.SPACECENTER)))
             {
                 return;
             }
 
-            if (loaded)
-                return;
-            loaded = true;
+            // Clear the enabled flag so we don't end up with lots of invocations.
+            enabled = false;
             
             var allTypes = getAllTypes();
 
@@ -827,7 +825,7 @@ namespace KSPAPIExtensions.PartMessage
                 goto noHide;
                 
             doHide:
-                Debug.LogWarning("[PartMessageService] removing part " + partName + " due to dependency requirements not met");
+                Debug.Log("[PartMessageService] removing part " + partName + " due to dependency requirements not met");
                 part.ClearData();
                 
             noHide:
