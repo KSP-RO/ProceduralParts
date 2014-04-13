@@ -570,7 +570,7 @@ namespace ProceduralParts
             tex = FindTexture(textures, textureName);
             if (tex != null)
                 return true;
-            if (!textureName.BeginsWith("StretchyTanks"))
+            if (!textureName.StartsWith("StretchyTanks"))
                 return false;
 
             string substName = "ProceduralParts" + textureName.Substring("StretchyTanks".Length);

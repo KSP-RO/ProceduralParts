@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProceduralParts", "Procedur
 		{4282B0DA-C314-4524-9C32-EDAB2C9666A9} = {4282B0DA-C314-4524-9C32-EDAB2C9666A9}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KSPAPIExtensions", "..\KSPAPIExtensions\KSPAPIExtensions.csproj", "{4282B0DA-C314-4524-9C32-EDAB2C9666A9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KSPAPIExtensions", "..\..\KSPAPIExtensions\Source\KSPAPIExtensions.csproj", "{4282B0DA-C314-4524-9C32-EDAB2C9666A9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
