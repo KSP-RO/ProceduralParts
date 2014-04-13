@@ -1,7 +1,7 @@
 
 ProceduralParts allows you to procedurally generate (currently) fuel tanks, SRBs, Structural parts, and decouplers in a range of sizes and shapes. The parts are fully tweakable with multiple options for customization of the shape, surface texture, and other parameters.
 
-====  Features  =====
+## Features
 
 The features include:
 * Everything accessible by tweaking
@@ -20,11 +20,11 @@ Parts available:
 * Structural Part Good for fuselage, adapters, whatever. Half as light as the equivalent tank.
 * Nose Cone Specialized structural part for nose cones. The shape is limited to a smooth cone with a bounded ratio of diameter to length. 
 
-==== Installation ====
+## Installation
 
 Just put the ProceduralParts folder into your GameData folder and you should be away.
 
-==== Compatibility with StretchyTanks / StretchySRBs ====
+## Compatibility with StretchyTanks / StretchySRBs
 
 This is essentially a completely new mod and can run alongside either of the previous mods. This is useful if you have preexisting ships in your save file still using those parts. If you don't have any ships using those parts, then you can delete the old mod.
 
@@ -33,50 +33,46 @@ If you do have ships still flying using StretchySRBs/StretchyTanks, and you want
 If you want to do this by hand, go through each .cfg file in the Parts folder for the mod. Find the line category=Propulsion, and change it to category=-1.
 
 
-==== Customization ====
+## Customization
 
 The original texture customization system from StretchySRB is still present. This system works off confignodes. There is a file in the StretchyTanks/Parts folder called STTextures.cfg that defines the textures. 
 
 You can create your own textures, place them in any location, and create a config file with STRETCHYTANKTEXTURES nodes for each texture. All documentation on the node syntax is in the STTextures.cfg file.
 
-Most other stuff including fuel mass ratios, fuel types, tech levels ect are all available within the config file and are well documented. Note that I tried to make everything as 'stock alike' as possible to ensure the mod isn't cheaty. This means a few things have changed as compared to StretchySRB. If you want it back the old way then look through the config file and fiddle with it.
+Most other stuff including fuel mass ratios, fuel types, tech levels etc are all available within the config file and are well documented. Note that I tried to make everything as 'stock alike' as possible to ensure the mod isn't cheaty. This means a few things have changed as compared to StretchySRB. If you want it back the old way then look through the config file and fiddle with it.
 
 There is the scope for adding your own tank shapes, however if you want to do this you'd best get in touch with me so I can talk you though it. Other surface of revolution type tanks will be pretty easy to implement, just calculate the profile.
 
 
-==== Integration with other mods ====
+## Integration with other mods
 
-Real Fuels integration is a work in progress, but does currently work fairly reasonably.
+Real Fuels integration is a work in progress, but does currently work fairly reasonably. You need the latest version of RF - v5.1.
 
-I have created several different tank types including Standard, Cryo, Balloon, BalloonCryo, and Service. If you use my updated real fuels DLL, then the information display in the tweaker and the real fuels dialog will be synched up, this will be in the next RF release.
+I have created several different tank types including Standard, Cryo, Balloon, BalloonCryo, and Service.
 
 For the SRBs, there are two parts available, one for surface and one for vac. You can tweak the sea-level thrust, but all the information displays as available in stock stretchy SRBs will require an update to Real Fuels to get it working.
 
 Ultimately all the different tank types will be rolled into one part, with a tweaker to switch between the different tank types available to RF. Similar treatment will be given to the SRBs. When this happens the existing parts will be deprecated and optionally either hidden in the VAB, or removed entirely (if you have no flying ships).
 
-Getting this to work will require some updates to real fuels, there's no specific time-frame, I will need to collaborate with the RF developers. Be patient :)
+Getting this to work will require some updates to real fuels, there's no specific time-frame, I will need to collaborate with the RF developers. Be patient 
 
-Here's the parts for RF: https://github.com/Swamp-Ig/ProceduralParts/releases/download/v0.8.0/ProceduralParts.RealFuelsSupport.0.8.0.zip
+You no longer need to download a separate part pack for real fuels, the mod will detect if it's installed and offer you the right tanks.
 
-And here's the replacement DLL: https://github.com/Swamp-Ig/ProceduralParts/releases/download/v0.8.0/modularFuelTanks.dll
-You'll need to go into your GameData/RealFuels/Plugins directory and replace the DLL. If you don't do this it's not a huge deal, it will just mean that the tweaking dialog won't update in sync with the real fuels window.
+## Plans for the future
 
-
-==== Plans for the future ====
-
-* Extruded parts, such as hexagonal and octagonal pieces
 * Improve functionality with Real Fuels. This will need some code changes on the real fuels end.
 * Cuboid parts, with customizable side lengths
-* Add optional mounting pod for surface mounts to pod tank. 
+* Extruded parts, such as hexagonal and octagonal pieces
+* Add optional mounting pod for surface mounts to pod tank.
 * Procedural command module, possibly with rescaling / tweakable IVA.
 
-==== Features That Are Not Planned ====
+## Features That Are Not Planned
 
 * Shapes with 'holes' in them and concave shapes - including toroids. 
 * Procedural wings, procedural fairings - there's good mods for these already.
 * Procedural engines - May happen one day, but not a priority.
 
-==== Acknowlagements ====
+## Acknowledgements
 
 ProceduralParts has an extended family tree:
 
@@ -88,8 +84,8 @@ Also featuring:
 
 * Models by Tiberion 
 * Further textures by Chestburster and Dante80.
-* Config code by jsimmonds
+* Config code by jsimmonds and OtherBarry
 
-==== Licence ====
+## Licence
 
 Remains as CC-BY-SA 3.0 Unported.
