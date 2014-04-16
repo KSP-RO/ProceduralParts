@@ -310,7 +310,7 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
         private void ResourceChanged(PartResource resource)
         {
-            if(selectedTankType == null || PartMessageService.SourceInfo.srcModule == this)
+            if(selectedTankType == null)
                 return;
 
             TankResource tankResource = selectedTankType.resources.Find(r => r.name == resource.info.name);

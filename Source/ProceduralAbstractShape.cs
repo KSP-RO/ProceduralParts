@@ -120,7 +120,7 @@ namespace ProceduralParts
         {
             try
             {
-                using (PartMessageService.Instance.MessageConsolidate(this))
+                using (PartMessageFinder.Service.MessageConsolidate(this))
                 {
                     bool wasForce = forceNextUpdate;
                     forceNextUpdate = false;
