@@ -10,6 +10,12 @@ namespace ProceduralParts
 {
     public abstract class ProceduralAbstractShape : PartModule
     {
+        public override void OnAwake()
+        {
+            base.OnAwake();
+            PartMessageFinder.Register(this);
+        }
+
         #region Config data
         [KSPField]
         public string displayName;

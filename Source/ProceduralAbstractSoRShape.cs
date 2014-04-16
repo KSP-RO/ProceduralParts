@@ -9,7 +9,6 @@ namespace ProceduralParts
 {
     public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
     {
-
         #region Config fields
 
         internal const int minCircleVertexes = 12;

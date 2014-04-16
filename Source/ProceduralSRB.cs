@@ -15,6 +15,12 @@ namespace ProceduralParts
     {
         #region callbacks
 
+        public override void OnAwake()
+        {
+            base.OnAwake();
+            PartMessageFinder.Register(this);
+        }
+
         public override void OnLoad(ConfigNode node)
         {
             if (!GameSceneFilter.AnyInitializing.IsLoaded())

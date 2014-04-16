@@ -23,6 +23,9 @@ namespace ProceduralParts
 
         public override void OnAwake()
         {
+            base.OnAwake();
+            PartMessageFinder.Register(this);
+
             if (GameSceneFilter.AnyInitializing.IsLoaded())
                 LoadTextureSets();
             InitializeTextureSet();

@@ -25,6 +25,11 @@ namespace ProceduralParts
     public class TankContentSwitcher : PartModule
     {
         #region Callbacks
+        public override void OnAwake()
+        {
+            base.OnAwake();
+            PartMessageFinder.Register(this);
+        }
 
         public override void OnLoad(ConfigNode node)
         {
@@ -400,6 +405,11 @@ namespace ProceduralParts
 
     public class TankContentSwitcherRealFuels : PartModule
     {
+        public override void OnAwake()
+        {
+            base.OnAwake();
+            PartMessageFinder.Register(this);
+        }
 
     #if false
         [KSPField(guiName = "Tank Type", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]

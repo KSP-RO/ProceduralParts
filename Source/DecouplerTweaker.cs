@@ -17,6 +17,11 @@ namespace ProceduralParts
     /// </summary>
     public class DecouplerTweaker : PartModule
     {
+        public override void OnAwake()
+        {
+            base.OnAwake();
+            PartMessageFinder.Register(this);
+        }
 
         /// <summary>
         /// In career mode, if this tech is not available then the option to have separators is not present
