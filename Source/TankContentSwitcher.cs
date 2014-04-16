@@ -347,7 +347,6 @@ namespace ProceduralParts
                 if (partRes.maxAmount == maxAmount)
                     continue;
 
-                partRes.maxAmount = maxAmount;
                 if (tankRes.forceEmpty)
                     partRes.amount = 0;
                 else if (partRes.maxAmount == 0)
@@ -357,6 +356,7 @@ namespace ProceduralParts
                     SIPrefix pfx = maxAmount.GetSIPrefix();
                     partRes.amount = pfx.Round(partRes.amount * maxAmount / partRes.maxAmount, 4);
                 }
+                partRes.maxAmount = maxAmount;
 
                 MaxAmountChanged(partRes);
                 InitialAmountChanged(partRes);
