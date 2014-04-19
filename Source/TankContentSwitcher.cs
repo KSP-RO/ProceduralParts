@@ -19,7 +19,7 @@ namespace ProceduralParts
     /// One can set this module up on any existing fuel part (Maybe with module manager if you like) 
     /// if you set the volume property in the config file.
     /// 
-    /// The class also accepts the messageName ChangeVolume(float volume) if attached to a dynamic resizing part
+    /// The class also accepts the message ChangeVolume(float volume) if attached to a dynamic resizing part
     /// such as ProceeduralTanks.
     /// </summary>
     public class TankContentSwitcher : PartModule
@@ -28,7 +28,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageFinder.Register(this);
+            PartMessageService.Register(this);
         }
 
         public override void OnLoad(ConfigNode node)
@@ -408,7 +408,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageFinder.Register(this);
+            PartMessageService.Register(this);
         }
 
     #if false

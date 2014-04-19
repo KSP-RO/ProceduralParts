@@ -8,13 +8,13 @@ using KSPAPIExtensions.PartMessage;
 
 namespace ProceduralParts
 {
-    [PartMessage]
+    [PartMessageDelegate]
     public delegate void ChangePartVolumeDelegate(float volume);
 
-    [PartMessage]
+    [PartMessageDelegate]
     public delegate void ChangeAttachNodeSizeDelegate(string name, float minDia, float area, int size);
 
-    [PartMessage]
+    [PartMessageDelegate]
     public delegate void ChangeTextureScaleDelegate(string name, Material material, Vector2 targetScale);
 
     public class ProceduralPart : PartModule
@@ -24,7 +24,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageFinder.Register(this);
+            PartMessageService.Register(this);
 
             if (GameSceneFilter.AnyInitializing.IsLoaded())
                 LoadTextureSets();
@@ -804,7 +804,7 @@ namespace ProceduralParts
                     int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
                     root.transform.Translate(trans / siblings, Space.World);
                 }
-                // Push the part down, we need to delta this childAttachment away so that when the translation from the parent reaches here it ends in the right spot
+                // PushSourceInfo the part down, we need to delta this childAttachment away so that when the translation from the parent reaches here it ends in the right spot
                 part.transform.Translate(-trans, Space.World);
             }
 

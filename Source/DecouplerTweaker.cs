@@ -20,7 +20,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageFinder.Register(this);
+            PartMessageService.Register(this);
         }
 
         /// <summary>
@@ -49,13 +49,13 @@ namespace ProceduralParts
 
 
         /// <summary>
-        /// Density of the decoupler. This is for use with Procedural Parts. Listens for ChangeVolume messageName
+        /// Density of the decoupler. This is for use with Procedural Parts. Listens for ChangeVolume message
         /// </summary>
         [KSPField]
         public float density = 0.0f;
 
         /// <summary>
-        /// Listen for a specific texture messageName, again for use with proceedural parts. If set, then listens for ChangeAttachNodeSize messageName.
+        /// Listen for a specific texture message, again for use with proceedural parts. If set, then listens for ChangeAttachNodeSize message.
         /// </summary>
         [KSPField]
         public string textureMessageName;
@@ -139,7 +139,7 @@ namespace ProceduralParts
         }
 
         // Plugs into procedural parts.
-        // I may well change this messageName to something else in the fullness of time.
+        // I may well change this message to something else in the fullness of time.
         [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), scenes:GameSceneFilter.AnyEditor)]
         private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {

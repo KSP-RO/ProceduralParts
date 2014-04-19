@@ -18,7 +18,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageFinder.Register(this);
+            PartMessageService.Register(this);
         }
 
         public override void OnLoad(ConfigNode node)

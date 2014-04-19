@@ -13,7 +13,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageFinder.Register(this);
+            PartMessageService.Register(this);
         }
 
         #region Config data
@@ -126,7 +126,7 @@ namespace ProceduralParts
         {
             try
             {
-                using (PartMessageFinder.Service.MessageConsolidate(this))
+                using (PartMessageService.Instance.Consolidate(this))
                 {
                     bool wasForce = forceNextUpdate;
                     forceNextUpdate = false;
