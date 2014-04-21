@@ -1,0 +1,56 @@
+
+// This mod rescales all procedural parts to 1.0m and 0.1m increments.
+// Note that there's a bunch of empty modules, this is because the order for modules is important.
+
+
+@PART[procedural*]
+{
+	@MODULE[ProceduralPart] 
+	{
+		%diameterLargeStep = 1.0
+		%diameterSmallStep = 0.1
+	}
+    @MODULE[ProceduralShapeCylinder] 
+	{
+		@diameter *= 0.8
+	}
+    @MODULE[ProceduralShapeCone] 
+	{
+		@topDiameter *= 0.8
+		@bottomDiameter *= 0.8
+	}
+    @MODULE[ProceduralShapePill] 
+	{
+		@diameter *= 0.8
+		@fillet *= 0.8
+	}
+    @MODULE[ProceduralShapeBezierCone] 
+	{
+		@topDiameter *= 0.8
+		@bottomDiameter *= 0.8
+	}
+    @MODULE[TankContentSwitcher] { }
+	
+	// From the real fuels tanks.
+    @MODULE[ModuleFuelTanks] { }
+    @MODULE[TankContentSwitcherRealFuels] { }
+	
+	// SRBs
+	@MODULE[ModuleEngines] { }
+	@MODULE[ProceduralSRB] 
+	{ 
+		@SRB_BELL[Surface]
+		{
+			@thrustScaleFactor *= 1.25
+		}
+		@SRB_BELL[Vacuum]
+		{
+			@thrustScaleFactor *= 1.25
+		}
+	}
+	@MODULE[ModuleGimbal] { }
+	
+	// Decoupler
+    @MODULE[ModuleDecouple] { }
+	@MODULE[DecouplerTweaker] { }
+}
