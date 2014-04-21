@@ -89,7 +89,7 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartResourceMaxAmountChanged))]
-        private void ResourcesChanged(PartResource resource)
+        private void ResourcesChanged(string resource, double maxAmount)
         {
             if (selectedBell == null)
                 return;
@@ -145,7 +145,7 @@ namespace ProceduralParts
         public class SRBBellConfig : IConfigNode
         {
             [Persistent]
-            public string displayName;
+            public string name;
             [Persistent]
             public string modelName;
             [NonSerialized]
@@ -176,6 +176,8 @@ namespace ProceduralParts
                     atmosphereCurve = new FloatCurve();
                     atmosphereCurve.Load(atmosCurveNode);
                 }
+                if (name == null)
+                    name = node.GetValue("displayName");
             }
             public void Save(ConfigNode node)
             {
@@ -197,7 +199,7 @@ namespace ProceduralParts
             {
                 SRBBellConfig conf = new SRBBellConfig();
                 conf.Load(srbNode);
-                srbConfigs.Add(conf.displayName, conf);
+                srbConfigs.Add(conf.name, conf);
             }
         }
 
@@ -314,7 +316,7 @@ namespace ProceduralParts
 
         private void UpdateBell()
         {
-            if (selectedBell != null && selectedBellName == selectedBell.displayName)
+            if (selectedBell != null && selectedBellName == selectedBell.name)
                 return;
 
             SRBBellConfig oldSelectedBell = selectedBell;
@@ -322,7 +324,7 @@ namespace ProceduralParts
             if (!srbConfigs.TryGetValue(selectedBellName, out selectedBell))
             {
                 Debug.LogError("*ST* Selected bell name \"" + selectedBellName + "\" does not exist. Reverting.");
-                selectedBellName = oldSelectedBell.displayName;
+                selectedBellName = oldSelectedBell.name;
                 selectedBell = oldSelectedBell;
                 return;
             }
@@ -358,15 +360,15 @@ namespace ProceduralParts
         }
         private Action<float> ChangeThrust;
 
-        [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "F0", guiUnits = "kN"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 0, incrementSlide = 1f)]
+        [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "S3+3", guiUnits = "N"),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 10, incrementSlide = 1f)]
         public float thrust = 250;
         private float oldThrust;
 
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Burn Time")]
         public string burnTime;
 
-        [KSPField(isPersistant = false, guiName = "Heat", guiActive = false, guiActiveEditor = true, guiFormat = "F2", guiUnits = "K/s")]
+        [KSPField(isPersistant = false, guiName = "Heat", guiActive = false, guiActiveEditor = true, guiFormat = "S3", guiUnits = "K/s")]
         public float heatProduction;
 
         [KSPField]
