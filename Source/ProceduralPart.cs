@@ -9,13 +9,13 @@ using KSPAPIExtensions.PartMessage;
 namespace ProceduralParts
 {
     [PartMessageDelegate]
-    public delegate void ChangePartVolumeDelegate(float volume);
+    public delegate void ChangePartVolumeDelegate([UseLatest] float volume);
 
     [PartMessageDelegate]
-    public delegate void ChangeAttachNodeSizeDelegate(string name, float minDia, float area, int size);
+    public delegate void ChangeAttachNodeSizeDelegate(string name, [UseLatest] float minDia, [UseLatest] float area, [UseLatest] int size);
 
     [PartMessageDelegate]
-    public delegate void ChangeTextureScaleDelegate(string name, Material material, Vector2 targetScale);
+    public delegate void ChangeTextureScaleDelegate(string name, [UseLatest] Material material, [UseLatest] Vector2 targetScale);
 
     public class ProceduralPart : PartModule
     {

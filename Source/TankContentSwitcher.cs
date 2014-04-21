@@ -281,7 +281,7 @@ namespace ProceduralParts
             if (useVolume)
             {
                 part.mass = mass = selectedTankType.dryDensity * tankVolume;
-                MassChanged();
+                MassChanged(mass);
             }
 
             // Update the resources list.
@@ -313,16 +313,20 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
-        private void ResourceChanged(PartResource resource)
+        private void ResourceChanged(string name, double amount)
         {
             if(selectedTankType == null)
                 return;
 
-            TankResource tankResource = selectedTankType.resources.Find(r => r.name == resource.info.name);
-            if (tankResource != null && tankResource.forceEmpty && resource.amount > 0)
+            TankResource tankResource = selectedTankType.resources.Find(r => r.name == name);
+            if (tankResource == null || !tankResource.forceEmpty)
+                return;
+
+            PartResource resource = part.Resources[name];
+            if(resource != null && resource.amount > 0)
             {
                 resource.amount = 0;
-                InitialAmountChanged(resource);
+                InitialAmountChanged(resource.name, resource.amount);
             }
         }
 
@@ -363,8 +367,8 @@ namespace ProceduralParts
                 }
                 partRes.maxAmount = maxAmount;
 
-                MaxAmountChanged(partRes);
-                InitialAmountChanged(partRes);
+                MaxAmountChanged(partRes.name, partRes.maxAmount);
+                InitialAmountChanged(partRes.name, partRes.amount);
             }
 
             return true;
