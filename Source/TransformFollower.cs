@@ -47,10 +47,10 @@ namespace ProceduralParts
             if (target.destroyed)
             {
                 Destroy(gameObject);
-                print("Target destroyed: " + target.name);
+                print("Target destroyed: " + ((target==null)?"null":target.name));
                 return;
             }
-
+            
             if (hasParent != (transform.parent != null))
             {
                 print("Setting parent during update: " + transform.parent);

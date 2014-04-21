@@ -76,8 +76,7 @@ namespace ProceduralParts
                     InitializeTechLimits();
 
                 InitializeShapes();
-
-                if (HighLogic.LoadedSceneIsEditor)
+                if(GameSceneFilter.AnyEditorOrFlight.IsLoaded())
                     InitializeNodes();
 
                 if (!HighLogic.LoadedSceneIsEditor)
@@ -713,7 +712,7 @@ namespace ProceduralParts
             {
                 node.originalPosition = node.position += part.transform.InverseTransformPoint(translation + part.transform.position);
 
-                //Debug.LogWarning("Transforming node:" + node.id + " translation=" + translation + " new position=" + node.position.ToString("F3") + " orientation=" + node.orientation.ToString("F3"));
+                //Debug.LogWarning("Transforming node:" + node.id + " part:" + part.name + " translation=" + translation + " new position=" + node.position.ToString("F3") + " orientation=" + node.orientation.ToString("F3"));
             }
 
             public override void Rotate(Quaternion rotate)
@@ -744,6 +743,11 @@ namespace ProceduralParts
             // Update the shape to put the nodes into their positions.
             shape.ForceNextUpdate();
             shape.Update();
+
+            // In flight mode, discard all the transform followers because the are not required
+            if (HighLogic.LoadedSceneIsFlight)
+                foreach (object att in nodeAttachments)
+                    shape.RemoveAttachment(att, false);
         }
 
         private void InitializeNode(AttachNode node)
