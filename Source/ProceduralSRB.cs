@@ -7,6 +7,7 @@ using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
 using KSPAPIExtensions.PartMessage;
+using KSPAPIExtensions.Utils;
 
 namespace ProceduralParts
 {
@@ -309,7 +310,7 @@ namespace ProceduralParts
 
             // It makes no sense to have a thrust limiter for SRBs
             // Even though this is present in stock, I'm disabling it.
-            BaseField thrustLimiter = GetComponent<ModuleEngines>().Fields["thrustPercentage"];
+            BaseField thrustLimiter = ((PartModule)Engine).Fields["thrustPercentage"];
             thrustLimiter.guiActive = false;
             thrustLimiter.guiActiveEditor = false;
         }
@@ -342,12 +343,11 @@ namespace ProceduralParts
         {
             // Set the bits and pieces
             selectedBell.model.gameObject.SetActive(true);
-            ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
             if (selectedBell.atmosphereCurve != null)
-                GetComponent<ModuleEngines>().atmosphereCurve = selectedBell.atmosphereCurve;
+                Engine.atmosphereCurve = selectedBell.atmosphereCurve;
             if (selectedBell.gimbalRange >= 0)
                 GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
-            srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", mE.atmosphereCurve.Evaluate(1), mE.atmosphereCurve.Evaluate(0));
+            srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", Engine.atmosphereCurve.Evaluate(1), Engine.atmosphereCurve.Evaluate(0));
         }
 
         #endregion
@@ -403,22 +403,32 @@ namespace ProceduralParts
             MoveBottomAttachmentAndNode(selectedBell.srbAttach.position - oldAttach);
         }
 
+        private EngineWrapper _engineWrapper;
+        private EngineWrapper Engine
+        {
+            get
+            {
+                if (_engineWrapper == null)
+                    _engineWrapper = new EngineWrapper(part);
+                return _engineWrapper;
+            }
+        }
+
         private void UpdateThrustNoMoving()
         {
-            ModuleEngines mE = (ModuleEngines)part.Modules["ModuleEngines"];
             PartResource solidFuel = part.Resources["SolidFuel"];
 
             double solidFuelMassG;
             if (solidFuel == null)
                 solidFuelMassG = 30.75;
             else
-                solidFuelMassG = solidFuel.maxAmount * solidFuel.info.density * mE.g;
+                solidFuelMassG = solidFuel.maxAmount * solidFuel.info.density * Engine.g;
 
-            mE.maxThrust = thrust;
+            Engine.maxThrust = thrust;
 
             if (!usingME)
             {
-                FloatCurve atmosphereCurve = (selectedBell.atmosphereCurve ?? mE.atmosphereCurve);
+                FloatCurve atmosphereCurve = (selectedBell.atmosphereCurve ?? Engine.atmosphereCurve);
 
                 float burnTime0 = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
                 float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
@@ -427,10 +437,10 @@ namespace ProceduralParts
 
                 // This equation is much easier
                 if (useOldHeatEquation)
-                    mE.heatProduction = heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((Math.Min(burnTime0, burnTime1) + 20f), 0.75f)) * 0.5f);
+                    Engine.heatProduction = heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((Math.Min(burnTime0, burnTime1) + 20f), 0.75f)) * 0.5f);
                 // The heat production is directly proportional to the thrust on part mass.
                 else
-                    mE.heatProduction = heatProduction = thrust * heatPerThrust / (part.mass + part.GetResourceMass());
+                    Engine.heatProduction = heatProduction = thrust * heatPerThrust / (part.mass + part.GetResourceMass());
             }
             else
             {
