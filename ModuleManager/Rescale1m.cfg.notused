@@ -1,4 +1,3 @@
-
 // This mod rescales all procedural parts to 1.0m and 0.1m increments.
 // Note that there's a bunch of empty modules, this is because the order for modules is important.
 
@@ -41,11 +40,11 @@
 	{ 
 		@SRB_BELL[Surface]
 		{
-			@thrustScaleFactor *= 1.25
+			@thrustScaleFactor *= 2.5
 		}
 		@SRB_BELL[Vacuum]
 		{
-			@thrustScaleFactor *= 1.25
+			@thrustScaleFactor *= 2.5
 		}
 	}
 	@MODULE[ModuleGimbal] { }
