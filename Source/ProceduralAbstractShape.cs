@@ -61,12 +61,11 @@ namespace ProceduralParts
                 if (value != _volume)
                 {
                     _volume = value;
-                    volumeChanged = true;
+                    ChangeVolume(value);
                 }
             }
         }
         private float _volume;
-        private bool volumeChanged = false;
 
         #endregion
 
@@ -133,11 +132,8 @@ namespace ProceduralParts
 
                     UpdateShape(wasForce);
 
-                    if (volumeChanged || wasForce)
-                    {
+                    if (forceNextUpdate)
                         ChangeVolume(volume);
-                        volumeChanged = false;
-                    }
                 }
             }
             catch (Exception ex)
