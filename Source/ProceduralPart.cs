@@ -906,6 +906,11 @@ namespace ProceduralParts
 
             RemovePartAttachment(delete.Value);
             childAttachments.Remove(delete);
+
+            Part child = node.Value.child;
+            if (child.attachMode == AttachModes.SRF_ATTACH)
+                child.srfAttachNode.attachedPart = null;
+
             //print("*ST* Child childAttachment removed: " + delete.Value.child);
         }
 
