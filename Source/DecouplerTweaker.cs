@@ -30,23 +30,16 @@ namespace ProceduralParts
         public string separatorTechRequired;
 
         /// <summary>
-        /// Maximum ejection force available. 
+        /// Maximum ejection impulse available. 
         /// </summary>
         [KSPField]
-        public float maxEjectionForce = float.PositiveInfinity;
+        public float maxImpulse = float.PositiveInfinity;
 
         /// <summary>
-        /// Target a specific decoupler module only, the one attached to this node. Leave unspecified by default.
+        /// Listen for a specific texture message, again for use with proceedural parts. If set, then listens for ChangeAttachNodeSize message.
         /// </summary>
         [KSPField]
-        public string explosiveNodeID;
-
-        /// <summary>
-        /// Allow targeting of all ModuleDecouple modules attached to a part, useful for symmetrical separators.
-        /// </summary>
-        [KSPField]
-        public bool multipleTargets = false;
-
+        public string textureMessageName;
 
         /// <summary>
         /// Density of the decoupler. This is for use with Procedural Parts. Listens for ChangeVolume message
@@ -55,23 +48,25 @@ namespace ProceduralParts
         public float density = 0.0f;
 
         /// <summary>
-        /// Listen for a specific texture message, again for use with proceedural parts. If set, then listens for ChangeAttachNodeSize message.
+        /// If specified, this will set a maximum impulse based on the diameter of the node.
         /// </summary>
         [KSPField]
-        public string textureMessageName;
+        public float maxImpulseDiameterRatio = 0.0f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Style:"),
          UI_Toggle(disabledText = "Decoupler", enabledText = "Separator")]
         public bool isOmniDecoupler = false;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Force", guiUnits = "N", guiFormat = "F0"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 5f, maxValue = float.PositiveInfinity, incrementLarge = 100f, incrementSlide = 5f)]
-        public float ejectionForce = 200f;
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Impulse", guiUnits = "kNs", guiFormat = "F1"),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.1f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall=0, incrementSlide = 0.1f)]
+        public float ejectionImpulse = 0f;
 
-        [KSPField(isPersistant = true)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="S3")]
         public float mass;
 
         private ModuleDecouple decouple;
+
+        internal const float impulsePerForceUnit = 0.02f;
 
         public override void OnSave(ConfigNode node)
         {
@@ -82,7 +77,7 @@ namespace ProceduralParts
         public override void OnStart(PartModule.StartState state)
         {
             if (mass != 0)
-                part.mass = mass;
+                UpdateMass(mass);
 
             FindDecoupler();
 
@@ -96,8 +91,11 @@ namespace ProceduralParts
             Fields["isOmniDecoupler"].guiActiveEditor =
                 string.IsNullOrEmpty(separatorTechRequired) || ResearchAndDevelopment.GetTechnologyState(separatorTechRequired) == RDTech.State.Available;
 
-            if (ejectionForce == 0)
-                ejectionForce = decouple.ejectionForce;
+            if (ejectionImpulse == 0)
+                ejectionImpulse = (float)Math.Round(decouple.ejectionForce * impulsePerForceUnit, 1);
+
+            UI_FloatEdit ejectionImpulseEdit = (UI_FloatEdit)Fields["ejectionImpulse"].uiControlEditor;
+            ejectionImpulseEdit.maxValue = maxImpulse;            
 
             OnUpdate();
 
@@ -106,36 +104,15 @@ namespace ProceduralParts
 
         private void FindDecoupler()
         {
-            if (explosiveNodeID != null)
-            {
-                for (int i = 0; i < part.Modules.Count; ++i)
-                {
-                    PartModule module = part.Modules[i];
-                    if (module is ModuleDecouple && (decouple = (ModuleDecouple)module).explosiveNodeID == explosiveNodeID)
-                        break;
-                }
-            }
-            else
-                decouple = part.Modules["ModuleDecouple"] as ModuleDecouple;
+            decouple = part.Modules["ModuleDecouple"] as ModuleDecouple;
         }
 
         public override void OnUpdate()
         {
-            if (!multipleTargets)
-            {
-                if (decouple == null)
-                    FindDecoupler();
-                decouple.ejectionForce = ejectionForce;
-                decouple.isOmniDecoupler = isOmniDecoupler;
-            }
-            else
-                foreach (PartModule m in part.Modules)
-                    if (m is ModuleDecouple)
-                    {
-                        ModuleDecouple decouple = (ModuleDecouple)m;
-                        decouple.ejectionForce = ejectionForce;
-                        decouple.isOmniDecoupler = isOmniDecoupler;
-                    }
+            if (decouple == null)
+                FindDecoupler();
+            decouple.ejectionForce = ejectionImpulse / impulsePerForceUnit;
+            decouple.isOmniDecoupler = isOmniDecoupler;
         }
 
         // Plugs into procedural parts.
@@ -143,41 +120,39 @@ namespace ProceduralParts
         [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), scenes:GameSceneFilter.AnyEditor)]
         private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
-            if (name != textureMessageName)
+            if (name != textureMessageName || maxImpulseDiameterRatio == 0)
                 return;
 
-            UI_FloatEdit ejectionForceEdit = (UI_FloatEdit)Fields["ejectionForce"].uiControlEditor;
-            float oldForceRatio = ejectionForce / ejectionForceEdit.maxValue;
+            UI_FloatEdit ejectionImpulseEdit = (UI_FloatEdit)Fields["ejectionImpulse"].uiControlEditor;
+            float oldRatio = ejectionImpulse / ejectionImpulseEdit.maxValue;
 
-            // TODO: change this to a float curve implmentation and make it configurable.
-            const float area1 = 0.625f * 0.625f * Mathf.PI, force1 = 25;
-            const float area2 = 1.25f * 1.25f * Mathf.PI, force2 = 300;
-            const float area3 = 2.5f * 2.5f * Mathf.PI, force3 = 800;
+            maxImpulse = Mathf.Round(maxImpulseDiameterRatio * minDia);
+            ejectionImpulseEdit.maxValue = maxImpulse;
 
-            // There's no real scaling law to the stock decouplers, will have maxima dependent on area so that it roughly fits
-            // the stock parts.
-            float maxForce = float.PositiveInfinity;
-            if (area <= area1)
-                maxForce = force1;
-            else if (area <= area2)
-                maxForce = Mathf.Lerp(force1, force2, Mathf.InverseLerp(area1, area2, area));
-            else if (area <= area3)
-                maxForce = Mathf.Lerp(force2, force3, Mathf.InverseLerp(area2, area3, area));
-            else
-                maxForce = area / area3 * force3;
-
-            maxForce = Mathf.Round(maxForce / 5f) * 5f;
-            maxForce = Mathf.Min(maxForce, this.maxEjectionForce);
-
-            ejectionForceEdit.maxValue = maxForce;
-            ejectionForce = Mathf.Round(maxForce * oldForceRatio * 5f) / 5f;
+            ejectionImpulse = Mathf.Round(maxImpulse * oldRatio / 0.1f) * 0.1f;
         }
 
         [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:GameSceneFilter.AnyEditor)]
         private void ChangeVolume(float volume)
         {
             if (density > 0)
-                part.mass = mass = density * volume;
+                UpdateMass(density * volume);
+        }
+
+        private void UpdateMass(float mass)
+        {
+            part.mass = this.mass = mass;
+            BaseField fld = Fields["mass"];
+            if (mass < 0.1)
+            {
+                fld.guiUnits = "g";
+                fld.guiFormat = "S3+6";
+            }
+            else
+            {
+                fld.guiUnits = "T";
+                fld.guiFormat = "S3";
+            }
         }
     }
 
