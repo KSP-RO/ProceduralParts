@@ -25,9 +25,10 @@ namespace ProceduralParts
         public float length = 1f;
         protected float oldLength;
 
-        public ConeTopMode coneTopMode = ConeTopMode.CanZero;
+        public ConeEndMode coneTopMode = ConeEndMode.CanZero;
+        public ConeEndMode coneBottomMode = ConeEndMode.CanZero;
 
-        public enum ConeTopMode
+        public enum ConeEndMode
         {
             CanZero, LimitMin, Constant,
         }
@@ -38,7 +39,13 @@ namespace ProceduralParts
 
             try
             {
-                coneTopMode = (ConeTopMode)Enum.Parse(typeof(ConeTopMode), node.GetValue("coneTopMode"), true);
+                coneTopMode = (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneTopMode"), true);
+            }
+            catch { }
+
+            try
+            {
+                coneBottomMode = (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneBottomMode"), true);
             }
             catch { }
         }
@@ -59,22 +66,16 @@ namespace ProceduralParts
                 lengthEdit.incrementSmall = pPart.lengthSmallStep;
             }
 
-            if (pPart.diameterMin == pPart.diameterMax)
+            if (pPart.diameterMin == pPart.diameterMax || (coneTopMode == ConeEndMode.Constant && coneBottomMode == ConeEndMode.Constant))
             {
                 Fields["topDiameter"].guiActiveEditor = false;
                 Fields["bottomDiameter"].guiActiveEditor = false;
                 return;
             }
 
-            UI_FloatEdit bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
-            bottomDiameterEdit.incrementLarge = pPart.diameterLargeStep;
-            bottomDiameterEdit.incrementSmall = pPart.diameterSmallStep;
-            bottomDiameterEdit.minValue = pPart.diameterMin;
-            bottomDiameterEdit.maxValue = pPart.diameterMax;
-
-            if (coneTopMode == ConeTopMode.Constant)
+            if (coneTopMode == ConeEndMode.Constant)
             {
-                // Fixed aspect - deactivate the top diameter
+                // Top diameter is constant
                 Fields["topDiameter"].guiActiveEditor = false;
                 Fields["bottomDiameter"].guiName = "Diameter";
             }
@@ -83,37 +84,63 @@ namespace ProceduralParts
                 UI_FloatEdit topDiameterEdit = (UI_FloatEdit)Fields["topDiameter"].uiControlEditor;
                 topDiameterEdit.incrementLarge = pPart.diameterLargeStep;
                 topDiameterEdit.incrementSmall = pPart.diameterSmallStep;
-                topDiameterEdit.minValue = (coneTopMode == ConeTopMode.CanZero) ? 0 : pPart.diameterMin;
+                topDiameterEdit.maxValue = pPart.diameterMax;
+                topDiameterEdit.minValue = (coneTopMode == ConeEndMode.CanZero) ? 0 : pPart.diameterMin;
             }
+
+            if (coneBottomMode == ConeEndMode.Constant)
+            {
+                // Bottom diameter is constant
+                Fields["bottomDiameter"].guiActiveEditor = false;
+                Fields["topDiameter"].guiName = "Diameter";
+            }
+            else
+            {
+                UI_FloatEdit bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
+                bottomDiameterEdit.incrementLarge = pPart.diameterLargeStep;
+                bottomDiameterEdit.incrementSmall = pPart.diameterSmallStep;
+                bottomDiameterEdit.maxValue = pPart.diameterMax;
+                bottomDiameterEdit.minValue = (coneBottomMode == ConeEndMode.CanZero) ? 0 : pPart.diameterMin;
+            }
+
         }
 
         protected void MaintainParameterRelations()
         {
-            // Bottom pushes top in (nothing to do with aspects)
-            if (topDiameter > bottomDiameter)
-                topDiameter = bottomDiameter;
+            if(bottomDiameter >= topDiameter)
+                MaintainParameterRelations(ref bottomDiameter, oldBottomDiameter, ref topDiameter, oldTopDiameter);
+            else
+                MaintainParameterRelations(ref topDiameter, oldTopDiameter, ref bottomDiameter, oldBottomDiameter);
+
+        }
+
+        private void MaintainParameterRelations(ref float bigEnd, float oldBigEnd, ref float smallEnd, float oldSmallEnd)
+        {
+            // Ensure the bigger end is not smaller than the min diameter
+            if (bigEnd < pPart.diameterMin)
+                bigEnd = pPart.diameterMin;
 
             // Aspect ratio stuff
             if (pPart.aspectMin == 0 && float.IsPositiveInfinity(pPart.aspectMax))
                 return;
 
-            float aspect = (bottomDiameter - topDiameter) / length;
+            float aspect = (bigEnd - smallEnd) / length;
 
             if (!MathUtils.TestClamp(ref aspect, pPart.aspectMin, pPart.aspectMax))
                 return;
 
-            // The bottom can push the top, otherwise its fixed.
-            if (bottomDiameter != oldBottomDiameter)
+            if (bigEnd != oldBigEnd)
             {
+                // Big end can push the length
                 try
                 {
-                    length = MathUtils.RoundTo((bottomDiameter - topDiameter) / aspect, 0.001f);
+                    length = MathUtils.RoundTo((bigEnd - smallEnd) / aspect, 0.001f);
 
                     if (!MathUtils.TestClamp(ref length, pPart.lengthMin, pPart.lengthMax))
                         return;
 
                     // Bottom has gone out of range, push back.
-                    bottomDiameter = MathUtils.RoundTo(aspect * length + topDiameter, 0.001f);
+                    bigEnd = MathUtils.RoundTo(aspect * length + smallEnd, 0.001f);
                 }
                 finally
                 {
@@ -123,12 +150,12 @@ namespace ProceduralParts
             else if (length != oldLength)
             {
                 // Reset the length back in range.
-                length = MathUtils.RoundTo((bottomDiameter - topDiameter) / aspect, 0.001f);
+                length = MathUtils.RoundTo((bigEnd - smallEnd) / aspect, 0.001f);
             }
-            else if (topDiameter != oldTopDiameter)
+            else if (smallEnd != oldSmallEnd)
             {
                 // Just reset top diameter to extremum. 
-                topDiameter = MathUtils.RoundTo(aspect * length + bottomDiameter, 0.001f);
+                smallEnd = MathUtils.RoundTo(aspect * length + bigEnd, 0.001f);
             }
         }
 
