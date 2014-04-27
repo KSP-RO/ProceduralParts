@@ -40,14 +40,15 @@
 	@MODULE[ModuleEngines] { }
 	@MODULE[ProceduralSRB] 
 	{ 
-		@SRB_BELL[Surface]
-		{
-			@thrustScaleFactor *= 2.5
-		}
-		@SRB_BELL[Vacuum]
-		{
-			@thrustScaleFactor *= 2.5
-		}
+		// To replicate Advanced Booster SRB
+		// See thread here: http://forum.kerbalspaceprogram.com/threads/70676-WIP-Procedural-Parts-The-next-phase-of-Stretchy-SRBs?p=1116650&viewfull=1#post1116650
+		// If you don't want tiny bells, use a smaller number. If you want a higher thrust limit, use a bigger number.
+		// Changing this will not affect ships in flight (but will affect anything loaded into the VAB)
+		thrust1m = 1500
+		
+		// As per the 0.9.3 release. There were a few unreleased versions with 2.5 and higher here.
+		// Once you've loaded and saved the old ship it won't matter any longer.
+		deprecatedThrustScaleFactor *= 1.25
 	}
 	@MODULE[ModuleGimbal] { }
 	

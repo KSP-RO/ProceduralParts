@@ -24,12 +24,10 @@ namespace ProceduralParts
 
         public override void OnLoad(ConfigNode node)
         {
-            if (!GameSceneFilter.AnyInitializing.IsLoaded())
-                return;
-
             try
             {
-                LoadBells(node);
+                if (GameSceneFilter.AnyInitializing.IsLoaded())
+                    LoadBells(node);
             }
             catch (Exception ex)
             {
@@ -41,7 +39,6 @@ namespace ProceduralParts
         public override string GetInfo()
         {
             InitializeBells();
-
             return base.GetInfo();
         }
 
@@ -64,8 +61,6 @@ namespace ProceduralParts
             }
         }
 
-        private AttachNode bottomAttachNode;
-
         public void Update()
         {
             try
@@ -79,7 +74,7 @@ namespace ProceduralParts
                 }
                 else
                 {
-                    UpdateHeat();
+                    AnimateHeat();
                 }
             }
             catch (Exception ex)
@@ -89,24 +84,21 @@ namespace ProceduralParts
             }
         }
 
-        [PartMessageListener(typeof(PartResourceMaxAmountChanged))]
-        private void ResourcesChanged(string resource, double maxAmount)
+        [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
+        private void PartResourceChanged(string resource, double amount)
         {
             if (selectedBell == null)
                 return;
-            UpdateThrust(true);
+            UpdateThrustDependentCalcs();
         }
 
-        [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate))]
+        [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), scenes: GameSceneFilter.AnyEditor)]
         private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
-            if (name != "bottom")
+            if (name != bottomAttachNodeName)
                 return;
 
-            // Max choke diameter is equal to the tank bottom size.
-            maxBellChokeDiameter = minDia;
-
-            UpdateMaxThrust();
+            UpdateMaxThrust(minDia);
         }
 
         #endregion
@@ -118,9 +110,22 @@ namespace ProceduralParts
 
         [KSPField]
         public string bottomAttachNodeName;
+        private AttachNode bottomAttachNode;
 
         [KSPField]
         public string thrustVectorTransformName;
+        private Transform thrustTransform;
+
+        private EngineWrapper _engineWrapper;
+        private EngineWrapper Engine
+        {
+            get
+            {
+                if (_engineWrapper == null)
+                    _engineWrapper = new EngineWrapper(part);
+                return _engineWrapper;
+            }
+        }
 
         #endregion
 
@@ -132,15 +137,16 @@ namespace ProceduralParts
         [KSPField(isPersistant = false, guiName = "ISP", guiActive = false, guiActiveEditor = true)]
         public string srbISP;
 
+        [KSPField(isPersistant = true)]
+        public float bellScale = -1;
+
+        [KSPField]
+        public float deprecatedThrustScaleFactor = 256;
+
         private SRBBellConfig selectedBell;
         private Dictionary<string, SRBBellConfig> srbConfigs;
-
-        // Needs to be public because of a bug in KSP.
         [SerializeField]
         public ConfigNode[] srbConfigsSerialized;
-
-        private float maxBellChokeDiameter = float.PositiveInfinity;
-        private Transform thrustTransform;
 
         [Serializable]
         public class SRBBellConfig : IConfigNode
@@ -163,10 +169,11 @@ namespace ProceduralParts
             public float gimbalRange = -1;
 
             [Persistent]
-            public float thrustScaleFactor = 256f;
+            public float bellChokeDiameter = 0.5f;
 
             [Persistent]
-            public float bellChokeDiameter = 0.5f;
+            public float chokeEndRatio = 0.5f;
+
 
             public void Load(ConfigNode node)
             {
@@ -208,9 +215,7 @@ namespace ProceduralParts
         {
             // Initialize the configs.
             if (srbConfigs == null)
-            {
                 LoadSRBConfigs();
-            }
 
             BaseField field = Fields["selectedBellName"];
             switch (srbConfigs.Count)
@@ -228,10 +233,8 @@ namespace ProceduralParts
                     break;
             }
 
-            ProceduralPart pPart = GetComponent<ProceduralPart>();
-
             Transform srbBell = part.FindModelTransform(srbBellName);
-            thrustTransform = srbBell.Find(this.thrustVectorTransformName);
+            thrustTransform = srbBell.Find(thrustVectorTransformName);
 
             foreach (SRBBellConfig conf in srbConfigs.Values)
             {
@@ -259,44 +262,68 @@ namespace ProceduralParts
                 conf.model.gameObject.SetActive(false);
             }
 
+            // Select the bell
             if (string.IsNullOrEmpty(selectedBellName) || !srbConfigs.ContainsKey(selectedBellName))
-                selectedBellName = srbConfigsSerialized[0].GetValue("displayName");
-
+                selectedBellName = srbConfigsSerialized[0].GetValue("name");
             selectedBell = srbConfigs[selectedBellName];
 
-            InitModulesFromBell();
-
             // Config for Real Fuels.
-            if( part.Modules.Contains("ModuleEngineConfigs") ) 
+            if (part.Modules.Contains("ModuleEngineConfigs"))
             {
                 var mEC = part.Modules["ModuleEngineConfigs"];
-                ChangeThrust = (Action<float>)Delegate.CreateDelegate(typeof(Action<float>), mEC, "ChangeThrust");
+                ModuleEnginesChangeThrust = (Action<float>)Delegate.CreateDelegate(typeof(Action<float>), mEC, "ChangeThrust");
                 Fields["burnTime"].guiActiveEditor = false;
                 Fields["srbISP"].guiActiveEditor = false;
                 Fields["heatProduction"].guiActiveEditor = false;
             }
 
-            // Call change thrust to initialize the bell scale.
-            UpdateThrustNoMoving();
+            // Initialize the modules.
+            InitModulesFromBell();
 
             // Break out at this stage during loading scene
             if (GameSceneFilter.AnyInitializing.IsLoaded())
-                return;
-
-            // Attach the bell. In the config file this isn't in normalized position, move it into normalized position first.
-            srbBell.position = pPart.transform.TransformPoint(0, -0.5f, 0);
-            pPart.AddAttachment(srbBell, true);
-
-            // Move thrust transform to the end of the bell
-            thrustTransform.position = selectedBell.srbAttach.position;
-
-            // Move the bottom attach node into position.
-            bottomAttachNode = part.findAttachNode(bottomAttachNodeName);
-            if (HighLogic.LoadedSceneIsEditor)
             {
+                UpdateThrustDependentCalcs();
+                return;
+            }
+
+            // Update the thrust according to the equation when in editor mode, don't mess with ships in flight
+            if (GameSceneFilter.AnyEditor.IsLoaded())
+                UpdateThrustDependentCalcs();
+            else
+            {
+                if (bellScale <= 0 || heatProduction <= 0)
+                {
+                    // We've reloaded from a legacy save
+                    // Use the new heat production equation, but use the legacy bell scaling one.
+                    UpdateThrustDependentCalcs();
+
+                    // Legacy bell scaling equation
+                    bellScale = Mathf.Sqrt(thrust / deprecatedThrustScaleFactor);
+                }
+
+                UpdateEngineAndBellScale();
+            }
+
+            // It makes no sense to have a thrust limiter for SRBs
+            // Even though this is present in stock, I'm disabling it.
+            BaseField thrustLimiter = ((PartModule)Engine).Fields["thrustPercentage"];
+            thrustLimiter.guiActive = false;
+            thrustLimiter.guiActiveEditor = false;
+
+            ProceduralPart pPart = GetComponent<ProceduralPart>();
+            if (pPart != null)
+            {
+                // Attach the bell. In the config file this isn't in normalized position, move it into normalized position first.
+                srbBell.position = pPart.transform.TransformPoint(0, -0.5f, 0);
+                pPart.AddAttachment(srbBell, true);
+
+                // Move the bottom attach node into position.
+                // This needs to be done in flight mode too for the joints to work correctly
+                bottomAttachNode = part.findAttachNode(bottomAttachNodeName);
                 Vector3 delta = selectedBell.srbAttach.position - selectedBell.model.position;
                 bottomAttachNode.originalPosition = bottomAttachNode.position += part.transform.InverseTransformDirection(delta);
-                if (bottomAttachNode.attachedPart != null && bottomAttachNode.attachedPart.transform == part.transform.parent)
+                if (HighLogic.LoadedSceneIsEditor && bottomAttachNode.attachedPart != null && bottomAttachNode.attachedPart.transform == part.transform.parent)
                 {
                     // Because the parent is attached using our node, we need to move it out by the
                     // node offset as it will get moved back again by the same amount when it gets attached
@@ -308,11 +335,8 @@ namespace ProceduralParts
                 }
             }
 
-            // It makes no sense to have a thrust limiter for SRBs
-            // Even though this is present in stock, I'm disabling it.
-            BaseField thrustLimiter = ((PartModule)Engine).Fields["thrustPercentage"];
-            thrustLimiter.guiActive = false;
-            thrustLimiter.guiActiveEditor = false;
+            // Move thrust transform to the end of the bell
+            thrustTransform.position = selectedBell.srbAttach.position;
         }
 
         private void UpdateBell()
@@ -336,7 +360,7 @@ namespace ProceduralParts
 
             InitModulesFromBell();
 
-            UpdateMaxThrust();
+            UpdateThrust(true);
         }
 
         private void InitModulesFromBell()
@@ -352,38 +376,33 @@ namespace ProceduralParts
 
         #endregion
 
-        #region Thrust and heat production
+        #region Thrust 
 
         private bool usingME
         {
-            get { return ChangeThrust != null; }
+            get { return ModuleEnginesChangeThrust != null; }
         }
-        private Action<float> ChangeThrust;
+        private Action<float> ModuleEnginesChangeThrust;
 
-        [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "S3+3", guiUnits = "N"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 2000f, incrementLarge = 100f, incrementSmall = 10, incrementSlide = 1f)]
+        [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "S4+3", guiUnits = "N"),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = float.PositiveInfinity, incrementLarge = 100f, incrementSmall = 10, incrementSlide = 1f)]
         public float thrust = 250;
         private float oldThrust;
 
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Burn Time")]
         public string burnTime;
 
-        [KSPField(isPersistant = false, guiName = "Heat", guiActive = false, guiActiveEditor = true, guiFormat = "S3", guiUnits = "K/s")]
-        public float heatProduction;
-
         [KSPField]
-        public float heatPerThrust = 2.0f;
+        public float thrust1m = 0;
 
-        [KSPField]
-        public bool useOldHeatEquation = false;
+        private float maxThrust = float.PositiveInfinity;
 
-        private void UpdateMaxThrust()
+        private void UpdateMaxThrust(float attachedEndSize)
         {
             if (selectedBell == null)
                 return;
 
-            float maxThrustSqrt = maxBellChokeDiameter * Mathf.Sqrt(selectedBell.thrustScaleFactor) / selectedBell.bellChokeDiameter;
-            float maxThrust = maxThrustSqrt * maxThrustSqrt;
+            maxThrust = Mathf.Max(Mathf.Round(attachedEndSize * attachedEndSize * thrust1m * 0.1f) * 10f, 10f);
 
             ((UI_FloatEdit)Fields["thrust"].uiControlEditor).maxValue = maxThrust;
             if (thrust > maxThrust)
@@ -399,22 +418,13 @@ namespace ProceduralParts
                 return;
 
             Vector3 oldAttach = selectedBell.srbAttach.position;
-            UpdateThrustNoMoving();
+            UpdateThrustDependentCalcs();
             MoveBottomAttachmentAndNode(selectedBell.srbAttach.position - oldAttach);
+
+            oldThrust = thrust;
         }
 
-        private EngineWrapper _engineWrapper;
-        private EngineWrapper Engine
-        {
-            get
-            {
-                if (_engineWrapper == null)
-                    _engineWrapper = new EngineWrapper(part);
-                return _engineWrapper;
-            }
-        }
-
-        private void UpdateThrustNoMoving()
+        private void UpdateThrustDependentCalcs()
         {
             PartResource solidFuel = part.Resources["SolidFuel"];
 
@@ -422,36 +432,37 @@ namespace ProceduralParts
             if (solidFuel == null)
                 solidFuelMassG = 30.75;
             else
-                solidFuelMassG = solidFuel.maxAmount * solidFuel.info.density * Engine.g;
+                solidFuelMassG = solidFuel.amount * solidFuel.info.density * Engine.g;
 
-            Engine.maxThrust = thrust;
+            FloatCurve atmosphereCurve = (selectedBell.atmosphereCurve ?? Engine.atmosphereCurve);
 
-            if (!usingME)
-            {
-                FloatCurve atmosphereCurve = (selectedBell.atmosphereCurve ?? Engine.atmosphereCurve);
+            float burnTime0 = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
+            float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
+            burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
 
-                float burnTime0 = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
-                float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
-
-                burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
-
-                // This equation is much easier
-                if (useOldHeatEquation)
-                    Engine.heatProduction = heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((Math.Min(burnTime0, burnTime1) + 20f), 0.75f)) * 0.5f);
-                // The heat production is directly proportional to the thrust on part mass.
-                else
-                    Engine.heatProduction = heatProduction = thrust * heatPerThrust / (part.mass + part.GetResourceMass());
-            }
+            // This equation is much easier. From StretchySRBs
+            if (useOldHeatEquation)
+                heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((Math.Min(burnTime0, burnTime1) + 20f), 0.75f)) * 0.5f);
+            // My equation.
             else
-            {
-                ChangeThrust(thrust);
-            }
+                heatProduction = heatPerThrust * Mathf.Sqrt(thrust) / (1 + part.mass);
 
             // Rescale the bell.
-            float bellScale = Mathf.Sqrt(thrust) / Mathf.Sqrt(selectedBell.thrustScaleFactor);
+            float bellScale1m = selectedBell.chokeEndRatio / selectedBell.bellChokeDiameter;
+            bellScale = bellScale1m * Mathf.Sqrt(thrust / thrust1m);
+
+            UpdateEngineAndBellScale();
+        }
+
+        private void UpdateEngineAndBellScale()
+        {
+            Engine.heatProduction = heatProduction;
+            Engine.maxThrust = thrust;
+
             selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
 
-            oldThrust = thrust;
+            if (usingME)
+                ModuleEnginesChangeThrust(thrust);
         }
 
         #endregion
@@ -503,9 +514,19 @@ namespace ProceduralParts
 
         #region Heat
 
+        [KSPField(isPersistant = true, guiName = "Heat", guiActive = false, guiActiveEditor = true, guiFormat = "S3", guiUnits = "K/s")]
+        public float heatProduction;
+
+        [KSPField]
+        public float heatPerThrust = 2.0f;
+
+        [KSPField]
+        public bool useOldHeatEquation = false;
+
         internal const float draperPoint = 525f;
 
-        private void UpdateHeat()
+
+        private void AnimateHeat()
         {
             // The emmissive module is too much effort to get working, just do it the easy way.
             float num = Mathf.Clamp01((part.temperature - draperPoint) / (part.maxTemp - draperPoint));
@@ -513,7 +534,7 @@ namespace ProceduralParts
                 num = 0f;
 
             Material mat = selectedBell.model.renderer.sharedMaterial;
-            mat.SetColor("_EmissiveColor", new Color(num, 0, 0));
+            mat.SetColor("_EmissiveColor", new Color(num*num, 0, 0));
         }
 
         #endregion
