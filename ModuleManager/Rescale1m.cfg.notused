@@ -8,6 +8,8 @@
 	{
 		%diameterLargeStep = 1.0
 		%diameterSmallStep = 0.1
+		@diameterMin *= 0.8
+		@diameterMax *= 0.8
 	}
     @MODULE[ProceduralShapeCylinder] 
 	{
