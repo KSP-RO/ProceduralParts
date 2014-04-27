@@ -68,17 +68,8 @@ namespace ProceduralParts
 
         internal const float impulsePerForceUnit = 0.02f;
 
-        public override void OnSave(ConfigNode node)
-        {
-            // Force saved value for enabled to be true.
-            node.SetValue("isEnabled", "True");
-        }
-
         public override void OnStart(PartModule.StartState state)
         {
-            if (mass != 0)
-                UpdateMass(mass);
-
             FindDecoupler();
 
             if (decouple == null)
@@ -88,18 +79,25 @@ namespace ProceduralParts
                 return;
             }
 
-            Fields["isOmniDecoupler"].guiActiveEditor =
-                string.IsNullOrEmpty(separatorTechRequired) || ResearchAndDevelopment.GetTechnologyState(separatorTechRequired) == RDTech.State.Available;
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                if (mass != 0)
+                    UpdateMass(mass);
 
-            if (ejectionImpulse == 0)
-                ejectionImpulse = (float)Math.Round(decouple.ejectionForce * impulsePerForceUnit, 1);
+                Fields["isOmniDecoupler"].guiActiveEditor =
+                    string.IsNullOrEmpty(separatorTechRequired) || ResearchAndDevelopment.GetTechnologyState(separatorTechRequired) == RDTech.State.Available;
 
-            UI_FloatEdit ejectionImpulseEdit = (UI_FloatEdit)Fields["ejectionImpulse"].uiControlEditor;
-            ejectionImpulseEdit.maxValue = maxImpulse;            
+                if (ejectionImpulse == 0)
+                    ejectionImpulse = (float)Math.Round(decouple.ejectionForce * impulsePerForceUnit, 1);
 
-            OnUpdate();
-
-            isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
+                UI_FloatEdit ejectionImpulseEdit = (UI_FloatEdit)Fields["ejectionImpulse"].uiControlEditor;
+                ejectionImpulseEdit.maxValue = maxImpulse;
+            }
+            else if (HighLogic.LoadedSceneIsFlight)
+            {
+                decouple.isOmniDecoupler = isOmniDecoupler;
+                part.mass = mass;
+            }
         }
 
         private void FindDecoupler()
@@ -111,12 +109,10 @@ namespace ProceduralParts
         {
             if (decouple == null)
                 FindDecoupler();
-            decouple.ejectionForce = ejectionImpulse / impulsePerForceUnit;
-            decouple.isOmniDecoupler = isOmniDecoupler;
+            decouple.ejectionForce = ejectionImpulse / TimeWarp.fixedDeltaTime;
         }
 
         // Plugs into procedural parts.
-        // I may well change this message to something else in the fullness of time.
         [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), scenes:GameSceneFilter.AnyEditor)]
         private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
