@@ -209,7 +209,7 @@ namespace ProceduralParts
             // (?<=[^a-zA-Z])([0-9]+) -> $1f
         }
 
-        private Vector3 CalcMomentOfInertia() 
+        private Vector3 CalcMomentOfInertiaNoDensity() 
         {
             // This is the closed form for I_y 
             // 
@@ -253,39 +253,41 @@ namespace ProceduralParts
             //
             // In the above every possible term is represented once. What a monster!
 
-            double a=p0.x, b=p1.x, c=p2.x, d=p3.x;
-            double e=(p1.y-p0.y), f=(p2.y-p1.y), g=(p3.y-p2.y);
-            // minimal definition of the power function.
-            Func<double, int, double> p = (v, x) =>
-            {
-                switch (x)
-                {
-                    case 2: return v * v;
-                    case 3: return v * v * v;
-                    case 4: return v * v * v * v;
-                    default: throw new InvalidProgramException();
-                }
-            };
+            // Eggrobin shoved it into mathmatica for me and came up with this optimized calculation:
 
-            float I_y = (float)(Math.PI / 2d * (
-               1d/5d*p(a,4)*e
-             + 1d/5d*p(d,4)*g 
-             + 1d/35d*(6d*p(a,3)*b*e + p(a,4)*f)
-             + 1d/35d*(6d*c*p(d,3)*g + p(d,4)*f)
-             + 1d/455d*(54d*p(a,2)*p(b,2)*e + 24d*p(a,3)*b*f + 12d*p(a,3)*c*e + p(a,4)*g)
-             + 1d/455d*(54d*p(c,2)*p(d,2)*g + 24d*c*p(d,3)*f + 12d*b*p(d,3)*g + p(d,4)*e)
-             + 1d/455d*(27d*p(a,2)*p(b,2)*f + 27d*a*p(b,3)*e + 27d*p(a,2)*b*c*e + 6d*p(a,3)*c*f + 3d*p(a,3)*b*g + p(a,3)*d*e)
-             + 1d/455d*(27d*p(c,2)*p(d,2)*f + 27d*p(c,3)*d*g + 27d*b*c*p(d,2)*g + 6d*b*p(d,3)*f + 3d*c*p(d,3)*e + a*p(d,3)*g)
-             + 1d/5005d*(324d*a*p(b,2)*c*e + 216d*a*p(b,3)*f + 216d*p(a,2)*b*c*f + 81d*p(b,4)*e + 54d*p(a,2)*p(c,2)*e + 54d*p(a,2)*p(b,2)*g + 36d*p(a,2)*b*d*e + 12d*p(a,3)*c*g + 8d*p(a,3)*d*f)
-             + 1d/5005d*(324d*b*p(c,2)*d*g + 216d*p(c,3)*d*f + 216d*b*c*p(d,2)*f + 81d*p(c,4)*g + 54d*p(c,2)*p(d,2)*e + 54d*p(b,2)*p(d,2)*g + 36d*a*c*p(d,2)*g + 12d*b*p(d,3)*e + 8d*a*p(d,3)*f)
-             + 1d/5005d*(324d*a*p(b,2)*c*f + 162d*p(b,3)*c*e + 162d*a*b*p(c,2)*e + 81d*p(b,4)*f + 54d*a*p(b,3)*g + 54d*p(a,2)*p(c,2)*f + 54d*a*p(b,2)*d*e + 54d*p(a,2)*b*c*g + 36d*p(a,2)*b*d*f + 18d*p(a,2)*c*d*e + 2d*p(a,3)*d*g)
-             + 1d/5005d*(324d*b*p(c,2)*d*f + 162d*b*p(c,3)*g + 162d*p(b,2)*c*d*g + 81d*p(c,4)*f + 54d*p(c,3)*d*e + 54d*p(b,2)*p(d,2)*f + 54d*a*p(c,2)*d*g + 54d*b*c*p(d,2)*e + 36d*a*c*p(d,2)*f + 18d*a*b*p(d,2)*g + 2d*a*p(d,3)*e)
-             + 1d/5005d*(216d*p(b,3)*c*f + 216d*a*b*p(c,2)*f + 162d*p(b,2)*p(c,2)*e + 108d*a*p(b,2)*c*g + 72d*a*b*c*d*e + 72d*a*p(b,2)*d*f + 36d*a*p(c,3)*e + 36d*p(b,3)*d*e + 27d*p(b,4)*g + 24d*p(a,2)*c*d*f + 18d*p(a,2)*p(c,2)*g + 12d*p(a,2)*b*d*g + 2d*p(a,2)*p(d,2)*e) 
-             + 1d/5005d*(216d*b*p(c,3)*f + 216d*p(b,2)*c*d*f + 162d*p(b,2)*p(c,2)*g + 108d*b*p(c,2)*d*e + 72d*a*b*c*d*g + 72d*a*p(c,2)*d*f + 36d*a*p(c,3)*g + 36d*p(b,3)*d*g + 27d*p(c,4)*e + 24d*a*b*p(d,2)*f + 18d*p(b,2)*p(d,2)*e + 12d*a*c*p(d,2)*e + 2d*p(a,2)*p(d,2)*g)
-             + 1d/1430d*(81d*p(b,2)*p(c,2)*f + 36d*a*b*c*d*f + 27d*b*p(c,3)*e + 27d*p(b,3)*c*g + 27d*p(b,2)*c*d*e + 27d*a*b*p(c,2)*g + 18d*a*p(c,3)*f + 18d*p(b,3)*d*f + 9d*a*p(c,2)*d*e + 9d*a*p(b,2)*d*g + 3d*a*b*p(d,2)*e + 3d*p(a,2)*c*d*g + p(a,2)*p(d,2)*f)
-             ));
+            double x0=p0.x, x1=p1.x, x2=p2.x, x3=p3.x;
+            double a=(p1.y-p0.y), b=(p2.y-p1.y), c=(p3.y-p2.y);
 
-            return new Vector3(I_y / 2f, I_y, I_y / 2f);
+            // local variables to reduce the number of calculations.
+            double t511 = x0 * x0; double t517 = x0 * t511; double t544 = x1 * x1; double t545 = x1 * t544;
+            double t556 = x2 * x2; double t557 = x2 * t556; double t562 = x3 * x3; double t566 = 4 * t562;
+            double t578 = x3 * t562; double t589 = 36 * x2 * t562; double t527 = x0 * t517;
+            double t580 = 9 * x2; double t582 = 2 * x3; double t583 = t580 + t582; double t554 = x1 * t545;
+            double t555 = 162 * t554; double t590 = 21 * x2 * x3; double t591 = 36 * t556; double t592 = t590 + t591 + t566;
+            double t450 = 33 * x2; double t478 = 4 * x3; double t573 = 594 * t544; double t570 = 6 * x2;
+            double t571 = t570 + x3; double t569 = 48 * x2 * x3; double t574 = 108 * t556; double t575 = 7 * t562;
+            double t587 = 72 * x3 * t556; double t588 = 63 * t557; double t594 = 8 * t578;
+            double t559 = x2 * t557; double t602 = x3 * t578; double t535 = 24 * x2; double t536 = 7 * x3;
+            double t538 = t535 + t536; double t625 = 72 * t557; double t564 = 16 * x2 * x3; double t565 = 21 * t556;
+            double t567 = t564 + t565 + t566; double t663 = 108 * x3 * t556; double t563 = 594 * t556 * t562;
+
+            // I_y / (ρ π/2).
+            double Density2PithsMomentY =
+            (b * (4 * (132 * x1 + t450 + t478) * t517 + 286 * t527 + 18 * t538 * t545 + t555 + 432 * x3 * t557 + 162 * t559
+            + t563 + 27 * t544 * t567 + t511 * (t569 + 72 * x1 * t571 + t573 + t574 + t575) + 528 * x2 * t578 + 12 * x1 * (54 * x3
+            * t556 + 36 * t557 + 11 * t578 + t589) + 2 * x0 * (216 * t545 + 36 * t544 * t583 + t587 + t588 + t589 + 6 * x1 * t592
+            + t594) + 286 * t602) + a * (22 * (78 * x1 + 12 * x2 + x3) * t517 + 2002 * t527 + t555 + 2 * t511 * (9 * x1 * (t450
+            + t478) + 2 * (9 * x2 * x3 + 27 * t556 + t562) + t573) + 36 * t545 * t583 + 9 * t544 * t592 + 3 * x1 * (t587 + t588 +
+            t589 + t594) + 2 * (54 * x3 * t557 + 27 * t559 + 54 * t556 * t562 + 33 * x2 * t578 + 11 * t602) + x0 * (594 * t545 + 63 *
+            x3 * t556 + 24 * x2 * t562 + 108 * t544 * t571 + 3 * x1 * (t569 + t574 + t575) + 4 * t578 + t625)) + c * (22 * t527 + 9 *
+            (21 * x2 + 8 * x3) * t545 + 54 * t554 + 108 * t544 * (3 * x2 * x3 + 3 * t556 + t562) + t517 * (66 * x1 + 4 * t571)
+            + t511 * (108 * t544 + t566 + 12 * x1 * t583 + t590 + t591) + 2 * (297 * x3 * t557 + 81 * t559 + t563 + 858 * x2 * t578
+            + 1001 * t602) + 6 * x1 * (54 * t557 + 99 * x2 * t562 + 44 * t578 + t663) + x0 * (9 * t538 * t544 + 108 * t545 + 72 * x2
+            * t562 + 9 * x1 * t567 + 22 * t578 + t625 + t663))) / 10010;
+
+            float Iy = Mathf.PI * (float)Density2PithsMomentY / 2f;
+
+            return new Vector3(Iy / 2f, Iy, Iy / 2f);
         }
 
         private Vector3 CalcCoMOffset()
