@@ -1,6 +1,3 @@
 
-This folder contains any optional module manager configs for the mod.
-
-Rename it from .cfg.notused to use.
-
+This folder contains any module manager configs for the mod.
 See the comments inside each file for details.
