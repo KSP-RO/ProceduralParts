@@ -1,6 +1,7 @@
 ============= Changelog for ProceduralParts  =========
 
 === 0.9.0 ===
+Procedural tanks for resources in other mods: Kethane, TAC, Extraplanetary Launchpads
 Ability to display numbers in tweaker interface using SI prefixes and significant figures
 Xenon Tank
 Hiding of parts depending on what addins are installed
