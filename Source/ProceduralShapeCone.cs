@@ -53,7 +53,6 @@ namespace ProceduralParts
             Constant,
         }
 
-
         /// <summary>
         /// Limit mode for the top end of the cone
         /// </summary>
@@ -89,7 +88,7 @@ namespace ProceduralParts
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
 
-            if (pPart.lengthMin == pPart.lengthMax)
+            if (pPart.lengthMin == pPart.lengthMax || pPart.aspectMin == pPart.aspectMax)
                 Fields["length"].guiActiveEditor = false;
             else
             {
@@ -119,7 +118,7 @@ namespace ProceduralParts
                 topDiameterEdit.incrementLarge = pPart.diameterLargeStep;
                 topDiameterEdit.incrementSmall = pPart.diameterSmallStep;
                 topDiameterEdit.maxValue = pPart.diameterMax;
-                topDiameterEdit.minValue = (coneTopMode == ConeEndMode.CanZero) ? 0 : pPart.diameterMin;
+                topDiameterEdit.minValue = (coneTopMode == ConeEndMode.CanZero && coneBottomMode != ConeEndMode.Constant) ? 0 : pPart.diameterMin;
             }
 
             if (coneBottomMode == ConeEndMode.Constant)
@@ -134,7 +133,7 @@ namespace ProceduralParts
                 bottomDiameterEdit.incrementLarge = pPart.diameterLargeStep;
                 bottomDiameterEdit.incrementSmall = pPart.diameterSmallStep;
                 bottomDiameterEdit.maxValue = pPart.diameterMax;
-                bottomDiameterEdit.minValue = (coneBottomMode == ConeEndMode.CanZero) ? 0 : pPart.diameterMin;
+                bottomDiameterEdit.minValue = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : pPart.diameterMin;
             }
 
         }
@@ -142,13 +141,13 @@ namespace ProceduralParts
         protected void MaintainParameterRelations()
         {
             if(bottomDiameter >= topDiameter)
-                MaintainParameterRelations(ref bottomDiameter, oldBottomDiameter, ref topDiameter, oldTopDiameter);
+                MaintainParameterRelations(ref bottomDiameter, ref oldBottomDiameter, ref topDiameter, ref oldTopDiameter, coneTopMode);
             else
-                MaintainParameterRelations(ref topDiameter, oldTopDiameter, ref bottomDiameter, oldBottomDiameter);
+                MaintainParameterRelations(ref topDiameter, ref oldTopDiameter, ref bottomDiameter, ref oldBottomDiameter, coneBottomMode);
 
         }
 
-        private void MaintainParameterRelations(ref float bigEnd, float oldBigEnd, ref float smallEnd, float oldSmallEnd)
+        private void MaintainParameterRelations(ref float bigEnd, ref float oldBigEnd, ref float smallEnd, ref float oldSmallEnd, ConeEndMode smallEndMode)
         {
             // Ensure the bigger end is not smaller than the min diameter
             if (bigEnd < pPart.diameterMin)
@@ -158,7 +157,7 @@ namespace ProceduralParts
             if (pPart.aspectMin == 0 && float.IsPositiveInfinity(pPart.aspectMax))
                 return;
 
-            float aspect = (bigEnd - smallEnd) / length;
+            float aspect = bigEnd / length;
 
             if (!MathUtils.TestClamp(ref aspect, pPart.aspectMin, pPart.aspectMax))
                 return;
@@ -168,13 +167,19 @@ namespace ProceduralParts
                 // Big end can push the length
                 try
                 {
-                    length = MathUtils.RoundTo((bigEnd - smallEnd) / aspect, 0.001f);
+                    length = MathUtils.RoundTo(bigEnd / aspect, 0.001f);
 
+                    // The aspect is within range if false, we can safely return
                     if (!MathUtils.TestClamp(ref length, pPart.lengthMin, pPart.lengthMax))
                         return;
 
+                    // If the aspect is fixed, then the length is dependent on the diameter anyhow
+                    // so just return (we can still limit the total length if we want)
+                    if (pPart.aspectMin == pPart.aspectMax)
+                        return;
+
                     // Bottom has gone out of range, push back.
-                    bigEnd = MathUtils.RoundTo(aspect * length + smallEnd, 0.001f);
+                    bigEnd = MathUtils.RoundTo(aspect * length, 0.001f);
                 }
                 finally
                 {
@@ -183,14 +188,34 @@ namespace ProceduralParts
             }
             else if (length != oldLength)
             {
-                // Reset the length back in range.
-                length = MathUtils.RoundTo((bigEnd - smallEnd) / aspect, 0.001f);
+                try
+                {
+                    // Length can push the big end
+                    bigEnd = MathUtils.RoundTo(aspect * length, 0.001f);
+
+                    // The aspect is within range if true
+                    if (!MathUtils.TestClamp(ref bigEnd, pPart.diameterMin, pPart.diameterMax))
+                    {
+                        // need to push back on the length
+                        length = MathUtils.RoundTo(bigEnd / aspect, 0.001f);
+                    }
+
+                    // Delta the small end by the same amount.
+                    if(smallEndMode != ConeEndMode.Constant) 
+                    {
+                        smallEnd += bigEnd - oldBigEnd;
+
+                        if (smallEndMode == ConeEndMode.LimitMin && smallEnd < pPart.diameterMin)
+                            smallEnd = pPart.diameterMin;
+                    }
+                }
+                finally
+                {
+                    oldBigEnd = bigEnd;
+                    oldSmallEnd = smallEnd;
+                }
             }
-            else if (smallEnd != oldSmallEnd)
-            {
-                // Just reset top diameter to extremum. 
-                smallEnd = MathUtils.RoundTo(aspect * length + bigEnd, 0.001f);
-            }
+            // The small end is ignored for aspects.
         }
 
         protected override void UpdateShape(bool force)

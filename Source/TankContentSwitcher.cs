@@ -138,6 +138,8 @@ namespace ProceduralParts
             [Persistent]
             public float dryDensity;
             [Persistent]
+            public float massConstant;
+            [Persistent]
             public bool isStructural = false;
             
             public List<TankResource> resources;
@@ -280,7 +282,7 @@ namespace ProceduralParts
 
             if (useVolume)
             {
-                part.mass = mass = selectedTankType.dryDensity * tankVolume;
+                part.mass = mass = selectedTankType.dryDensity * tankVolume + selectedTankType.massConstant;
                 MassChanged(mass);
             }
 
@@ -290,17 +292,15 @@ namespace ProceduralParts
 
             if (useVolume)
             {
-                if (selectedTankType.isStructural)
-                    massDisplay = FormatMass(part.mass);
-                else
-                {
-                    double resourceMass = 0;
-                    foreach (PartResource r in part.Resources)
-                        resourceMass += r.maxAmount * r.info.density;
+                double resourceMass = 0;
+                foreach (PartResource r in part.Resources)
+                    resourceMass += r.maxAmount * r.info.density;
 
-                    float totalMass = part.mass + (float)resourceMass;
+                float totalMass = part.mass + (float)resourceMass;
+                if (selectedTankType.isStructural)
+                    massDisplay = FormatMass(totalMass);
+                else
                     massDisplay = "Dry: " + FormatMass(part.mass) + " / Wet: " + FormatMass(totalMass);
-                }
             }
         }
 
