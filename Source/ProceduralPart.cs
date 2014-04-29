@@ -250,9 +250,15 @@ namespace ProceduralParts
         [KSPField]
         public float diameterMin = 0.01f;
 
+        /// <summary>
+        /// The 'large step' for diameter sliders.
+        /// </summary>
         [KSPField]
         public float diameterLargeStep = 1.25f;
 
+        /// <summary>
+        /// The 'small step' for diameter sliders.
+        /// </summary>
         [KSPField]
         public float diameterSmallStep = 0.125f;
 
@@ -268,9 +274,15 @@ namespace ProceduralParts
         [KSPField]
         public float lengthMin = 0.01f;
 
+        /// <summary>
+        /// Large length step size
+        /// </summary>
         [KSPField]
         public float lengthLargeStep = 1.0f;
 
+        /// <summary>
+        /// Small length step size
+        /// </summary>
         [KSPField]
         public float lengthSmallStep = 0.125f;
 
@@ -288,16 +300,14 @@ namespace ProceduralParts
 
         /// <summary>
         /// Minimum aspect ratio - min ratio of length / diameter.
-        /// For cones, the length is as if the sidewalls had the same slope and the the small end diameter was zero
-        /// In effect this limits the slope of the sides to half this value.
+        /// For cones, the biggest end is the one for the diameter. 
         /// </summary>
         [KSPField]
         public float aspectMin = 0f;
 
         /// <summary>
         /// Minimum aspect ratio - min ratio of length / diameter.
-        /// For cones, the length is as if the sidewalls had the same slope and the the small end diameter was zero
-        /// In effect this limits the slope of the sides to half this value.
+        /// For cones, the biggest end is the one for the diameter. 
         /// </summary>
         [KSPField]
         public float aspectMax = float.PositiveInfinity;
@@ -907,7 +917,7 @@ namespace ProceduralParts
             RemovePartAttachment(delete.Value);
             childAttachments.Remove(delete);
 
-            Part child = node.Value.child;
+            Part child = delete.Value.child;
             if (child.attachMode == AttachModes.SRF_ATTACH)
                 child.srfAttachNode.attachedPart = null;
 

@@ -10,6 +10,8 @@ namespace ProceduralParts
 
     public class ProceduralShapeCone : ProceduralAbstractSoRShape
     {
+        #region Config parameters
+
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "S4", guiUnits="m"),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
         public float topDiameter = 1.25f;
@@ -25,13 +27,45 @@ namespace ProceduralParts
         public float length = 1f;
         protected float oldLength;
 
-        public ConeEndMode coneTopMode = ConeEndMode.CanZero;
-        public ConeEndMode coneBottomMode = ConeEndMode.CanZero;
+        #endregion
 
+        #region Limit paramters
+
+        /// <summary>
+        /// The mode for the cone end. This can be set for the top and bottom ends to constrain editing
+        /// </summary>
         public enum ConeEndMode
         {
-            CanZero, LimitMin, Constant,
+            /// <summary>
+            /// If this end is the small end, it can be reduced down to zero and is unaffected by the <see cref="ProceduralPart.diameterMin"/>.
+            /// If the end is the big end then it will be still be limited by the minimum diameter.
+            /// The default mode. 
+            /// </summary>
+            CanZero, 
+            /// <summary>
+            /// Limit the minimum diameter regardless of if this is the big or the small end. Useful for parts that
+            /// must have something attached to the end such as SRBs.
+            /// </summary>
+            LimitMin, 
+            /// <summary>
+            /// The diameter is fixed and cannot be changed. Set the diameter in the config file.
+            /// </summary>
+            Constant,
         }
+
+
+        /// <summary>
+        /// Limit mode for the top end of the cone
+        /// </summary>
+        public ConeEndMode coneTopMode = ConeEndMode.CanZero;
+        /// <summary>
+        /// Limit mode for the bottom end of the cone.
+        /// </summary>
+        public ConeEndMode coneBottomMode = ConeEndMode.CanZero;
+
+        #endregion
+
+        #region Implementation
 
         public override void OnLoad(ConfigNode node)
         {
@@ -216,6 +250,7 @@ namespace ProceduralParts
             oldBottomDiameter = bottomDiameter;
             oldLength = length;
         }
+        #endregion
     }
 
 }
