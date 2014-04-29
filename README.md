@@ -1,26 +1,25 @@
-
 ProceduralParts allows you to procedurally generate (currently) fuel tanks, SRBs, Structural parts, and decouplers in a range of sizes and shapes. The parts are fully tweakable with multiple options for customization of the shape, surface texture, and other parameters.
 
 ## Features
 
 The features include:
-[*] Everything accessible by tweaking
-[*] A broad range of shapes including cylinders, truncated cones, filleted cylinders, bezier cones.
-[*] New part shapes are easy to develop and plug in, so cuboid / pill shaped / whatever else you want shaped will be able to be created.
-[*] Most stuff configurable in the config file, including resources and fill ratios, tech levels, available shapes
-[*] Diverse support for career mode - tank shapes, dimensions, and contents all limited by researched tech
-[*] All supplied parts are carefully designed to be as 'stock alike' as possible in their tech level requirements - You can't create a monster tank before you've discovered basic rocketry for example.
-[*] Other mod support - tanks for RealFuels, Kethane, Extraplanetary Launchpads, and TAC. (thanks to OtherBarry)
-[*] Multiple textures available for part surfaces. These are fully compatible with StretchySRB textures.
-[*] Deprecation support for StretchySRB - see below for details.
-[*] A Module - TankContentSwitcher that can be applied to existing tanks (with say module manager) and allow their contents to be tweaked. Tweak any tank in the VAB into a Liquid fuel only or oxidizer 
+* Everything accessible by tweaking
+* A broad range of shapes including cylinders, truncated cones, filleted cylinders, bezier cones.
+* New part shapes are easy to develop and plug in, so cuboid / pill shaped / whatever else you want shaped will be able to be created.
+* Most stuff configurable in the config file, including resources and fill ratios, tech levels, available shapes
+* Diverse support for career mode - tank shapes, dimensions, and contents all limited by researched tech
+* All supplied parts are carefully designed to be as 'stock alike' as possible in their tech level requirements - You can't create a monster tank before you've discovered basic rocketry for example.
+* Other mod support - tanks for RealFuels, Kethane, Extraplanetary Launchpads, and TAC. (thanks to OtherBarry)
+* Multiple textures available for part surfaces. These are fully compatible with StretchySRB textures.
+* Deprecation support for StretchySRB - see below for details.
+* A Module - TankContentSwitcher that can be applied to existing tanks (with say module manager) and allow their contents to be tweaked. Tweak any tank in the VAB into a Liquid fuel only or oxidizer 
 
 Parts available:
-* Tanks Different parts supplied for different 'groups' of fuels (Liquid fuels, SRBs, Monoprop, Xenon). The multiple part approach is to allow for tech limiting of sizes and volumes.
-* SRBs Tweakable thrust (or burn time for real fuels). Tweak between a choice of two bells that are designed for surface or vacuum, with varying ISPs.
-* Decoupler Tweakable diameters (with tech defined limits), ejection impulse, and can be in either decoupler or separator mode (again tech dependent).
-* Structural Part Good for fuselage, adapters, whatever. Half as light as the equivalent tank.
-* Nose Cone Specialized structural part for nose cones. The shape is limited to a smooth cone with a bounded ratio of diameter to length. 
+* **Tanks** Different parts supplied for different 'groups' of fuels (Liquid fuels, SRBs, Monoprop, Xenon). The multiple part approach is to allow for tech limiting of sizes and volumes.
+* **SRBs** Tweakable thrust (or burn time for real fuels). Tweak between a choice of two bells that are designed for surface or vacuum, with varying ISPs.
+* **Decoupler** Tweakable diameters (with tech defined limits), ejection impulse, and can be in either decoupler or separator mode (again tech dependent).
+* **Structural Part** Good for fuselage, adapters, whatever. Half as light as the equivalent tank.
+* **Nose Cone** Specialized structural part for nose cones. The shape is limited to a smooth cone with a bounded ratio of diameter to length. 
 
 ## Installation
 
