@@ -12,18 +12,25 @@ namespace ProceduralParts
     public class ProceduralShapeBezierCone : ProceduralShapeCone
     {
 
-        private static float[][] shapePresets
-            = new float[][] { 
-            new float[] { 0.3f, 0.3f, 0.7f, 0.7f },
-            new float[] { 0.4f, 0.001f, 1.0f, 0.6f }, 
-            new float[] { 0.5f, 0.001f, 0.8f, 0.7f }, 
-            new float[] { 0.4f, 0.2f, 0.8f, 0.6f },
-            new float[] { 0.3f, 0.2f, 1.0f, 0.5f },
-            new float[] { 0.1f, 0.001f, 0.7f, 2f/3f },
-            new float[] { 1f/3f, 0.3f, 1.0f, 0.9f }
+        private class ShapePreset
+        {
+            public string name;
+            public float[] curve;
+        }
+
+        private static List<ShapePreset> shapePresets = new List<ShapePreset>()
+        {
+            new ShapePreset() { name="Straight", curve=new float[] { 0.3f, 0.3f, 0.7f, 0.7f } },
+            new ShapePreset() { name="Round #1", curve=new float[] { 0.4f, 0.001f, 1.0f, 0.6f } },
+            new ShapePreset() { name="Round #2", curve=new float[] { 0.5f, 0.001f, 0.8f, 0.7f } },
+            new ShapePreset() { name="Round #3", curve=new float[] { 1.0f, 0.0f, 1f, 0.5f} },
+            new ShapePreset() { name="Peaked #1", curve=new float[] { 0.4f, 0.2f, 0.8f, 0.6f } },
+            new ShapePreset() { name="Peaked #2", curve=new float[] { 0.3f, 0.2f, 1.0f, 0.5f } },
+            new ShapePreset() { name="Sharp #1", curve=new float[] { 0.1f, 0.001f, 0.7f, 2f/3f } },
+            new ShapePreset() { name="Sharp #2", curve=new float[] { 1f/3f, 0.3f, 1.0f, 0.9f } },
         };
 
-        private static string[] shapeNames =
+        private static string[] oldShapeNames =
         {
             "Straight",
             "Round #1",
@@ -31,14 +38,13 @@ namespace ProceduralParts
             "Peaked #1",
             "Peaked #2",
             "Sharp #1",
-            "Sharp #2"
+            "Sharp #2",
         };
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Curve"),
          UI_ChooseOption(scene = UI_Scene.Editor)]
-        public int curveIdx = 1;
-        private int oldCurveIdx;
-
+        public string selectedShape;
+        private string oldSelectedShape;
 
         public override void OnStart(StartState state)
         {
@@ -46,19 +52,40 @@ namespace ProceduralParts
                 return;
 
             if (!pPart.allowCurveTweaking)
-                Fields["curveIdx"].guiActiveEditor = false;
+                Fields["selectedShape"].guiActiveEditor = false;
             else
             {
-                UI_ChooseOption curveIdxEdit = (UI_ChooseOption)Fields["curveIdx"].uiControlEditor;
-                curveIdxEdit.options = shapeNames;
+                UI_ChooseOption selectedShapeEdit = (UI_ChooseOption)Fields["selectedShape"].uiControlEditor;
+                selectedShapeEdit.options = (from p in shapePresets select p.name).ToArray();
             }
             base.OnStart(state);
+        }
+
+        public override void OnLoad(ConfigNode node)
+        {
+            base.OnLoad(node);
+
+            if (node.values.Contains("curveIdx") && selectedShape == null) 
+            {
+                try
+                {
+                    int curveIdx = int.Parse(node.GetValue("curveIdx"));
+                    selectedShape = oldShapeNames[curveIdx];
+                }
+                catch { }
+            }
+
+            if (selectedShape == null || (from s in shapePresets where s.name == selectedShape select s).Count() == 0)
+            {
+                // Default to round#1
+                selectedShape = shapePresets[1].name;
+            }
         }
 
         protected override void UpdateShape(bool force)
         {
             if (!force && oldTopDiameter == topDiameter && oldBottomDiameter == bottomDiameter && oldLength == length &&
-                curveIdx == oldCurveIdx)
+                selectedShape == oldSelectedShape)
                 return;
 
             if (HighLogic.LoadedSceneIsEditor)
@@ -75,7 +102,7 @@ namespace ProceduralParts
             WriteBezier();
 
             oldTopDiameter = topDiameter; oldBottomDiameter = bottomDiameter; oldLength = length;
-            oldCurveIdx = curveIdx;
+            oldSelectedShape = selectedShape;
         }
 
         #region Control point calculation and volume limits
@@ -101,7 +128,7 @@ namespace ProceduralParts
             else
                 return;
 
-            if (length != oldLength || curveIdx != oldCurveIdx)
+            if (length != oldLength || oldSelectedShape != selectedShape)
             {
                 // The volume is directly proportional to the length
                 length *= volume / vol;
@@ -142,7 +169,7 @@ namespace ProceduralParts
             p0 = new Vector2(bottomDiameter, -length / 2f);
             p3 = new Vector2(topDiameter, length / 2f);
 
-            float[] shape = shapePresets[curveIdx];
+            float[] shape = (from s in shapePresets where s.name == selectedShape select s.curve).FirstOrDefault();
 
             // Pretty obvious below what the shape points mean
             if (bottomDiameter < topDiameter)
