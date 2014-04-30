@@ -841,94 +841,66 @@ namespace ProceduralParts
         private void UpdateAttachedParts()
         {
             
-            // Update parent attachements.
-            // Explain logic: 
-            //     xor nulls -> need to update
-            //   then either both are null or both not so:
-            //     both null (which means one is null) -> no need
-            //     transforms discrepant -> need to update  (can this case actually happen?)
-            if ((part.parent == null) != (parentAttachment == null) || (part.parent != null && part.parent != parentAttachment.child))
+            if(part.parent != null && parentAttachment == null)
             {
-                //Detach the old parent
-                if (parentAttachment != null)
+                Part parent = part.parent;
+                AttachNode childToParent = part.findAttachNodeByPart(parent);
+                if (childToParent == null)
                 {
-                    RemovePartAttachment(parentAttachment);
-                    //print("*ST* Removing old parent childAttachment:" + parentAttachment.child);
-
-                    // Fix bug in KSP, if we don't do this then findAttachNodeByPart will return the surface child node next time
-                    if (part.attachMode == AttachModes.SRF_ATTACH)
-                        part.srfAttachNode.attachedPart = null;
+                    Debug.LogError("*ST* unable to find child node from parent: " + part.transform);
+                    return;
                 }
 
-                if (part.parent == null)
-                {
-                    parentAttachment = null;
-                }
-                else
-                {
-                    Part parent = part.parent;
-                    AttachNode childToParent;
+                Vector3 position = transform.TransformPoint(childToParent.position);
+                Part root = EditorLogic.SortedShipList[0];
 
-                    childToParent = part.findAttachNodeByPart(parent);
-                    if (childToParent == null)
-                    {
-                        Debug.LogError("*ST* unable to find child node from parent: " + part.transform);
-                        return;
-                    }
+                //Debug.LogWarning("Attaching new parent: " + parent + " to " + childToParent.id + " position=" + childToParent.position.ToString("G3"));
 
-                    Vector3 position = transform.TransformPoint(childToParent.position);
-                    Part root = EditorLogic.SortedShipList[0];
+                // we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
+                parentAttachment = AddPartAttachment(position, new ParentTransformable(root, part, childToParent));
+                parentAttachment.child = parent;
 
-                    //Debug.LogWarning("Attaching new parent: " + parent + " to " + childToParent.id + " position=" + childToParent.position.ToString("G3"));
-
-                    // we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
-                    parentAttachment = AddPartAttachment(position, new ParentTransformable(root, part, childToParent));
-                    parentAttachment.child = parent;
-
-                    // for symetric attachments, seems required. Don't know why.
-                    shape.ForceNextUpdate();
-                }
+                // for symetric attachments, seems required. Don't know why.
+                shape.ForceNextUpdate();
             }
 
-            LinkedListNode<PartAttachment> node = childAttachments.First;
-            foreach (Part child in part.children)
+            for (int i = childAttachments.Count; i < part.children.Count; ++i)
             {
-                while (node != null && node.Value.child != child)
-                {
-                    // node has been removed
-                    RemoveChildPartAttachment(ref node);
-                }
-                if (node == null)
-                {
-                    // Node has been attached.
-                    AddChildPartAttachment(child);
-                    shape.ForceNextUpdate();
-                }
-                else if (node.Value.child == child)
-                {
-                    node = node.Next;
-                }
-            }
-            while (node != null)
-            {
-                RemoveChildPartAttachment(ref node);
+                // New children are always added at the end of the list
+                // so if our list is shorter, then the ones at the end are the new ones
+                AddChildPartAttachment(part.children[i]);
+                shape.ForceNextUpdate();
             }
         }
 
-        private void RemoveChildPartAttachment(ref LinkedListNode<PartAttachment> node)
+        [PartMessageListener(typeof(PartChildDetached), scenes: GameSceneFilter.AnyEditor)]
+        private void PartChildDetached(Part child)
         {
-            LinkedListNode<PartAttachment> delete = node;
-            node = node.Next;
-
-            RemovePartAttachment(delete.Value);
-            childAttachments.Remove(delete);
-
-            Part child = delete.Value.child;
-            if (child.attachMode == AttachModes.SRF_ATTACH)
-                child.srfAttachNode.attachedPart = null;
-
-            //print("*ST* Child childAttachment removed: " + delete.Value.child);
+            for (var node = childAttachments.First; node != null; node = node.Next )
+                if (node.Value.child == child)
+                {
+                    RemovePartAttachment(node.Value);
+                    childAttachments.Remove(node);
+                    Debug.LogWarning("*ST* Detaching child: " + child.transform.name);
+                    return;
+                }
+            Debug.LogWarning("*ST* Message recieved removing child, but can't find child");
         }
+
+        [PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
+        private void PartParentChanged(Part newParent)
+        {
+            if (parentAttachment != null)
+            {
+                RemovePartAttachment(parentAttachment);
+                parentAttachment = null;
+            }
+
+            // Unfortunatly there's no way to know what attachment node has been used
+            // at this stage, so will have to rely on the code above in Update to check 
+            // for part.parent not null while parentAttachment is null.
+        }
+
 
         private void AddChildPartAttachment(Part child)
         {
@@ -945,7 +917,7 @@ namespace ProceduralParts
             attach.child = child;
 
             childAttachments.AddLast(attach);
-            //Debug.LogWarning("*ST* Attaching child childAttachment: " + child.transform.name + " from child node " + node.id + " Offset=" + part.transform.InverseTransformDirection(child.transform.position + worldOffset));
+            Debug.LogWarning("*ST* Attaching child childAttachment: " + child.transform.name + " from child node " + node.id + " Offset=" + part.transform.InverseTransformDirection(child.transform.position + worldOffset));
         }
 
         private PartAttachment AddPartAttachment(Vector3 position, TransformFollower.Transformable target, bool normalized = false)
