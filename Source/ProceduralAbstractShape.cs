@@ -26,6 +26,9 @@ namespace ProceduralParts
         [KSPField]
         public string techObsolete;
 
+        [KSPField]
+        public string volumeName = PartVolumes.Tankage.ToString();
+
         #endregion
 
         #region Objects
@@ -61,7 +64,7 @@ namespace ProceduralParts
                 if (value != _volume)
                 {
                     _volume = value;
-                    ChangeVolume(value);
+                    ChangeVolume(volumeName, value);
                 }
             }
         }
@@ -74,13 +77,13 @@ namespace ProceduralParts
         // Events. These will get bound up automatically
 
         [PartMessageEvent]
-        public event ChangePartVolumeDelegate ChangeVolume;
+        public event PartVolumeChanged ChangeVolume;
 
         [PartMessageEvent]
         public event ChangeTextureScaleDelegate ChangeTextureScale;
 
         [PartMessageEvent]
-        public event ChangeAttachNodeSizeDelegate ChangeAttachNodeSize;
+        public event PartAttachNodeSizeChanged ChangeAttachNodeSize;
 
         [PartMessageEvent]
         public event PartModelChanged ModelChanged;
@@ -93,9 +96,9 @@ namespace ProceduralParts
             ChangeTextureScale(name, material, targetScale);
         }
         
-        protected void RaiseChangeAttachNodeSize(string name, float minDia, float area, int size)
+        protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area, int size)
         {
-            ChangeAttachNodeSize(name, minDia, area, size);
+            ChangeAttachNodeSize(node, minDia, area, size);
         }
 
         protected void RaiseModelAndColliderChanged()
@@ -132,8 +135,8 @@ namespace ProceduralParts
 
                     UpdateShape(wasForce);
 
-                    if (forceNextUpdate)
-                        ChangeVolume(volume);
+                    if (wasForce)
+                        ChangeVolume(volumeName, volume);
                 }
             }
             catch (Exception ex)

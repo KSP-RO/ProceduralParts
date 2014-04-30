@@ -85,17 +85,17 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
-        private void PartResourceChanged(string resource, double amount)
+        private void PartResourceChanged(PartResource resource, double amount)
         {
             if (selectedBell == null)
                 return;
             UpdateThrustDependentCalcs();
         }
 
-        [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), scenes: GameSceneFilter.AnyEditor)]
-        private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
+        [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
+        private void ChangeAttachNodeSize(AttachNode node, float minDia, float area, int size)
         {
-            if (name != bottomAttachNodeName)
+            if (node.id != bottomAttachNodeName)
                 return;
 
             UpdateMaxThrust(minDia);

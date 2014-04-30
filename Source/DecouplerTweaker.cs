@@ -113,7 +113,7 @@ namespace ProceduralParts
         }
 
         // Plugs into procedural parts.
-        [PartMessageListener(typeof(ChangeAttachNodeSizeDelegate), scenes:GameSceneFilter.AnyEditor)]
+        [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes:GameSceneFilter.AnyEditor)]
         private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
         {
             if (name != textureMessageName || maxImpulseDiameterRatio == 0)
@@ -128,8 +128,8 @@ namespace ProceduralParts
             ejectionImpulse = Mathf.Round(maxImpulse * oldRatio / 0.1f) * 0.1f;
         }
 
-        [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:GameSceneFilter.AnyEditor)]
-        private void ChangeVolume(float volume)
+        [PartMessageListener(typeof(PartVolumeChanged), scenes:GameSceneFilter.AnyEditor)]
+        private void ChangeVolume(string volumeName, float volume)
         {
             if (density > 0)
                 UpdateMass(density * volume);

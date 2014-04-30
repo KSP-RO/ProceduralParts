@@ -47,6 +47,16 @@ namespace ProceduralParts
             // Unity for some daft reason, and not as according to it's own documentation, won't clone 
             // serializable member fields. Lets DIY.
             tankTypeOptionsSerialized = ObjectSerializer.Serialize(tankTypeOptions);
+
+
+            try
+            {
+                if (bool.Parse(node.GetValue("useVolume")))
+                {
+                    tankVolumeName = PartVolumes.Tankage.ToString();
+                }
+            }
+            catch { }
         }
 
         public override void OnSave(ConfigNode node)
@@ -59,8 +69,11 @@ namespace ProceduralParts
         {
             if (HighLogic.LoadedSceneIsFlight)
             {
-                if(useVolume)
+                if (tankVolumeName != null)
+                {
                     part.mass = mass;
+                    MassChanged(mass);
+                }
                 isEnabled = enabled = false;
                 return;
             }
@@ -94,19 +107,16 @@ namespace ProceduralParts
         public float mass;
 
         [KSPField]
-        public bool useVolume = false;
+        public string tankVolumeName;
 
         /// <summary>
         /// Message sent from ProceduralAbstractShape when it updates.
         /// </summary>
-        [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:~GameSceneFilter.Flight)]
-        private void ChangeVolume(float volume)
+        [PartMessageListener(typeof(PartVolumeChanged), scenes:~GameSceneFilter.Flight)]
+        private void ChangeVolume(string volumeName, float volume)
         {
-            if (!useVolume)
-            {
-                Debug.LogError("Updating part volume when this is not expected. Set useVolume = true in config file");
+            if (volumeName != this.tankVolumeName)
                 return;
-            }
 
             if (volume <= 0f)
                 throw new ArgumentOutOfRangeException("volume");
@@ -207,8 +217,8 @@ namespace ProceduralParts
             if (tankTypeOptionsSerialized != null)
                 ObjectSerializer.Deserialize(tankTypeOptionsSerialized, out tankTypeOptions);
 
-            Fields["tankVolume"].guiActiveEditor = useVolume; 
-            Fields["massDisplay"].guiActiveEditor = useVolume;
+            Fields["tankVolume"].guiActiveEditor = tankVolumeName != null; 
+            Fields["massDisplay"].guiActiveEditor = tankVolumeName != null;
 
             if (tankTypeOptions == null || tankTypeOptions.Count == 0)
             {
@@ -256,7 +266,7 @@ namespace ProceduralParts
             if (selectedTankType.isStructural)
                 Fields["tankVolume"].guiActiveEditor = false;
             else
-                Fields["tankVolume"].guiActiveEditor = useVolume;
+                Fields["tankVolume"].guiActiveEditor = tankVolumeName != null;
 
             UpdateMassAndResources(true);
         }
@@ -280,7 +290,7 @@ namespace ProceduralParts
             if (selectedTankType == null)
                 return;
 
-            if (useVolume)
+            if (tankVolumeName != null)
             {
                 part.mass = mass = selectedTankType.dryDensity * tankVolume + selectedTankType.massConstant;
                 MassChanged(mass);
@@ -290,7 +300,7 @@ namespace ProceduralParts
             if (typeChanged || !UpdateResources())
                 RebuildResources();
 
-            if (useVolume)
+            if (tankVolumeName != null)
             {
                 double resourceMass = 0;
                 foreach (PartResource r in part.Resources)
@@ -313,7 +323,7 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
-        private void ResourceChanged(string name, double amount)
+        private void ResourceChanged(PartResource resource, double amount)
         {
             if(selectedTankType == null)
                 return;
@@ -322,11 +332,10 @@ namespace ProceduralParts
             if (tankResource == null || !tankResource.forceEmpty)
                 return;
 
-            PartResource resource = part.Resources[name];
             if(resource != null && resource.amount > 0)
             {
                 resource.amount = 0;
-                InitialAmountChanged(resource.name, resource.amount);
+                InitialAmountChanged(resource, resource.amount);
             }
         }
 
@@ -367,8 +376,8 @@ namespace ProceduralParts
                 }
                 partRes.maxAmount = maxAmount;
 
-                MaxAmountChanged(partRes.name, partRes.maxAmount);
-                InitialAmountChanged(partRes.name, partRes.amount);
+                MaxAmountChanged(partRes, partRes.maxAmount);
+                InitialAmountChanged(partRes, partRes.amount);
             }
 
             return true;
@@ -492,7 +501,7 @@ namespace ProceduralParts
             UpdateTankType();
     #endif
             if (tankVolume > 0)
-                ChangeVolume(tankVolume);
+                ChangeVolume(PartVolumes.Tankage.ToString(), tankVolume);
 
             isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
         }
@@ -526,9 +535,12 @@ namespace ProceduralParts
         /// <summary>
         /// Message sent from ProceduralAbstractShape when it updates.
         /// </summary>
-        [PartMessageListener(typeof(ChangePartVolumeDelegate), scenes:GameSceneFilter.AnyEditor)]
-        private void ChangeVolume(float volume)
+        [PartMessageListener(typeof(PartVolumeChanged), scenes:GameSceneFilter.AnyEditor)]
+        private void ChangeVolume(string volumeName, float volume)
         {
+            if (volumeName != PartVolumes.Tankage.ToString())
+                return;
+
             // Need to call ChangeVolume in Modular Fuel Tanks
             tankVolume = volume;
             if (tankVolume > 0 && moduleFuelTanks != null)

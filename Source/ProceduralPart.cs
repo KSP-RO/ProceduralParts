@@ -9,12 +9,6 @@ using KSPAPIExtensions.PartMessage;
 namespace ProceduralParts
 {
     [PartMessageDelegate]
-    public delegate void ChangePartVolumeDelegate([UseLatest] float volume);
-
-    [PartMessageDelegate]
-    public delegate void ChangeAttachNodeSizeDelegate(string name, [UseLatest] float minDia, [UseLatest] float area, [UseLatest] int size);
-
-    [PartMessageDelegate]
     public delegate void ChangeTextureScaleDelegate(string name, [UseLatest] Material material, [UseLatest] Vector2 targetScale);
 
     public class ProceduralPart : PartModule
@@ -701,16 +695,20 @@ namespace ProceduralParts
 
         private List<object> nodeAttachments = new List<object>(4);
 
-        private class NodeTransformable : TransformFollower.Transformable
+        private class NodeTransformable : TransformFollower.Transformable, PartMessagePartProxy
         {
             // leave as not serializable so will be null when deserialzied.
             private Part part;
             private AttachNode node;
 
+            [PartMessageEvent]
+            public event PartAttachNodePositionChanged NodePositionChanged;
+
             public NodeTransformable(Part part, AttachNode node)
             {
                 this.part = part;
                 this.node = node;
+                PartMessageService.Register(this);
             }
 
             public override bool destroyed
@@ -722,6 +720,7 @@ namespace ProceduralParts
             {
                 node.originalPosition = node.position += part.transform.InverseTransformPoint(translation + part.transform.position);
 
+                NodePositionChanged(node, node.position, node.orientation, node.secondaryAxis);
                 //Debug.LogWarning("Transforming node:" + node.id + " part:" + part.name + " translation=" + translation + " new position=" + node.position.ToString("F3") + " orientation=" + node.orientation.ToString("F3"));
             }
 
@@ -731,7 +730,13 @@ namespace ProceduralParts
                 Vector3 newOrientationWorld = rotate * oldOrientationWorld;
                 node.originalOrientation = node.orientation = part.transform.InverseTransformPoint(newOrientationWorld + part.transform.position).normalized;
 
+                NodePositionChanged(node, node.position, node.orientation, node.secondaryAxis);
                 //Debug.LogWarning("Transforming node:" + node.id + " rotation=" + rotate.ToStringAngleAxis() + " new position=" + node.position.ToString("F3") + " orientation=" + node.orientation.ToString("F3"));
+            }
+
+            public Part ProxyPart
+            {
+                get { return part; }
             }
         }
 
@@ -835,6 +840,7 @@ namespace ProceduralParts
 
         private void UpdateAttachedParts()
         {
+            
             // Update parent attachements.
             // Explain logic: 
             //     xor nulls -> need to update
