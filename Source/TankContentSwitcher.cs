@@ -433,10 +433,14 @@ namespace ProceduralParts
         public string[] typesAvailable;
     #endif
 
+        [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Utilization", guiFormat = "F0", guiUnits = "%"),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue=0, maxValue=100, incrementSlide = 1f)]
+        public float utilization = 100f;
+
         /// <summary>
         /// Volume of part in kilolitres. 
         /// </summary>
-        [KSPField(guiActive = true, guiActiveEditor = true, guiName = "Volume", guiFormat = "S3+3", guiUnits = "L")]
+        [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Volume", guiFormat = "S3+3", guiUnits = "L")]
         public float tankVolume = 0.0f;
 
         [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Mass")]
@@ -453,11 +457,6 @@ namespace ProceduralParts
         [KSPField]
         public float volumeScale = 867.7219117f;
 
-        /// <summary>
-        /// Utilized fraction of the tank.
-        /// </summary>
-        [KSPField]
-        public float utilization = 1.0f;
 
         public override void OnSave(ConfigNode node)
         {
@@ -544,7 +543,7 @@ namespace ProceduralParts
             // Need to call ChangeVolume in Modular Fuel Tanks
             tankVolume = volume;
             if (tankVolume > 0 && moduleFuelTanks != null)
-                changeVolume.Invoke(moduleFuelTanks, new object[] { Math.Round(tankVolume * volumeScale * utilization) });
+                changeVolume.Invoke(moduleFuelTanks, new object[] { Math.Round(tankVolume * volumeScale * utilization / 100f) });
         }
 
         [KSPEvent (guiActive=false, active = true)]
