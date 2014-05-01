@@ -114,7 +114,7 @@ namespace ProceduralParts
 
         // Plugs into procedural parts.
         [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes:GameSceneFilter.AnyEditor)]
-        private void ChangeAttachNodeSize(string name, float minDia, float area, int size)
+        private void ChangeAttachNodeSize(string name, float minDia, float area)
         {
             if (name != textureMessageName || maxImpulseDiameterRatio == 0)
                 return;

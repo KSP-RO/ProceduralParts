@@ -69,8 +69,6 @@ namespace ProceduralParts
                 {
                     UpdateBell();
                     UpdateThrust();
-
-                    UpdateAttachedPart();
                 }
                 else
                 {
@@ -93,7 +91,7 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
-        private void ChangeAttachNodeSize(AttachNode node, float minDia, float area, int size)
+        private void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
         {
             if (node.id != bottomAttachNodeName)
                 return;
@@ -330,7 +328,6 @@ namespace ProceduralParts
                     // Children are attached using their own nodes, so their original offset ends up correct.
                     bottomAttachNode.attachedPart.transform.position += delta;
                     part.transform.position -= delta;
-                    oldAttachedPart = bottomAttachNode.attachedPart;
                     //Debug.LogWarning("Moving bottom attach " + delta);
                 }
             }
@@ -469,19 +466,12 @@ namespace ProceduralParts
 
         #region Attachments and nodes
 
-        private Part oldAttachedPart = null;
-
-        private void UpdateAttachedPart()
+        [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
+        [PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
+        private void PartParentChanged(Part newPart)
         {
-            // When we attach a new part to the bottom node, ProceduralPart sets its reference position to on the surface.
-            // Since we've moved the node, we need to undo the move that ProceeduralPart does to move it back to
-            // the surface when first attached.
-            if (oldAttachedPart != bottomAttachNode.attachedPart)
-            {
-                if (bottomAttachNode.attachedPart != null)
-                    MoveBottomAttachment(selectedBell.srbAttach.position - selectedBell.model.transform.position);
-                oldAttachedPart = bottomAttachNode.attachedPart;
-            }
+            if (newPart != null && newPart == bottomAttachNode.attachedPart)
+                MoveBottomAttachment(selectedBell.srbAttach.position - selectedBell.model.transform.position);
         }
 
         private void MoveBottomAttachmentAndNode(Vector3 delta)

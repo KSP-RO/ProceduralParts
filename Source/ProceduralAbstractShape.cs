@@ -96,9 +96,9 @@ namespace ProceduralParts
             ChangeTextureScale(name, material, targetScale);
         }
         
-        protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area, int size)
+        protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area)
         {
-            ChangeAttachNodeSize(node, minDia, area, size);
+            ChangeAttachNodeSize(node, minDia, area);
         }
 
         protected void RaiseModelAndColliderChanged()
