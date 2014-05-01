@@ -109,7 +109,6 @@ namespace ProceduralParts
             {
                 UpdateTexture();
                 UpdateShape();
-                UpdateAttachedParts();
             }
             catch (Exception ex)
             {
@@ -838,39 +837,25 @@ namespace ProceduralParts
             }
         }
 
-        private void UpdateAttachedParts()
+        [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
+        private void PartChildAttached(Part child)
         {
-            
-            if(part.parent != null && parentAttachment == null)
+            AttachNode node = child.findAttachNodeByPart(part);
+
+            if (node == null)
             {
-                Part parent = part.parent;
-                AttachNode childToParent = part.findAttachNodeByPart(parent);
-                if (childToParent == null)
-                {
-                    Debug.LogError("*ST* unable to find child node from parent: " + part.transform);
-                    return;
-                }
-
-                Vector3 position = transform.TransformPoint(childToParent.position);
-                Part root = EditorLogic.SortedShipList[0];
-
-                //Debug.LogWarning("Attaching new parent: " + parent + " to " + childToParent.id + " position=" + childToParent.position.ToString("G3"));
-
-                // we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
-                parentAttachment = AddPartAttachment(position, new ParentTransformable(root, part, childToParent));
-                parentAttachment.child = parent;
-
-                // for symetric attachments, seems required. Don't know why.
-                shape.ForceNextUpdate();
+                Debug.LogError("*ST* unable to find child node for child: " + child.transform);
+                return;
             }
 
-            for (int i = childAttachments.Count; i < part.children.Count; ++i)
-            {
-                // New children are always added at the end of the list
-                // so if our list is shorter, then the ones at the end are the new ones
-                AddChildPartAttachment(part.children[i]);
-                shape.ForceNextUpdate();
-            }
+            Vector3 worldOffset = child.transform.TransformDirection(node.position);
+            PartAttachment attach = AddPartAttachment(child.transform.position + worldOffset, new TransformFollower.TransformTransformable(child.transform, node.position));
+            attach.child = child;
+
+            childAttachments.AddLast(attach);
+            //Debug.LogWarning("*ST* Attaching child childAttachment: " + child.transform.name + " from child node " + node.id + " Offset=" + part.transform.InverseTransformDirection(child.transform.position + worldOffset));
+
+            shape.ForceNextUpdate();
         }
 
         [PartMessageListener(typeof(PartChildDetached), scenes: GameSceneFilter.AnyEditor)]
@@ -896,28 +881,27 @@ namespace ProceduralParts
                 parentAttachment = null;
             }
 
-            // Unfortunatly there's no way to know what attachment node has been used
-            // at this stage, so will have to rely on the code above in Update to check 
-            // for part.parent not null while parentAttachment is null.
-        }
+            if (newParent == null)
+                return;
 
-
-        private void AddChildPartAttachment(Part child)
-        {
-            AttachNode node = child.findAttachNodeByPart(part);
-
-            if (node == null)
+            AttachNode childToParent = part.findAttachNodeByPart(newParent);
+            if (childToParent == null)
             {
-                Debug.LogError("*ST* unable to find child node for child: " + child.transform);
+                Debug.LogError("*ST* unable to find child node from parent: " + part.transform);
                 return;
             }
 
-            Vector3 worldOffset = child.transform.TransformDirection(node.position);
-            PartAttachment attach = AddPartAttachment(child.transform.position + worldOffset, new TransformFollower.TransformTransformable(child.transform, node.position));
-            attach.child = child;
+            Vector3 position = transform.TransformPoint(childToParent.position);
+            Part root = EditorLogic.SortedShipList[0];
 
-            childAttachments.AddLast(attach);
-            Debug.LogWarning("*ST* Attaching child childAttachment: " + child.transform.name + " from child node " + node.id + " Offset=" + part.transform.InverseTransformDirection(child.transform.position + worldOffset));
+            //Debug.LogWarning("Attaching new parent: " + parent + " to " + childToParent.id + " position=" + childToParent.position.ToString("G3"));
+
+            // we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
+            parentAttachment = AddPartAttachment(position, new ParentTransformable(root, part, childToParent));
+            parentAttachment.child = newParent;
+
+            // for symetric attachments, seems required. Don't know why.
+            shape.ForceNextUpdate();
         }
 
         private PartAttachment AddPartAttachment(Vector3 position, TransformFollower.Transformable target, bool normalized = false)
