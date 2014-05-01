@@ -847,13 +847,13 @@ namespace ProceduralParts
                 Debug.LogError("*ST* unable to find child node for child: " + child.transform);
                 return;
             }
+            //Debug.LogWarning("Attaching to parent: " + part + " child: " + child.transform.name);
 
             Vector3 worldOffset = child.transform.TransformDirection(node.position);
             PartAttachment attach = AddPartAttachment(child.transform.position + worldOffset, new TransformFollower.TransformTransformable(child.transform, node.position));
             attach.child = child;
 
             childAttachments.AddLast(attach);
-            //Debug.LogWarning("*ST* Attaching child childAttachment: " + child.transform.name + " from child node " + node.id + " Offset=" + part.transform.InverseTransformDirection(child.transform.position + worldOffset));
 
             shape.ForceNextUpdate();
         }
@@ -866,7 +866,7 @@ namespace ProceduralParts
                 {
                     RemovePartAttachment(node.Value);
                     childAttachments.Remove(node);
-                    Debug.LogWarning("*ST* Detaching child: " + child.transform.name);
+                    //Debug.LogWarning("Detaching from: " + part + " child: " + child.transform.name);
                     return;
                 }
             Debug.LogWarning("*ST* Message recieved removing child, but can't find child");
@@ -878,6 +878,7 @@ namespace ProceduralParts
             if (parentAttachment != null)
             {
                 RemovePartAttachment(parentAttachment);
+                //Debug.LogWarning("Detatching: " + part + " from parent: " + newParent);
                 parentAttachment = null;
             }
 
@@ -894,7 +895,7 @@ namespace ProceduralParts
             Vector3 position = transform.TransformPoint(childToParent.position);
             Part root = EditorLogic.SortedShipList[0];
 
-            //Debug.LogWarning("Attaching new parent: " + parent + " to " + childToParent.id + " position=" + childToParent.position.ToString("G3"));
+            //Debug.LogWarning("Attaching: " + part + " to new parent: " + newParent + " node:" + childToParent.id + " position=" + childToParent.position.ToString("G3"));
 
             // we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
             parentAttachment = AddPartAttachment(position, new ParentTransformable(root, part, childToParent));
