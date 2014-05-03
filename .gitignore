@@ -156,4 +156,5 @@ $RECYCLE.BIN/
 # Mac crap
 .DS_Store
 
-Source/ProceduralTanks/someGuff.txt
+Source/Properties/AssemblyInfo.cs
+Source/Properties/AssemblyInfo.cs
