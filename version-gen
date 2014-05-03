@@ -2,5 +2,7 @@
 #
 # Updates the version code
 
+cd "$(git rev-parse --show-toplevel)/Source/Properties/"
+
 version=$(git describe --tags --long --match "v*" | sed 's:v\(.*\)-\(.*\)-.*:\1.\2:')
 sed -e "s/@VERSION@/$version/" AssemblyInfo.in > AssemblyInfo.cs
