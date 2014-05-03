@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# Updates the version code
+
+version=$(git describe --tags --long --match "v*" | sed 's:v\(.*\)-\(.*\)-.*:\1.\2:')
+sed -e "s/@VERSION@/$version/" AssemblyInfo.in > AssemblyInfo.cs
