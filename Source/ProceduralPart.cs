@@ -350,7 +350,7 @@ namespace ProceduralParts
 
             foreach (TechLimit limit in techLimits)
             {
-                if (ResearchAndDevelopment.GetTechnologyState(limit.TechRequired) != RDTech.State.Available)
+                if (ResearchAndDevelopment.GetTechnologyState(limit.name) != RDTech.State.Available)
                     continue;
 
                 if (limit.diameterMin < diameterMin)
@@ -407,7 +407,7 @@ namespace ProceduralParts
         public class TechLimit : IConfigNode
         {
             [Persistent]
-            public string TechRequired;
+            public string name;
             [Persistent]
             public float diameterMin = float.NaN;
             [Persistent]
@@ -430,6 +430,10 @@ namespace ProceduralParts
             public void Load(ConfigNode node)
             {
                 ConfigNode.LoadObjectFromConfig(this, node);
+                if (name == null)
+                {
+                    name = node.GetValue("TechRequired");
+                }
             }
             public void Save(ConfigNode node)
             {
@@ -438,7 +442,7 @@ namespace ProceduralParts
 
             public override string ToString()
             {
-                return string.Format("TechLimits(TechRequired={6} diameter=({0:G3}, {1:G3}) length=({2:G3}, {3:G3}) volume=({4:G3}, {5:G3}) )", diameterMin, diameterMax, lengthMin, lengthMax, volumeMin, volumeMax, TechRequired);
+                return string.Format("TechLimits(TechRequired={6} diameter=({0:G3}, {1:G3}) length=({2:G3}, {3:G3}) volume=({4:G3}, {5:G3}) )", diameterMin, diameterMax, lengthMin, lengthMax, volumeMin, volumeMax, name);
             }
         }
 
