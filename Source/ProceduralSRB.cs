@@ -321,19 +321,17 @@ namespace ProceduralParts
                 bottomAttachNode = part.findAttachNode(bottomAttachNodeName);
                 Vector3 delta = selectedBell.srbAttach.position - selectedBell.model.position;
                 bottomAttachNode.originalPosition = bottomAttachNode.position += part.transform.InverseTransformDirection(delta);
-                if (HighLogic.LoadedSceneIsEditor && bottomAttachNode.attachedPart != null && bottomAttachNode.attachedPart.transform == part.transform.parent)
-                {
-                    // Because the parent is attached using our node, we need to move it out by the
-                    // node offset as it will get moved back again by the same amount when it gets attached
-                    // Children are attached using their own nodes, so their original offset ends up correct.
-                    bottomAttachNode.attachedPart.transform.position += delta;
-                    part.transform.position -= delta;
-                    //Debug.LogWarning("Moving bottom attach " + delta);
-                }
+
+                pPart.AddNodeOffset(bottomAttachNodeName, GetOffset);
             }
 
             // Move thrust transform to the end of the bell
             thrustTransform.position = selectedBell.srbAttach.position;
+        }
+
+        private Vector3 GetOffset()
+        {
+            return selectedBell.srbAttach.position - selectedBell.model.position;
         }
 
         private void UpdateBell()
@@ -466,25 +464,14 @@ namespace ProceduralParts
 
         #region Attachments and nodes
 
-        [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
-        [PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
-        private void PartParentChanged(Part newPart)
-        {
-            if (newPart != null && newPart == bottomAttachNode.attachedPart)
-                MoveBottomAttachment(selectedBell.srbAttach.position - selectedBell.model.transform.position);
-        }
-
         private void MoveBottomAttachmentAndNode(Vector3 delta)
         {
             bottomAttachNode.originalPosition = bottomAttachNode.position += part.transform.InverseTransformDirection(delta);
-            if (bottomAttachNode.attachedPart != null)
-                MoveBottomAttachment(delta);
             thrustTransform.position += delta;
-        }
 
-        private Vector3 MoveBottomAttachment(Vector3 delta)
-        {
-            //Debug.LogWarning("UpdateAttachedPart delta=" + delta);
+            if (bottomAttachNode.attachedPart == null)
+                return;
+
             if (bottomAttachNode.attachedPart.transform == part.transform.parent)
             {
                 part.transform.Translate(-delta, Space.World);
@@ -497,7 +484,6 @@ namespace ProceduralParts
             {
                 bottomAttachNode.attachedPart.transform.Translate(delta, Space.World);
             }
-            return delta;
         }
 
         #endregion

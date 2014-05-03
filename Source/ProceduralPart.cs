@@ -693,6 +693,7 @@ namespace ProceduralParts
         #region Node Attachments
 
         private List<object> nodeAttachments = new List<object>(4);
+        private Dictionary<string, Func<Vector3>> nodeOffsets = new Dictionary<string, Func<Vector3>>();
 
         private class NodeTransformable : TransformFollower.Transformable, PartMessagePartProxy
         {
@@ -767,6 +768,7 @@ namespace ProceduralParts
         private void InitializeNode(AttachNode node)
         {
             Vector3 position = transform.TransformPoint(node.position);
+            node.originalPosition = node.position *= 1.00001f;
 
             TransformFollower follower = TransformFollower.createFollower(partModel, position, new NodeTransformable(part, node));
 
@@ -774,6 +776,15 @@ namespace ProceduralParts
             object data = shape.AddAttachment(follower, !symmetryClone);
 
             nodeAttachments.Add(data);
+        }
+
+        public void AddNodeOffset(string nodeId, Func<Vector3> GetOffset)
+        {
+            AttachNode node = part.findAttachNode(nodeId);
+            if (node == null)
+                throw new ArgumentException("Node " + nodeId + " is not the ID of an attachment node");
+
+            nodeOffsets.Add(nodeId, GetOffset);
         }
 
         #endregion
@@ -841,16 +852,30 @@ namespace ProceduralParts
         private void PartChildAttached(Part child)
         {
             AttachNode node = child.findAttachNodeByPart(part);
-
             if (node == null)
             {
                 Debug.LogError("*ST* unable to find child node for child: " + child.transform);
                 return;
             }
+            Vector3 position = child.transform.TransformPoint(node.position);
+
+            // Handle node offsets
+            if (child.attachMode != AttachModes.SRF_ATTACH)
+            {
+                AttachNode ourNode = part.findAttachNodeByPart(child);
+                if (ourNode == null)
+                {
+                    Debug.LogError("*ST* unable to find our node for child: " + child.transform);
+                    return;
+                }
+                Func<Vector3> Offset;
+                if (nodeOffsets.TryGetValue(ourNode.id, out Offset))
+                    position -= Offset();
+            }
+
             //Debug.LogWarning("Attaching to parent: " + part + " child: " + child.transform.name);
 
-            Vector3 worldOffset = child.transform.TransformDirection(node.position);
-            PartAttachment attach = AddPartAttachment(child.transform.position + worldOffset, new TransformFollower.TransformTransformable(child.transform, node.position));
+            PartAttachment attach = AddPartAttachment(position, new TransformFollower.TransformTransformable(child.transform, node.position));
             attach.child = child;
 
             childAttachments.AddLast(attach);
@@ -888,11 +913,15 @@ namespace ProceduralParts
             AttachNode childToParent = part.findAttachNodeByPart(newParent);
             if (childToParent == null)
             {
-                Debug.LogError("*ST* unable to find child node from parent: " + part.transform);
+                Debug.LogError("*ST* unable to find parent node from child: " + part.transform);
                 return;
             }
-
             Vector3 position = transform.TransformPoint(childToParent.position);
+            
+            Func<Vector3> Offset;
+            if (nodeOffsets.TryGetValue(childToParent.id, out Offset))
+                position -= Offset();
+
             Part root = EditorLogic.SortedShipList[0];
 
             //Debug.LogWarning("Attaching: " + part + " to new parent: " + newParent + " node:" + childToParent.id + " position=" + childToParent.position.ToString("G3"));
