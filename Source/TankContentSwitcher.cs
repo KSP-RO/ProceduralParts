@@ -436,6 +436,10 @@ namespace ProceduralParts
         [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Utilization", guiFormat = "F0", guiUnits = "%"),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue=0, maxValue=100, incrementSlide = 1f)]
         public float utilization = 100f;
+        private float oldUtilization;
+
+        [KSPField(isPersistant=true)]
+        public float partVolume = 0f;
 
         /// <summary>
         /// Volume of part in kilolitres. 
@@ -499,8 +503,8 @@ namespace ProceduralParts
             }
             UpdateTankType();
     #endif
-            if (tankVolume > 0)
-                ChangeVolume(PartVolumes.Tankage.ToString(), tankVolume);
+            if (partVolume > 0)
+                ChangeVolume(PartVolumes.Tankage.ToString(), partVolume);
 
             isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
         }
@@ -511,6 +515,12 @@ namespace ProceduralParts
                 return;
 
             Fields["showRFGUI"].guiActiveEditor = EditorLogic.fetch.editorScreen == EditorLogic.EditorScreen.Parts;
+
+            if (utilization != oldUtilization)
+            {
+                ChangeVolume(PartVolumes.Tankage.ToString(), partVolume);
+                oldUtilization = utilization;
+            }
 
             UpdateTankType();
         }
@@ -541,9 +551,10 @@ namespace ProceduralParts
                 return;
 
             // Need to call ChangeVolume in Modular Fuel Tanks
-            tankVolume = volume;
+            partVolume = volume;
+            tankVolume = volume * utilization / 100f;
             if (tankVolume > 0 && moduleFuelTanks != null)
-                changeVolume.Invoke(moduleFuelTanks, new object[] { Math.Round(tankVolume * volumeScale * utilization / 100f) });
+                changeVolume.Invoke(moduleFuelTanks, new object[] { Math.Round(tankVolume * volumeScale) });
         }
 
         [KSPEvent (guiActive=false, active = true)]
