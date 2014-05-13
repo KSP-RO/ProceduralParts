@@ -433,7 +433,7 @@ namespace ProceduralParts
         public string[] typesAvailable;
     #endif
 
-        [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Utilization", guiFormat = "F0", guiUnits = "%"),
+        [KSPField(isPersistant=true, guiActive = false, guiActiveEditor = true, guiName = "Utilization", guiFormat = "F0", guiUnits = "%"),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue=0, maxValue=100, incrementSlide = 1f)]
         public float utilization = 100f;
         private float oldUtilization;
