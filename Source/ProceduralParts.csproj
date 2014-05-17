@@ -20,8 +20,8 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <BaseIntermediateOutputPath>..\..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
-    <OutputPath>..\..\..\Build\ProceduralParts\Debug\</OutputPath>
+    <BaseIntermediateOutputPath>..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
+    <OutputPath>..\..\Build\ProceduralParts\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -32,7 +32,7 @@
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
     <BaseIntermediateOutputPath>..\..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
-    <OutputPath>..\..\..\Build\ProceduralParts\Debug\</OutputPath>
+    <OutputPath>..\..\Build\ProceduralParts\Release\</OutputPath>
     <DefineConstants>
     </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
