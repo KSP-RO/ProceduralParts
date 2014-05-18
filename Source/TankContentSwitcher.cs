@@ -308,18 +308,10 @@ namespace ProceduralParts
 
                 float totalMass = part.mass + (float)resourceMass;
                 if (selectedTankType.isStructural)
-                    massDisplay = FormatMass(totalMass);
+                    massDisplay = MathUtils.FormatMass(totalMass);
                 else
-                    massDisplay = "Dry: " + FormatMass(part.mass) + " / Wet: " + FormatMass(totalMass);
+                    massDisplay = "Dry: " + MathUtils.FormatMass(part.mass) + " / Wet: " + MathUtils.FormatMass(totalMass);
             }
-        }
-
-        private static string FormatMass(float mass)
-        {
-            if (mass < 1.0f)
-                return mass.ToStringSI(4, 6, "g");
-            else
-                return mass.ToStringSI(4, unit:"t");
         }
 
         [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
@@ -410,6 +402,34 @@ namespace ProceduralParts
                 window.displayDirty = true;
 
             ResourceListChanged();
+        }
+
+        #endregion
+
+        #region Message passing for EPL
+
+        // Extraplanetary launchpads needs these messages sent.
+        // From the next update of EPL, this won't be required.
+
+        [PartMessageListener(typeof(PartResourcesChanged))]
+        private void ResourcesModified()
+        {
+            BaseEventData data = new BaseEventData(BaseEventData.Sender.USER);
+            data.Set<Part>("part", part);
+            part.SendEvent("OnResourcesModified", data, 0);
+        }
+
+        private float oldmass = 0;
+
+        [PartMessageListener(typeof(PartMassChanged))]
+        private void MassModified(float mass)
+        {
+            BaseEventData data = new BaseEventData(BaseEventData.Sender.USER);
+            data.Set<Part>("part", part);
+            data.Set<float>("oldmass", oldmass);
+            part.SendEvent("OnMassModified", data, 0);
+
+            oldmass = mass;
         }
 
         #endregion
@@ -596,7 +616,7 @@ namespace ProceduralParts
                 return;
 
             if (part.Resources.Count == 0)
-                massDisplay = FormatMass(part.mass);
+                massDisplay = MathUtils.FormatMass(part.mass);
             else
             {
                 double resourceMass = 0;
@@ -604,17 +624,8 @@ namespace ProceduralParts
                     resourceMass += r.maxAmount * r.info.density;
 
                 float totalMass = part.mass + (float)resourceMass;
-                massDisplay = "Dry: " + FormatMass(part.mass) + " / Wet: " + FormatMass(totalMass);
+                massDisplay = "Dry: " + MathUtils.FormatMass(part.mass) + " / Wet: " + MathUtils.FormatMass(totalMass);
             }
         }
-
-        private static string FormatMass(float mass)
-        {
-            if (mass < 1.0f)
-                return mass.ToStringSI(4, 6, "g");
-            else
-                return mass.ToStringSI(4, unit:"t");
-        }
-
     }
 }
