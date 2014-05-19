@@ -701,7 +701,7 @@ namespace ProceduralParts
         private readonly List<object> nodeAttachments = new List<object>(4);
         private readonly Dictionary<string, Func<Vector3>> nodeOffsets = new Dictionary<string, Func<Vector3>>();
 
-        private class NodeTransformable : TransformFollower.Transformable, PartMessagePartProxy
+        private class NodeTransformable : TransformFollower.Transformable, IPartMessagePartProxy
         {
             // leave as not serializable so will be null when deserialzied.
             private readonly Part part;
