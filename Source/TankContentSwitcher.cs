@@ -28,6 +28,7 @@ namespace ProceduralParts
         {
             base.OnAwake();
             PartMessageService.Register(this);
+            this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
 
         public override void OnLoad(ConfigNode node)
@@ -85,10 +86,9 @@ namespace ProceduralParts
             isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
         }
 
-        public void Update()
+        public void OnUpdateEditor()
         {
-            if (HighLogic.LoadedSceneIsEditor)
-                UpdateTankType();
+            UpdateTankType();
         }
 
         #endregion
@@ -99,7 +99,7 @@ namespace ProceduralParts
         /// Volume of part in kilolitres. 
         /// </summary>
         [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Volume", guiFormat="S4+3", guiUnits="L")]
-        public float tankVolume = 0.0f;
+        public float tankVolume;
 
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Mass")]
         public string massDisplay;
@@ -442,6 +442,7 @@ namespace ProceduralParts
         {
             base.OnAwake();
             PartMessageService.Register(this);
+            this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
 
     #if false
@@ -459,13 +460,13 @@ namespace ProceduralParts
         private float oldUtilization;
 
         [KSPField(isPersistant=true)]
-        public float partVolume = 0f;
+        public float partVolume;
 
         /// <summary>
         /// Volume of part in kilolitres. 
         /// </summary>
         [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Volume", guiFormat = "S3+3", guiUnits = "L")]
-        public float tankVolume = 0.0f;
+        public float tankVolume;
 
         [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Mass")]
         public string massDisplay;
@@ -473,7 +474,7 @@ namespace ProceduralParts
         // ReSharper disable once InconsistentNaming
         [KSPField(isPersistant = false, guiActiveEditor = true, guiActive = false, guiName = "Real Fuels"),
          UI_Toggle(enabledText="GUI", disabledText="GUI")]
-        public bool showRFGUI = false;
+        public bool showRFGUI;
 
         /// <summary>
         /// Real Fuels uses larger volumes than is really there. This factor is applied to the volume prior to it
@@ -530,11 +531,8 @@ namespace ProceduralParts
             isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
         }
 
-        public void Update()
+        public void OnUpdateEditor()
         {
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
-
             Fields["showRFGUI"].guiActiveEditor = EditorLogic.fetch.editorScreen == EditorLogic.EditorScreen.Parts;
 
             // ReSharper disable once CompareOfFloatsByEqualityOperator

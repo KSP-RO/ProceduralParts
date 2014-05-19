@@ -18,6 +18,7 @@ namespace ProceduralParts
         {
             base.OnAwake();
             PartMessageService.Register(this);
+            this.RegisterOnUpdateEditor(OnUpdateEditor);
 
             if (GameSceneFilter.AnyInitializing.IsLoaded())
                 LoadTextureSets();
@@ -76,7 +77,7 @@ namespace ProceduralParts
                 {
                     // Force the first update, then disable.
                     shape.ForceNextUpdate();
-                    shape.Update();
+                    shape.OnUpdateEditor();
 
                     UpdateTexture();
 
@@ -93,11 +94,8 @@ namespace ProceduralParts
             }
         }
 
-        public virtual void Update()
+        public virtual void OnUpdateEditor()
         {
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
-
             if (skipNextUpdate)
             {
                 skipNextUpdate = false;
@@ -297,7 +295,7 @@ namespace ProceduralParts
         /// For cones, the biggest end is the one for the diameter. 
         /// </summary>
         [KSPField]
-        public float aspectMin = 0f;
+        public float aspectMin;
 
         /// <summary>
         /// Minimum aspect ratio - min ratio of length / diameter.
@@ -754,7 +752,7 @@ namespace ProceduralParts
             if (symmetryClone)
             {
                 shape.ForceNextUpdate();
-                shape.Update();
+                shape.OnUpdateEditor();
             }
 
             foreach (AttachNode node in part.attachNodes)
@@ -764,12 +762,12 @@ namespace ProceduralParts
 
             // Update the shape to put the nodes into their positions.
             shape.ForceNextUpdate();
-            shape.Update();
+            shape.OnUpdateEditor();
 
             // In flight mode, discard all the transform followers because the are not required
             if (HighLogic.LoadedSceneIsFlight)
                 foreach (object att in nodeAttachments)
-                    shape.RemoveAttachment(att);
+                    shape.RemoveAttachment(att, false);
         }
 
         private void InitializeNode(AttachNode node)
@@ -954,7 +952,7 @@ namespace ProceduralParts
 
         private void RemovePartAttachment(PartAttachment delete)
         {
-            shape.RemoveAttachment(delete.data);
+            shape.RemoveAttachment(delete.data, false);
             Destroy(delete.follower.gameObject);
         }
 
@@ -1003,7 +1001,7 @@ namespace ProceduralParts
             return;
 
         foundNode:
-            TransformFollower follower = shape.RemoveAttachment(node.Value.data);
+            TransformFollower follower = shape.RemoveAttachment(node.Value.data, false);
             Destroy(follower);
 
             attachments.Remove(node);

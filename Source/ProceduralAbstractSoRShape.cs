@@ -47,7 +47,7 @@ namespace ProceduralParts
         private readonly LinkedList<Attachment> bottomAttachments = new LinkedList<Attachment>();
         private readonly LinkedList<Attachment> sideAttachments = new LinkedList<Attachment>();
 
-        public override object AddAttachment(TransformFollower attach, bool normalized = false)
+        public override object AddAttachment(TransformFollower attach, bool normalized)
         {
             return normalized ? AddAttachmentNormalized(attach) : AddAttachmentNotNormalized(attach);
         }
@@ -82,7 +82,7 @@ namespace ProceduralParts
             }
 
 
-            // pt or bottom?
+            // top or bottom?
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (phi != 0)
             {
@@ -220,7 +220,7 @@ namespace ProceduralParts
             return ret;
         }
 
-        protected void MoveAttachments(LinkedList<ProfilePoint> pts)
+        private void MoveAttachments(LinkedList<ProfilePoint> pts)
         {
             lastProfile = pts;
 
@@ -319,7 +319,7 @@ namespace ProceduralParts
             ret.node = sideAttachments.AddLast(ret);
         }
 
-        public override TransformFollower RemoveAttachment(object data, bool normalize = false)
+        public override TransformFollower RemoveAttachment(object data, bool normalize)
         {
             Attachment attach = (Attachment)data;
             switch (attach.location)
@@ -359,7 +359,7 @@ namespace ProceduralParts
 
         #region Mesh Writing
 
-        public class ProfilePoint
+        protected class ProfilePoint
         {
             public readonly float dia;
             public readonly float y;
@@ -693,7 +693,7 @@ namespace ProceduralParts
 
             private readonly int subdivCount;
             public readonly int totVertexes;
-            public readonly float maxError;
+            private readonly float maxError;
 
             private static readonly float MaxError0 = Mathf.Sqrt(2) * (Mathf.Sin(Mathf.PI / 4.0f) - 0.5f) * 0.5f;
 

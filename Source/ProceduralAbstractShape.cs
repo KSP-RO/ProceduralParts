@@ -1,4 +1,5 @@
 ﻿using System;
+using KSPAPIExtensions;
 using UnityEngine;
 using KSPAPIExtensions.PartMessage;
 
@@ -10,6 +11,7 @@ namespace ProceduralParts
         {
             base.OnAwake();
             PartMessageService.Register(this);
+            this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
 
         #region Config data
@@ -116,7 +118,12 @@ namespace ProceduralParts
             node.SetValue("isEnabled", "True");
         }
 
-        public void Update()
+        public override void OnUpdate()
+        {
+            OnUpdateEditor();
+        }
+
+        public void OnUpdateEditor()
         {
             try
             {
@@ -156,7 +163,7 @@ namespace ProceduralParts
         /// <param name="normalized">If true, the current offset of the attachment is in 'normalized' offset
         /// - where i would be in space on a unit length and diameter cylinder. This method will relocate the object.</param>
         /// <returns>Object used to track the attachment for Remove method</returns>
-        public abstract object AddAttachment(TransformFollower attach, bool normalized = false);
+        public abstract object AddAttachment(TransformFollower attach, bool normalized);
 
         /// <summary>
         /// Remove object attached to the surface of this part.
@@ -164,7 +171,7 @@ namespace ProceduralParts
         /// <param name="data">Data returned from child method</param>
         /// <param name="normalize">If true, the transform positon follower will be relocated to a 'normalized' 
         /// offset - where i would appear on a unit length and diameter cylinder</param>
-        public abstract TransformFollower RemoveAttachment(object data, bool normalize = false);
+        public abstract TransformFollower RemoveAttachment(object data, bool normalize);
 
         #endregion
     }

@@ -56,7 +56,7 @@ namespace ProceduralParts
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Impulse", guiUnits = "kNs", guiFormat = "F1"),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.1f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall=0, incrementSlide = 0.1f)]
-        public float ejectionImpulse = 0f;
+        public float ejectionImpulse;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="S3")]
         public float mass;

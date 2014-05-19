@@ -17,6 +17,7 @@ namespace ProceduralParts
         {
             base.OnAwake();
             PartMessageService.Register(this);
+            this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
 
         public override void OnLoad(ConfigNode node)
@@ -58,19 +59,17 @@ namespace ProceduralParts
             }
         }
 
-        public void Update()
+        public override void OnUpdate()
+        {
+            AnimateHeat();
+        }
+
+        public void OnUpdateEditor()
         {
             try
             {
-                if (HighLogic.LoadedSceneIsEditor)
-                {
-                    UpdateBell();
-                    UpdateThrust();
-                }
-                else
-                {
-                    AnimateHeat();
-                }
+                UpdateBell();
+                UpdateThrust();
             }
             catch (Exception ex)
             {
