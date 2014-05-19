@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
-using KSPAPIExtensions;
 using KSPAPIExtensions.PartMessage;
 
 namespace ProceduralParts
@@ -32,35 +28,31 @@ namespace ProceduralParts
         #endregion
 
         #region Objects
-        public ProceduralPart pPart
+        public ProceduralPart PPart
         {
-            get
-            {
-                if (_pPart == null)
-                    _pPart = GetComponent<ProceduralPart>();
-                return _pPart;
-            }
+            get { return _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
         }
         private ProceduralPart _pPart;
 
-        public Mesh sidesMesh
+        public Mesh SidesMesh
         {
-            get { return pPart.sidesMesh; }
+            get { return PPart.SidesMesh; }
         }
 
-        public Mesh endsMesh
+        public Mesh EndsMesh
         {
-            get { return pPart.endsMesh; }
+            get { return PPart.EndsMesh; }
         }
         #endregion
 
         #region Shape details
 
-        public float volume
+        public float Volume
         {
             get { return _volume; }
             protected set
             {
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
                 if (value != _volume)
                 {
                     _volume = value;
@@ -91,9 +83,9 @@ namespace ProceduralParts
         [PartMessageEvent]
         public event PartColliderChanged ColliderChanged;
 
-        protected void RaiseChangeTextureScale(string name, Material material, Vector2 targetScale)
+        protected void RaiseChangeTextureScale(string meshName, Material material, Vector2 targetScale)
         {
-            ChangeTextureScale(name, material, targetScale);
+            ChangeTextureScale(meshName, material, targetScale);
         }
         
         protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area)
@@ -115,7 +107,7 @@ namespace ProceduralParts
 
         public void ForceNextUpdate()
         {
-            this.forceNextUpdate = true;
+            forceNextUpdate = true;
         }
 
         public override void OnSave(ConfigNode node)
@@ -136,7 +128,7 @@ namespace ProceduralParts
                     UpdateShape(wasForce);
 
                     if (wasForce)
-                        ChangeVolume(volumeName, volume);
+                        ChangeVolume(volumeName, Volume);
                 }
             }
             catch (Exception ex)
@@ -160,7 +152,7 @@ namespace ProceduralParts
         /// Base classes should proportionally move the location and orientation (rotation) as the part stretches.
         /// The return value will be passed back to removeTankAttachment when i's detached
         /// </summary>
-        /// <param name="child">Transform offset follower for the attachment</param>
+        /// <param name="attach">Transform offset follower for the attachment</param>
         /// <param name="normalized">If true, the current offset of the attachment is in 'normalized' offset
         /// - where i would be in space on a unit length and diameter cylinder. This method will relocate the object.</param>
         /// <returns>Object used to track the attachment for Remove method</returns>

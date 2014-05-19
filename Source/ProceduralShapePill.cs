@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
 
@@ -34,57 +32,59 @@ namespace ProceduralParts
         {
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
-
-            if (pPart.lengthMin == pPart.lengthMax)
+            // ReSharper disable CompareOfFloatsByEqualityOperator
+            if (PPart.lengthMin == PPart.lengthMax)
                 Fields["length"].guiActiveEditor = false;
             else
             {
                 UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
-                lengthEdit.maxValue = pPart.lengthMax;
-                lengthEdit.minValue = pPart.lengthMin;
-                lengthEdit.incrementLarge = pPart.lengthLargeStep;
-                lengthEdit.incrementSmall = pPart.lengthSmallStep;
+                lengthEdit.maxValue = PPart.lengthMax;
+                lengthEdit.minValue = PPart.lengthMin;
+                lengthEdit.incrementLarge = PPart.lengthLargeStep;
+                lengthEdit.incrementSmall = PPart.lengthSmallStep;
             }
 
             UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
-            if (pPart.diameterMin == pPart.diameterMax)
+            if (PPart.diameterMin == PPart.diameterMax)
                 Fields["diameter"].guiActiveEditor = false;
             else
             {
-                diameterEdit.maxValue = pPart.diameterMax;
-                diameterEdit.minValue = useEndDiameter ? 0 : pPart.diameterMin;
-                diameterEdit.incrementLarge = pPart.diameterLargeStep;
-                diameterEdit.incrementSmall = pPart.diameterSmallStep;
+                diameterEdit.maxValue = PPart.diameterMax;
+                diameterEdit.minValue = useEndDiameter ? 0 : PPart.diameterMin;
+                diameterEdit.incrementLarge = PPart.diameterLargeStep;
+                diameterEdit.incrementSmall = PPart.diameterSmallStep;
             }
 
-            if (!pPart.allowCurveTweaking)
+            if (!PPart.allowCurveTweaking)
             {
                 Fields["fillet"].guiActiveEditor = false;
-                diameterEdit.maxValue = pPart.diameterMax - fillet;
+                diameterEdit.maxValue = PPart.diameterMax - fillet;
             }
             else
             {
                 filletEdit = (UI_FloatEdit)Fields["fillet"].uiControlEditor;
-                filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? pPart.diameterMax : diameter);
+                filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
                 filletEdit.minValue = 0;
-                filletEdit.incrementLarge = pPart.diameterLargeStep;
-                filletEdit.incrementSmall = pPart.diameterSmallStep;
+                filletEdit.incrementLarge = PPart.diameterLargeStep;
+                filletEdit.incrementSmall = PPart.diameterSmallStep;
             }
+            // ReSharper restore CompareOfFloatsByEqualityOperator
         }
 
         // A few shortcuts to use in formulas.
-        private const float pi = Mathf.PI;
-        private static Func<float, float> sqrt = Mathf.Sqrt;
-        private static Func<float, float, float> pow = Mathf.Pow;
+        private const float Pi = Mathf.PI;
+        private static readonly Func<float, float> sqrt = Mathf.Sqrt;
+        private static readonly Func<float, float, float> pow = Mathf.Pow;
 
         protected override void UpdateShape(bool force)
         {
+            // ReSharper disable CompareOfFloatsByEqualityOperator
             if (!force && oldDiameter == diameter && oldLength == length && oldFillet == fillet)
                 return;
 
             if (HighLogic.LoadedSceneIsFlight)
             {
-                volume = CalcVolume();
+                Volume = CalcVolume();
             }
             else if (HighLogic.LoadedSceneIsEditor)
             {
@@ -102,24 +102,24 @@ namespace ProceduralParts
                         // Again using alpha, solve the volume equation below equation for l
                         // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for l
                         // l = (-3 (pi-4) pi d f^2+pi (3 pi-10) f^3+24 v)/(6 pi d^2) 
-                        length = (-3f * (pi - 4f) * pi * diameter * pow(fillet, 2) + pi * (3f * pi - 10f) * pow(fillet, 3) + 24f * volume) / (6f * pi * pow(diameter, 2));
-                        length = Mathf.Round(length / pPart.lengthSmallStep) * pPart.lengthSmallStep;
+                        length = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * Volume) / (6f * Pi * pow(diameter, 2));
+                        length = Mathf.Round(length / PPart.lengthSmallStep) * PPart.lengthSmallStep;
 
                         // We could iterate here with the fillet and push it back up if it's been pushed down
                         // but it's altogether too much bother. User will just have to suck it up and not be
                         // so darn agressive with short lengths. I mean, seriously... :)
                     }
 
-                    filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? pPart.diameterMax : diameter);
+                    filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
                 }
                 else if (diameter != oldDiameter)
                 {
                     if (useEndDiameter)
                     {
-                        if (diameter + fillet < pPart.diameterMin)
-                            fillet = pPart.diameterMin - diameter;
-                        else if (diameter + fillet > pPart.diameterMax)
-                            fillet = pPart.diameterMax - diameter;
+                        if (diameter + fillet < PPart.diameterMin)
+                            fillet = PPart.diameterMin - diameter;
+                        else if (diameter + fillet > PPart.diameterMax)
+                            fillet = PPart.diameterMax - diameter;
                     }
                     else
                     {
@@ -136,29 +136,29 @@ namespace ProceduralParts
                         // simplify d = ((-3 pi^2 f^2+12 pi f^2) ± sqrt(3 pi) sqrt(3 pi^3 f^4-24 pi^2 f^4+48 pi f^4+24 pi^2 f^3 l-80 pi f^3 l+192 l v))/(12 pi l) 
                         // d = (-3 (pi-4) pi f^2 ± sqrt(3 pi) sqrt(3 (pi-4)^2 pi f^4+8 pi (3 pi-10) f^3 l+192 l v)) / (12 pi l)
 
-                        float t1 = -3 * (pi - 4f) * pi * fillet * fillet;
-                        float t2 = sqrt(3f * pi) * sqrt(3f * pow(pi - 4f, 2) * pi * pow(fillet, 4) + 8f * pi * (3f * pi - 10f) * pow(fillet, 3) * length + 192f * length * volume);
-                        float de = (12f * pi * length);
+                        float t1 = -3 * (Pi - 4f) * Pi * fillet * fillet;
+                        float t2 = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * Volume);
+                        float de = (12f * Pi * length);
 
                         // I'm pretty sure only the +ve value is required, but make the -ve possible too.
                         diameter = (t1 + t2) / de;
                         if (diameter < 0)
                             diameter = (t1 - t2) / de;
 
-                        diameter = Mathf.Round(diameter / pPart.diameterSmallStep) * pPart.diameterSmallStep;
+                        diameter = Mathf.Round(diameter / PPart.diameterSmallStep) * PPart.diameterSmallStep;
                     }
 
-                    filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? pPart.diameterMax : diameter);
+                    filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
                 }
                 else if (fillet != oldFillet)
                 {
                     if (useEndDiameter)
                     {
                         // Keep diameter + fillet within range.
-                        if (diameter + fillet < pPart.diameterMin)
-                            diameter = pPart.diameterMin - fillet;
-                        else if (diameter + fillet > pPart.diameterMax)
-                            diameter = pPart.diameterMax - fillet;
+                        if (diameter + fillet < PPart.diameterMin)
+                            diameter = PPart.diameterMin - fillet;
+                        else if (diameter + fillet > PPart.diameterMax)
+                            diameter = PPart.diameterMax - fillet;
                     }
 
                     // Will do an iterative process for finding the value.
@@ -168,19 +168,19 @@ namespace ProceduralParts
                     float vol = CalcVolume();
                     float inc;
 
-                    if (vol < pPart.volumeMin)
+                    if (vol < PPart.volumeMin)
                     {
-                        volume = pPart.volumeMin;
-                        inc = -pPart.diameterSmallStep;
+                        Volume = PPart.volumeMin;
+                        inc = -PPart.diameterSmallStep;
                     }
-                    else if (vol > pPart.volumeMax)
+                    else if (vol > PPart.volumeMax)
                     {
-                        volume = pPart.volumeMax;
-                        inc = pPart.diameterSmallStep;
+                        Volume = PPart.volumeMax;
+                        inc = PPart.diameterSmallStep;
                     }
                     else
                     {
-                        volume = vol;
+                        Volume = vol;
                         goto goldilocks;
                     }
 
@@ -193,8 +193,8 @@ namespace ProceduralParts
                         fillet += inc;
                         vol = CalcVolume();
                     }
-                    while (Mathf.Abs(vol - volume) < Mathf.Abs(lVol - volume));
-                    fillet = Mathf.Round(lFillet / pPart.diameterSmallStep) * pPart.diameterSmallStep;
+                    while (Mathf.Abs(vol - Volume) < Mathf.Abs(lVol - Volume));
+                    fillet = Mathf.Round(lFillet / PPart.diameterSmallStep) * PPart.diameterSmallStep;
                 goldilocks: ;
                 }
             }
@@ -217,28 +217,28 @@ namespace ProceduralParts
                 float totLength = filletLength + bodyLength;
                 float s1 = filletLength * 0.5f / totLength;
 
-                CirclePoints cp = CirclePoints.ForDiameter(fillet, maxCircleError, minCircleVertexes);
+                CirclePoints cp = CirclePoints.ForDiameter(fillet, MaxCircleError, MinCircleVertexes);
 
                 // We need to be careful with the number of points so we don't blow the 255 point budget for colliders
-                CirclePoints collCp = CirclePoints.ForDiameter(fillet, maxCircleError, 0, 12);
-                CirclePoints collEnds = CirclePoints.ForDiameter(endDiameter, maxCircleError * 4f, 4, 12);
-                CirclePoints collBody = CirclePoints.ForDiameter(bodyDiameter, maxCircleError * 4f, 4, 16);
+                CirclePoints collCp = CirclePoints.ForDiameter(fillet, MaxCircleError, 0, 12);
+                CirclePoints collEnds = CirclePoints.ForDiameter(endDiameter, MaxCircleError * 4f, 4, 12);
+                CirclePoints collBody = CirclePoints.ForDiameter(bodyDiameter, MaxCircleError * 4f, 4, 16);
 
                 points.AddLast(new ProfilePoint(endDiameter, -0.5f * length, 0f, new Vector2(0, -1), colliderCirc: collEnds));
 
                 foreach (Vector3 xzu in cp.PointsXZU(0.5f, 0.75f))
-                    points.AddLast(new ProfilePoint(endDiameter + fillet * xzu.x, -0.5f * (bodyLength - fillet * xzu.y), s1 * Mathf.InverseLerp(0.5f, 0.75f, xzu[2]), (Vector2)xzu, inCollider: false));
+                    points.AddLast(new ProfilePoint(endDiameter + fillet * xzu.x, -0.5f * (bodyLength - fillet * xzu.y), s1 * Mathf.InverseLerp(0.5f, 0.75f, xzu[2]), xzu, inCollider: false));
                 foreach (Vector3 xzu in collCp.PointsXZU(0.5f, 0.75f))
-                    points.AddLast(new ProfilePoint(endDiameter + fillet * xzu.x, -0.5f * (bodyLength - fillet * xzu.y), s1 * Mathf.InverseLerp(0.5f, 0.75f, xzu[2]), (Vector2)xzu, inRender: false, colliderCirc: collEnds));
+                    points.AddLast(new ProfilePoint(endDiameter + fillet * xzu.x, -0.5f * (bodyLength - fillet * xzu.y), s1 * Mathf.InverseLerp(0.5f, 0.75f, xzu[2]), xzu, inRender: false, colliderCirc: collEnds));
 
                 points.AddLast(new ProfilePoint(bodyDiameter, -0.5f * bodyLength, s1, new Vector2(1, 0), colliderCirc: collBody));
                 if (fillet < length)
                     points.AddLast(new ProfilePoint(bodyDiameter, 0.5f * bodyLength, 1f - s1, new Vector2(1, 0), colliderCirc: collBody));
 
                 foreach (Vector3 xzu in cp.PointsXZU(0.75f, 1))
-                    points.AddLast(new ProfilePoint(endDiameter + fillet * xzu.x, 0.5f * (bodyLength + fillet * xzu.y), 1f - s1 * Mathf.InverseLerp(1f, 0.75f, xzu[2]), (Vector2)xzu, inCollider: false));
+                    points.AddLast(new ProfilePoint(endDiameter + fillet * xzu.x, 0.5f * (bodyLength + fillet * xzu.y), 1f - s1 * Mathf.InverseLerp(1f, 0.75f, xzu[2]), xzu, inCollider: false));
                 foreach (Vector3 xzu in collCp.PointsXZU(0.75f, 1))
-                    points.AddLast(new ProfilePoint(endDiameter + fillet * xzu.x, 0.5f * (bodyLength + fillet * xzu.y), 1f - s1 * Mathf.InverseLerp(1f, 0.75f, xzu[2]), (Vector2)xzu, inRender: false, colliderCirc: collEnds));
+                    points.AddLast(new ProfilePoint(endDiameter + fillet * xzu.x, 0.5f * (bodyLength + fillet * xzu.y), 1f - s1 * Mathf.InverseLerp(1f, 0.75f, xzu[2]), xzu, inRender: false, colliderCirc: collEnds));
                 points.AddLast(new ProfilePoint(endDiameter, 0.5f * length, 1f, new Vector2(0, 1), colliderCirc: collEnds));
             }
 
@@ -247,6 +247,7 @@ namespace ProceduralParts
             oldDiameter = diameter;
             oldLength = length;
             oldFillet = fillet;
+            // ReSharper restore CompareOfFloatsByEqualityOperator
         }
 
         private float CalcVolume()
@@ -275,18 +276,18 @@ namespace ProceduralParts
         private float MaxMinVolume()
         {
 
-            volume = CalcVolume();
+            Volume = CalcVolume();
 
-            if (volume > pPart.volumeMax)
+            if (Volume > PPart.volumeMax)
             {
-                float excess = volume - pPart.volumeMax;
-                volume = pPart.volumeMax;
+                float excess = Volume - PPart.volumeMax;
+                Volume = PPart.volumeMax;
                 return excess;
             }
-            if (volume < pPart.volumeMin)
+            if (Volume < PPart.volumeMin)
             {
-                float excess = volume - pPart.volumeMin;
-                volume = pPart.volumeMin;
+                float excess = Volume - PPart.volumeMin;
+                Volume = PPart.volumeMin;
                 return excess;
             }
             return 0;

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
-using System.Reflection;
 
 namespace ProceduralParts
 {
@@ -18,19 +16,19 @@ namespace ProceduralParts
             public float[] curve;
         }
 
-        private static List<ShapePreset> shapePresets = new List<ShapePreset>()
+        private static readonly List<ShapePreset> shapePresets = new List<ShapePreset>
         {
-            new ShapePreset() { name="Straight", curve=new float[] { 0.3f, 0.3f, 0.7f, 0.7f } },
-            new ShapePreset() { name="Round #1", curve=new float[] { 0.4f, 0.001f, 1.0f, 0.6f } },
-            new ShapePreset() { name="Round #2", curve=new float[] { 0.5f, 0.001f, 0.8f, 0.7f } },
-            new ShapePreset() { name="Round #3", curve=new float[] { 1.0f, 0.0f, 1f, 0.5f} },
-            new ShapePreset() { name="Peaked #1", curve=new float[] { 0.4f, 0.2f, 0.8f, 0.6f } },
-            new ShapePreset() { name="Peaked #2", curve=new float[] { 0.3f, 0.2f, 1.0f, 0.5f } },
-            new ShapePreset() { name="Sharp #1", curve=new float[] { 0.1f, 0.001f, 0.7f, 2f/3f } },
-            new ShapePreset() { name="Sharp #2", curve=new float[] { 1f/3f, 0.3f, 1.0f, 0.9f } },
+            new ShapePreset { name="Straight", curve=new[] { 0.3f, 0.3f, 0.7f, 0.7f } },
+            new ShapePreset { name="Round #1", curve=new[] { 0.4f, 0.001f, 1.0f, 0.6f } },
+            new ShapePreset { name="Round #2", curve=new[] { 0.5f, 0.001f, 0.8f, 0.7f } },
+            new ShapePreset { name="Round #3", curve=new[] { 1.0f, 0.0f, 1f, 0.5f} },
+            new ShapePreset { name="Peaked #1", curve=new[] { 0.4f, 0.2f, 0.8f, 0.6f } },
+            new ShapePreset { name="Peaked #2", curve=new[] { 0.3f, 0.2f, 1.0f, 0.5f } },
+            new ShapePreset { name="Sharp #1", curve=new[] { 0.1f, 0.001f, 0.7f, 2f/3f } },
+            new ShapePreset { name="Sharp #2", curve=new[] { 1f/3f, 0.3f, 1.0f, 0.9f } },
         };
 
-        private static string[] oldShapeNames =
+        private static readonly string[] oldShapeNames =
         {
             "Straight",
             "Round #1",
@@ -38,7 +36,7 @@ namespace ProceduralParts
             "Peaked #1",
             "Peaked #2",
             "Sharp #1",
-            "Sharp #2",
+            "Sharp #2"
         };
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Curve"),
@@ -51,7 +49,7 @@ namespace ProceduralParts
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
 
-            if (!pPart.allowCurveTweaking)
+            if (!PPart.allowCurveTweaking)
                 Fields["selectedShape"].guiActiveEditor = false;
             else
             {
@@ -72,10 +70,11 @@ namespace ProceduralParts
                     int curveIdx = int.Parse(node.GetValue("curveIdx"));
                     selectedShape = oldShapeNames[curveIdx];
                 }
+                // ReSharper disable once EmptyGeneralCatchClause
                 catch { }
             }
 
-            if (selectedShape == null || (from s in shapePresets where s.name == selectedShape select s).Count() == 0)
+            if (selectedShape == null || !(from s in shapePresets where s.name == selectedShape select s).Any())
             {
                 // Default to round#1
                 selectedShape = shapePresets[1].name;
@@ -84,9 +83,11 @@ namespace ProceduralParts
 
         protected override void UpdateShape(bool force)
         {
+            // ReSharper disable CompareOfFloatsByEqualityOperator
             if (!force && oldTopDiameter == topDiameter && oldBottomDiameter == bottomDiameter && oldLength == length &&
                 selectedShape == oldSelectedShape)
                 return;
+            // ReSharper restore CompareOfFloatsByEqualityOperator
 
             if (HighLogic.LoadedSceneIsEditor)
             {
@@ -96,7 +97,7 @@ namespace ProceduralParts
             }
             else
             {
-                volume = CalcVolume();
+                Volume = CalcVolume();
             }
 
             WriteBezier();
@@ -111,29 +112,30 @@ namespace ProceduralParts
 
         private void UpdateVolumeRange()
         {
-            volume = CalcVolume();
+            Volume = CalcVolume();
 
-            float vol = volume;
+            float vol = Volume;
             float inc;
-            if (volume < pPart.volumeMin)
+            if (Volume < PPart.volumeMin)
             {
-                volume = pPart.volumeMin;
+                Volume = PPart.volumeMin;
                 inc = 0.001f;
             }
-            else if (volume > pPart.volumeMax)
+            else if (Volume > PPart.volumeMax)
             {
-                volume = pPart.volumeMax;
+                Volume = PPart.volumeMax;
                 inc = -0.001f;
             }
             else
                 return;
 
+            // ReSharper disable CompareOfFloatsByEqualityOperator
             if (length != oldLength || oldSelectedShape != selectedShape)
             {
                 // The volume is directly proportional to the length
-                length *= volume / vol;
+                length *= Volume / vol;
 
-                volume = CalcVolume();
+                Volume = CalcVolume();
             }
             else if (bottomDiameter != oldBottomDiameter)
             {
@@ -143,6 +145,7 @@ namespace ProceduralParts
             {
                 IterateLimitVolume(ref topDiameter, vol, inc);
             }
+            // ReSharper restore CompareOfFloatsByEqualityOperator
         }
 
         private void IterateLimitVolume(ref float toTweak, float vol, float inc)
@@ -158,7 +161,7 @@ namespace ProceduralParts
                 toTweak = oToTweak + count++ * inc;
                 vol = CalcVolume();
             }
-            while (Mathf.Abs(vol - volume) < Mathf.Abs(lVol - volume));
+            while (Mathf.Abs(vol - Volume) < Mathf.Abs(lVol - Volume));
             toTweak = lToTweak;
         }
 
@@ -170,6 +173,8 @@ namespace ProceduralParts
             p3 = new Vector2(topDiameter, length / 2f);
 
             float[] shape = (from s in shapePresets where s.name == selectedShape select s.curve).FirstOrDefault();
+            if(shape == null)
+                throw new InvalidProgramException();
 
             // Pretty obvious below what the shape points mean
             if (bottomDiameter < topDiameter)
@@ -220,6 +225,7 @@ namespace ProceduralParts
             // (3 z1 r^2 + 6 z2 r s + 3 z3 s^2)
 
             // factor 1/2 taken out. The 1/4 is because the pN.x are diameters not radii.
+            // ReSharper disable once InconsistentNaming
             float M_y  = 1f/4f* ((p1.y-p0.y)*(1f/3f * p0.x*p0.x + 1f/4f * p0.x*p1.x + 1f/14f* p0.x*p2.x + 3f/28f* p1.x*p1.x+ 3f/28f * p1.x*p2.x + 1f/84f * p0.x*p3.x + 3f/70f * p2.x*p2.x + 1f/35f* p1.x*p3.x + 1f/28f* p2.x*p3.x + 1f/84f* p3.x*p3.x) +
                                  (p2.y-p1.y)*(1f/12f* p0.x*p0.x + 1f/7f * p0.x*p1.x + 1f/14f* p0.x*p2.x + 3f/28f* p1.x*p1.x+ 6f/35f * p1.x*p2.x + 2f/105f* p0.x*p3.x + 3f/28f * p2.x*p2.x + 1f/14f* p1.x*p3.x + 1f/7f * p2.x*p3.x + 1f/12f* p3.x*p3.x) +
                                  (p3.y-p2.y)*(1f/84f* p0.x*p0.x + 1f/28f* p0.x*p1.x + 1f/35f* p0.x*p2.x + 3f/70f* p1.x*p1.x+ 3f/28f * p1.x*p2.x + 1f/84f * p0.x*p3.x + 3f/28f * p2.x*p2.x + 1f/14f* p1.x*p3.x + 1f/4f * p2.x*p3.x + 1f/3f * p3.x*p3.x));
@@ -236,6 +242,7 @@ namespace ProceduralParts
             // (?<=[^a-zA-Z])([0-9]+) -> $1f
         }
 
+        // ReSharper disable once UnusedMember.Local
         private Vector3 CalcMomentOfInertiaNoDensity() 
         {
             // This is the closed form for I_y 
@@ -298,6 +305,7 @@ namespace ProceduralParts
             double t538 = t535 + t536; double t625 = 72 * t557; double t564 = 16 * x2 * x3; double t565 = 21 * t556;
             double t567 = t564 + t565 + t566; double t663 = 108 * x3 * t556; double t563 = 594 * t556 * t562;
 
+            // ReSharper disable once InconsistentNaming
             // I_y / (ρ π/2).
             double Density2PithsMomentY =
             (b * (4 * (132 * x1 + t450 + t478) * t517 + 286 * t527 + 18 * t538 * t545 + t555 + 432 * x3 * t557 + 162 * t559
@@ -312,11 +320,13 @@ namespace ProceduralParts
             + 1001 * t602) + 6 * x1 * (54 * t557 + 99 * x2 * t562 + 44 * t578 + t663) + x0 * (9 * t538 * t544 + 108 * t545 + 72 * x2
             * t562 + 9 * x1 * t567 + 22 * t578 + t625 + t663))) / 10010;
 
+            // ReSharper disable once InconsistentNaming
             float Iy = Mathf.PI * (float)Density2PithsMomentY / 2f;
 
             return new Vector3(Iy / 2f, Iy, Iy / 2f);
         }
 
+        // ReSharper disable once UnusedMember.Local
         private Vector3 CalcCoMOffset()
         {
             // d y-bar = dV y
@@ -379,6 +389,7 @@ namespace ProceduralParts
             {
                 LinkedListNode<ProfilePoint> node = process.Dequeue();
                 ProfilePoint pM = node.Value;
+                // ReSharper disable once PossibleNullReferenceException
                 ProfilePoint pN = node.Next.Value;
 
                 float tM = pM.v;
@@ -455,7 +466,7 @@ namespace ProceduralParts
                     // The difference from the line
                     float devTS = Vector2.Dot(B(ts[i]), norm) - devM;
 
-                    if (Mathf.Abs(devTS) < maxCircleError)
+                    if (Mathf.Abs(devTS) < MaxCircleError)
                         ts.RemoveAt(i--);
                 }
 
@@ -488,6 +499,7 @@ namespace ProceduralParts
             LinkedListNode<ProfilePoint> nx = pv.Next;
             for (int i = 0; i < cumLengths.Length; ++i, pv = nx, nx = nx.Next)
             {
+                // ReSharper disable once PossibleNullReferenceException
                 float dX = nx.Value.dia - pv.Value.dia;
                 float dY = nx.Value.y - pv.Value.y;
 
@@ -498,6 +510,7 @@ namespace ProceduralParts
             nx = points.First.Next;
             for (int i = 0; i < cumLengths.Length; ++i, nx = nx.Next)
             {
+                // ReSharper disable once PossibleNullReferenceException
                 nx.Value.v = cumLengths[i] / sumLengths;
             }
 
@@ -507,9 +520,11 @@ namespace ProceduralParts
 
         private ProfilePoint CreatePoint(float t, ref int colliderTri)
         {
+            // ReSharper disable once InconsistentNaming
             // B(t) = (1-t)^3 p0 + t(1-t)^2 p1 + t^2(1-t) p2 + t^3 p3
             Vector2 Bt = B(t);
 
+            // ReSharper disable once InconsistentNaming
             // B'(t) = (1-t)^2 (p1-p0) + t(1-t) (p2-p1) + t^2 (p3-p2)
             Vector2 Btdt = Bdt(t);
 
@@ -517,16 +532,15 @@ namespace ProceduralParts
             Vector2 norm = new Vector2(Btdt.y, -Btdt.x / 2f).normalized;
 
             // Count the number of triangles
-            CirclePoints colliderCirc = CirclePoints.ForDiameter(Bt.x, maxCircleError * 4f, 4, 16);
+            CirclePoints colliderCirc = CirclePoints.ForDiameter(Bt.x, MaxCircleError * 4f, 4, 16);
             colliderTri += (colliderCirc.totVertexes + 1) * 2;
 
             //Debug.LogWarning(string.Format("Creating profile point t={0:F3} coord=({1:F3}, {2:F3})  normal=({3:F3}, {4:F3})", t, Bt.x, Bt.y, norm.x, norm.y));
 
             // We can have a maxium of 255 triangles in the collider. Will leave a bit of breathing room at the top.
-            if (colliderTri <= 220)
-                return new ProfilePoint(Bt.x, Bt.y, t, norm, colliderCirc: colliderCirc);
-            else
-                return new ProfilePoint(Bt.x, Bt.y, t, norm, inCollider: false);
+            return colliderTri <= 220 ? 
+                new ProfilePoint(Bt.x, Bt.y, t, norm, colliderCirc: colliderCirc) : 
+                new ProfilePoint(Bt.x, Bt.y, t, norm, inCollider: false);
         }
 
         private Vector2 B(float t)

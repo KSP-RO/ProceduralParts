@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
 using KSPAPIExtensions.PartMessage;
@@ -36,7 +35,7 @@ namespace ProceduralParts
             catch (Exception ex)
             {
                 Debug.LogError("OnLoad exception: " + ex);
-                throw ex;
+                throw;
             }
         }
 
@@ -48,7 +47,7 @@ namespace ProceduralParts
 
         public override string GetInfo()
         {
-            OnStart(PartModule.StartState.Editor);
+            OnStart(StartState.Editor);
 
             // Need to rescale everything to make it look good in the icon, but reenable otherwise OnStart won't get called again.
             isEnabled = enabled = true;
@@ -57,9 +56,9 @@ namespace ProceduralParts
         }
 
         [SerializeField]
-        private bool symmetryClone = false;
+        private bool symmetryClone;
 
-        public override void OnStart(PartModule.StartState state)
+        public override void OnStart(StartState state)
         {
             // Update internal state
             try
@@ -117,7 +116,7 @@ namespace ProceduralParts
             }
         }
 
-        private bool skipNextUpdate = false;
+        private bool skipNextUpdate;
 
         #endregion
 
@@ -135,11 +134,11 @@ namespace ProceduralParts
         [KSPField]
         public string collisionName = "collisionMesh";
 
-        public Material sidesMaterial { get; private set; }
-        public Material endsMaterial { get; private set; }
+        public Material SidesMaterial { get; private set; }
+        public Material EndsMaterial { get; private set; }
 
-        public Mesh sidesMesh { get; private set; }
-        public Mesh endsMesh { get; private set; }
+        public Mesh SidesMesh { get; private set; }
+        public Mesh EndsMesh { get; private set; }
 
         private Transform partModel;
 
@@ -151,12 +150,12 @@ namespace ProceduralParts
             Transform ends = part.FindModelTransform(endsName);
             Transform colliderTr = part.FindModelTransform(collisionName);
 
-            sidesMaterial = sides.renderer.material;
-            endsMaterial = ends.renderer.material;
+            SidesMaterial = sides.renderer.material;
+            EndsMaterial = ends.renderer.material;
 
             // Instantiate meshes. The mesh method unshares any shared meshes.
-            sidesMesh = sides.GetComponent<MeshFilter>().mesh;
-            endsMesh = ends.GetComponent<MeshFilter>().mesh;
+            SidesMesh = sides.GetComponent<MeshFilter>().mesh;
+            EndsMesh = ends.GetComponent<MeshFilter>().mesh;
             partCollider = colliderTr.GetComponent<MeshCollider>();
 
             // Will need to destroy any old transform offset followers, they will be rebuilt in due course
@@ -172,7 +171,7 @@ namespace ProceduralParts
         private MeshCollider partCollider;
 
         // The partCollider mesh. This must be called whenever the contents of the mesh changes, even if the object remains the same.
-        public Mesh colliderMesh
+        public Mesh ColliderMesh
         {
             get
             {
@@ -213,8 +212,10 @@ namespace ProceduralParts
                 CombineInstance[] combine = new CombineInstance[meshes.Length];
                 for (int i = 0; i < meshes.Length; ++i)
                 {
-                    combine[i] = new CombineInstance();
-                    combine[i].mesh = meshes[i];
+                    combine[i] = new CombineInstance
+                    {
+                        mesh = meshes[i]
+                    };
                 }
                 Mesh colliderMesh = new Mesh();
                 colliderMesh.CombineMeshes(combine, true, false);
@@ -338,6 +339,7 @@ namespace ProceduralParts
             List<TechLimit> techLimits;
             ObjectSerializer.Deserialize(techLimitsSerialized, out techLimits);
 
+            // ReSharper disable LocalVariableHidesMember
             float diameterMax = 0;
             float diameterMin = float.PositiveInfinity;
             float lengthMax = 0;
@@ -373,6 +375,7 @@ namespace ProceduralParts
                     allowCurveTweaking = true;
             }
 
+            // ReSharper disable CompareOfFloatsByEqualityOperator
             if (diameterMax == 0)
                 diameterMax = float.PositiveInfinity;
             if (float.IsInfinity(diameterMin))
@@ -389,6 +392,7 @@ namespace ProceduralParts
                 aspectMax = float.PositiveInfinity;
             if (float.IsInfinity(aspectMin))
                 aspectMin = 0.01f;
+            // ReSharper restore CompareOfFloatsByEqualityOperator
 
             this.diameterMax = Mathf.Min(this.diameterMax, diameterMax);
             this.diameterMin = Mathf.Max(this.diameterMin, diameterMin);
@@ -399,6 +403,7 @@ namespace ProceduralParts
             this.aspectMax = Mathf.Min(this.aspectMax, aspectMax);
             this.aspectMin = Mathf.Max(this.aspectMin, aspectMin);
             this.allowCurveTweaking = this.allowCurveTweaking && allowCurveTweaking;
+            // ReSharper restore LocalVariableHidesMember
 
             //Debug.Log(string.Format("TechLimits applied: diameter=({0:G3}, {1:G3}) length=({2:G3}, {3:G3}) volume=({4:G3}, {5:G3}) allowCurveTweaking={6}", diameterMin, diameterMax, lengthMin, lengthMax, volumeMin, volumeMax, allowCurveTweaking));
         }
@@ -458,14 +463,14 @@ namespace ProceduralParts
         {
             public string name;
 
-            public bool autoScale = false;
-            public bool autoWidthDivide = false;
-            public float autoHeightSteps = 0f;
+            public bool autoScale;
+            public bool autoWidthDivide;
+            public float autoHeightSteps;
             public Vector2 scale = new Vector2(2f, 1f);
 
-            public Texture sides = null;
-            public Texture sidesBump = null;
-            public Texture ends = null;
+            public Texture sides;
+            public Texture sidesBump;
+            public Texture ends;
             public string sidesName;
             public string endsName;
             public string sidesBumpName;
@@ -506,7 +511,7 @@ namespace ProceduralParts
             {
                 return s1Start ? -1 : 1;
             }
-            return s1.name.CompareTo(s2.name);
+            return string.Compare(s1.name, s2.name, StringComparison.Ordinal);
         }
 
         private static TextureSet LoadTextureSet(ConfigNode node)
@@ -527,11 +532,13 @@ namespace ProceduralParts
 
 
             // get settings
-            TextureSet tex = new TextureSet();
-            tex.name = textureSet;
-            tex.sidesName = node.GetNode("sides").GetValue("texture");
-            tex.endsName = node.GetNode("ends").GetValue("texture");
-            tex.sidesBumpName = "";
+            TextureSet tex = new TextureSet
+            {
+                name = textureSet,
+                sidesName = node.GetNode("sides").GetValue("texture"),
+                endsName = node.GetNode("ends").GetValue("texture"),
+                sidesBumpName = ""
+            };
             if (node.GetNode("sides").HasValue("bump"))
                 tex.sidesBumpName = node.GetNode("sides").GetValue("bump");
 
@@ -591,12 +598,10 @@ namespace ProceduralParts
             return true;
         }
 
+        // ReSharper disable once ParameterTypeCanBeEnumerable.Local
         private static Texture FindTexture(Texture[] textures, string textureName)
         {
-            foreach (Texture t in textures)
-                if (t.name == textureName)
-                    return t;
-            return null;
+            return textures.FirstOrDefault(t => t.name == textureName);
         }
 
         private void InitializeTextureSet()
@@ -613,11 +618,11 @@ namespace ProceduralParts
         private Vector2 sideTextureScale = Vector2.one;
 
         [PartMessageListener(typeof(ChangeTextureScaleDelegate))]
-        private void ChangeTextureScale(string name, Material material, Vector2 targetScale)
+        public void ChangeTextureScale(string texName, Material material, Vector2 targetScale)
         {
-            if (name != "sides")
+            if (texName != "sides")
                 return;
-            this.sideTextureScale = targetScale;
+            sideTextureScale = targetScale;
             oldTextureSet = null;
             UpdateTexture();
         }
@@ -641,23 +646,20 @@ namespace ProceduralParts
             // Set shaders
             if (!part.Modules.Contains("ModulePaintable"))
             {
-                if (tex.sidesBump != null)
-                    sidesMaterial.shader = Shader.Find("KSP/Bumped");
-                else
-                    sidesMaterial.shader = Shader.Find("KSP/Diffuse");
+                SidesMaterial.shader = Shader.Find(tex.sidesBump != null ? "KSP/Bumped" : "KSP/Diffuse");
 
                 // pt is no longer specular ever, just diffuse.
-                if (endsMaterial != null)
-                    endsMaterial.shader = Shader.Find("KSP/Diffuse");
+                if (EndsMaterial != null)
+                    EndsMaterial.shader = Shader.Find("KSP/Diffuse");
             }
 
             // TODO: shove into config file.
-            if (endsMaterial != null)
+            if (EndsMaterial != null)
             {
-                float scale = 0.93f;
-                float offset = (1f / scale - 1f) / 2f;
-                endsMaterial.mainTextureScale = new Vector2(scale, scale);
-                endsMaterial.mainTextureOffset = new Vector2(offset, offset);
+                const float scale = 0.93f;
+                const float offset = (1f / scale - 1f) / 2f;
+                EndsMaterial.mainTextureScale = new Vector2(scale, scale);
+                EndsMaterial.mainTextureOffset = new Vector2(offset, offset);
             }
 
             // set up UVs
@@ -681,30 +683,31 @@ namespace ProceduralParts
             }
 
             // apply
-            sidesMaterial.mainTextureScale = scaleUV;
-            sidesMaterial.SetTexture("_MainTex", tex.sides);
+            SidesMaterial.mainTextureScale = scaleUV;
+            SidesMaterial.SetTexture("_MainTex", tex.sides);
             if (tex.sidesBump != null)
             {
-                sidesMaterial.SetTextureScale("_BumpMap", scaleUV);
-                sidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
+                SidesMaterial.SetTextureScale("_BumpMap", scaleUV);
+                SidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
             }
-            if (endsMaterial != null)
-                endsMaterial.SetTexture("_MainTex", tex.ends);
+            if (EndsMaterial != null)
+                EndsMaterial.SetTexture("_MainTex", tex.ends);
         }
 
         #endregion
 
         #region Node Attachments
 
-        private List<object> nodeAttachments = new List<object>(4);
-        private Dictionary<string, Func<Vector3>> nodeOffsets = new Dictionary<string, Func<Vector3>>();
+        private readonly List<object> nodeAttachments = new List<object>(4);
+        private readonly Dictionary<string, Func<Vector3>> nodeOffsets = new Dictionary<string, Func<Vector3>>();
 
         private class NodeTransformable : TransformFollower.Transformable, PartMessagePartProxy
         {
             // leave as not serializable so will be null when deserialzied.
-            private Part part;
-            private AttachNode node;
+            private readonly Part part;
+            private readonly AttachNode node;
 
+            // ReSharper disable once EventNeverSubscribedTo.Local
             [PartMessageEvent]
             public event PartAttachNodePositionChanged NodePositionChanged;
 
@@ -715,7 +718,7 @@ namespace ProceduralParts
                 PartMessageService.Register(this);
             }
 
-            public override bool destroyed
+            public override bool Destroyed
             {
                 get { return node == null; }
             }
@@ -766,7 +769,7 @@ namespace ProceduralParts
             // In flight mode, discard all the transform followers because the are not required
             if (HighLogic.LoadedSceneIsFlight)
                 foreach (object att in nodeAttachments)
-                    shape.RemoveAttachment(att, false);
+                    shape.RemoveAttachment(att);
         }
 
         private void InitializeNode(AttachNode node)
@@ -774,7 +777,7 @@ namespace ProceduralParts
             Vector3 position = transform.TransformPoint(node.position);
             node.originalPosition = node.position *= 1.00001f;
 
-            TransformFollower follower = TransformFollower.createFollower(partModel, position, new NodeTransformable(part, node));
+            TransformFollower follower = TransformFollower.CreateFollower(partModel, position, new NodeTransformable(part, node));
 
             // When the object is symmetryClone, the nodes will be already in offset, not in standard offset.
             object data = shape.AddAttachment(follower, !symmetryClone);
@@ -782,6 +785,7 @@ namespace ProceduralParts
             nodeAttachments.Add(data);
         }
 
+        // ReSharper disable once InconsistentNaming
         public void AddNodeOffset(string nodeId, Func<Vector3> GetOffset)
         {
             AttachNode node = part.findAttachNode(nodeId);
@@ -795,13 +799,13 @@ namespace ProceduralParts
 
         #region Part Attachments
 
-        private PartAttachment parentAttachment = null;
-        private LinkedList<PartAttachment> childAttachments = new LinkedList<PartAttachment>();
+        private PartAttachment parentAttachment;
+        private readonly LinkedList<PartAttachment> childAttachments = new LinkedList<PartAttachment>();
 
         private class PartAttachment
         {
             public Part child;
-            public TransformFollower follower;
+            public readonly TransformFollower follower;
             public object data;
 
             public PartAttachment(TransformFollower follower, object data)
@@ -813,9 +817,9 @@ namespace ProceduralParts
 
         private class ParentTransformable : TransformFollower.Transformable
         {
-            private Part root;
-            private Part part;
-            private AttachNode childToParent;
+            private readonly Part root;
+            private readonly Part part;
+            private readonly AttachNode childToParent;
 
             public ParentTransformable(Part root, Part part, AttachNode childToParent)
             {
@@ -824,7 +828,7 @@ namespace ProceduralParts
                 this.childToParent = childToParent;
             }
 
-            public override bool destroyed
+            public override bool Destroyed
             {
                 get { return root == null; }
             }
@@ -853,7 +857,7 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
-        private void PartChildAttached(Part child)
+        public void PartChildAttached(Part child)
         {
             AttachNode node = child.findAttachNodeByPart(part);
             if (node == null)
@@ -872,6 +876,7 @@ namespace ProceduralParts
                     Debug.LogError("*ST* unable to find our node for child: " + child.transform);
                     return;
                 }
+                // ReSharper disable once InconsistentNaming
                 Func<Vector3> Offset;
                 if (nodeOffsets.TryGetValue(ourNode.id, out Offset))
                     position -= Offset();
@@ -888,7 +893,7 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartChildDetached), scenes: GameSceneFilter.AnyEditor)]
-        private void PartChildDetached(Part child)
+        public void PartChildDetached(Part child)
         {
             for (var node = childAttachments.First; node != null; node = node.Next )
                 if (node.Value.child == child)
@@ -902,7 +907,7 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
-        private void PartParentChanged(Part newParent)
+        public void PartParentChanged(Part newParent)
         {
             if (parentAttachment != null)
             {
@@ -922,6 +927,7 @@ namespace ProceduralParts
             }
             Vector3 position = transform.TransformPoint(childToParent.position);
             
+            // ReSharper disable once InconsistentNaming
             Func<Vector3> Offset;
             if (nodeOffsets.TryGetValue(childToParent.id, out Offset))
                 position -= Offset();
@@ -940,7 +946,7 @@ namespace ProceduralParts
 
         private PartAttachment AddPartAttachment(Vector3 position, TransformFollower.Transformable target, bool normalized = false)
         {
-            TransformFollower follower = TransformFollower.createFollower(partModel, position, target);
+            TransformFollower follower = TransformFollower.CreateFollower(partModel, position, target);
             object data = shape.AddAttachment(follower, normalized);
 
             return new PartAttachment(follower, data);
@@ -962,7 +968,7 @@ namespace ProceduralParts
             public object data;
         }
 
-        private LinkedList<ModelAttachment> attachments = new LinkedList<ModelAttachment>();
+        private readonly LinkedList<ModelAttachment> attachments = new LinkedList<ModelAttachment>();
 
         /// <summary>
         /// Attach a gameObject to the surface of the part. The object must have a transform that is a child of the part.
@@ -974,12 +980,14 @@ namespace ProceduralParts
 
         public void AddAttachment(Transform child, Vector3 offset, bool normalized)
         {
-            ModelAttachment attach = new ModelAttachment();
+            ModelAttachment attach = new ModelAttachment
+            {
+                child = child
+            };
 
-            attach.child = child;
             Vector3 position = child.TransformPoint(offset);
 
-            TransformFollower follower = TransformFollower.createFollower(partModel, position, new TransformFollower.TransformTransformable(child, position, Space.World));
+            TransformFollower follower = TransformFollower.CreateFollower(partModel, position, new TransformFollower.TransformTransformable(child, position, Space.World));
             attach.data = shape.AddAttachment(follower, normalized);
 
             attachments.AddLast(attach);
@@ -1010,7 +1018,7 @@ namespace ProceduralParts
         private string oldShapeName = "****";
 
         private ProceduralAbstractShape shape;
-        private Dictionary<string, ProceduralAbstractShape> availableShapes = new Dictionary<string, ProceduralAbstractShape>();
+        private readonly Dictionary<string, ProceduralAbstractShape> availableShapes = new Dictionary<string, ProceduralAbstractShape>();
 
         private void InitializeShapes()
         {

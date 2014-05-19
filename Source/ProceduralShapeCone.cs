@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
 
@@ -74,12 +71,14 @@ namespace ProceduralParts
             {
                 coneTopMode = (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneTopMode"), true);
             }
+            // ReSharper disable once EmptyGeneralCatchClause
             catch { }
 
             try
             {
                 coneBottomMode = (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneBottomMode"), true);
             }
+            // ReSharper disable once EmptyGeneralCatchClause
             catch { }
         }
 
@@ -88,23 +87,25 @@ namespace ProceduralParts
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
 
-            if (pPart.lengthMin == pPart.lengthMax || pPart.aspectMin == pPart.aspectMax)
+            // ReSharper disable CompareOfFloatsByEqualityOperator
+            if (PPart.lengthMin == PPart.lengthMax || PPart.aspectMin == PPart.aspectMax)
                 Fields["length"].guiActiveEditor = false;
             else
             {
                 UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
-                lengthEdit.maxValue = pPart.lengthMax;
-                lengthEdit.minValue = pPart.lengthMin;
-                lengthEdit.incrementLarge = pPart.lengthLargeStep;
-                lengthEdit.incrementSmall = pPart.lengthSmallStep;
+                lengthEdit.maxValue = PPart.lengthMax;
+                lengthEdit.minValue = PPart.lengthMin;
+                lengthEdit.incrementLarge = PPart.lengthLargeStep;
+                lengthEdit.incrementSmall = PPart.lengthSmallStep;
             }
 
-            if (pPart.diameterMin == pPart.diameterMax || (coneTopMode == ConeEndMode.Constant && coneBottomMode == ConeEndMode.Constant))
+            if (PPart.diameterMin == PPart.diameterMax || (coneTopMode == ConeEndMode.Constant && coneBottomMode == ConeEndMode.Constant))
             {
                 Fields["topDiameter"].guiActiveEditor = false;
                 Fields["bottomDiameter"].guiActiveEditor = false;
                 return;
             }
+            // ReSharper restore CompareOfFloatsByEqualityOperator
 
             if (coneTopMode == ConeEndMode.Constant)
             {
@@ -115,10 +116,10 @@ namespace ProceduralParts
             else
             {
                 UI_FloatEdit topDiameterEdit = (UI_FloatEdit)Fields["topDiameter"].uiControlEditor;
-                topDiameterEdit.incrementLarge = pPart.diameterLargeStep;
-                topDiameterEdit.incrementSmall = pPart.diameterSmallStep;
-                topDiameterEdit.maxValue = pPart.diameterMax;
-                topDiameterEdit.minValue = (coneTopMode == ConeEndMode.CanZero && coneBottomMode != ConeEndMode.Constant) ? 0 : pPart.diameterMin;
+                topDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+                topDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+                topDiameterEdit.maxValue = PPart.diameterMax;
+                topDiameterEdit.minValue = (coneTopMode == ConeEndMode.CanZero && coneBottomMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
             }
 
             if (coneBottomMode == ConeEndMode.Constant)
@@ -130,10 +131,10 @@ namespace ProceduralParts
             else
             {
                 UI_FloatEdit bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
-                bottomDiameterEdit.incrementLarge = pPart.diameterLargeStep;
-                bottomDiameterEdit.incrementSmall = pPart.diameterSmallStep;
-                bottomDiameterEdit.maxValue = pPart.diameterMax;
-                bottomDiameterEdit.minValue = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : pPart.diameterMin;
+                bottomDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+                bottomDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+                bottomDiameterEdit.maxValue = PPart.diameterMax;
+                bottomDiameterEdit.minValue = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
             }
 
         }
@@ -149,17 +150,18 @@ namespace ProceduralParts
 
         private void MaintainParameterRelations(ref float bigEnd, ref float oldBigEnd, ref float smallEnd, ref float oldSmallEnd, ConeEndMode smallEndMode)
         {
+            // ReSharper disable CompareOfFloatsByEqualityOperator
             // Ensure the bigger end is not smaller than the min diameter
-            if (bigEnd < pPart.diameterMin)
-                bigEnd = pPart.diameterMin;
+            if (bigEnd < PPart.diameterMin)
+                bigEnd = PPart.diameterMin;
 
             // Aspect ratio stuff
-            if (pPart.aspectMin == 0 && float.IsPositiveInfinity(pPart.aspectMax))
+            if (PPart.aspectMin == 0 && float.IsPositiveInfinity(PPart.aspectMax))
                 return;
 
             float aspect = bigEnd / length;
 
-            if (!MathUtils.TestClamp(ref aspect, pPart.aspectMin, pPart.aspectMax))
+            if (!MathUtils.TestClamp(ref aspect, PPart.aspectMin, PPart.aspectMax))
                 return;
 
             if (bigEnd != oldBigEnd)
@@ -170,12 +172,12 @@ namespace ProceduralParts
                     length = MathUtils.RoundTo(bigEnd / aspect, 0.001f);
 
                     // The aspect is within range if false, we can safely return
-                    if (!MathUtils.TestClamp(ref length, pPart.lengthMin, pPart.lengthMax))
+                    if (!MathUtils.TestClamp(ref length, PPart.lengthMin, PPart.lengthMax))
                         return;
 
                     // If the aspect is fixed, then the length is dependent on the diameter anyhow
                     // so just return (we can still limit the total length if we want)
-                    if (pPart.aspectMin == pPart.aspectMax)
+                    if (PPart.aspectMin == PPart.aspectMax)
                         return;
 
                     // Bottom has gone out of range, push back.
@@ -194,7 +196,7 @@ namespace ProceduralParts
                     bigEnd = MathUtils.RoundTo(aspect * length, 0.001f);
 
                     // The aspect is within range if true
-                    if (!MathUtils.TestClamp(ref bigEnd, pPart.diameterMin, pPart.diameterMax))
+                    if (!MathUtils.TestClamp(ref bigEnd, PPart.diameterMin, PPart.diameterMax))
                     {
                         // need to push back on the length
                         length = MathUtils.RoundTo(bigEnd / aspect, 0.001f);
@@ -205,8 +207,8 @@ namespace ProceduralParts
                     {
                         smallEnd += bigEnd - oldBigEnd;
 
-                        if (smallEndMode == ConeEndMode.LimitMin && smallEnd < pPart.diameterMin)
-                            smallEnd = pPart.diameterMin;
+                        if (smallEndMode == ConeEndMode.LimitMin && smallEnd < PPart.diameterMin)
+                            smallEnd = PPart.diameterMin;
                     }
                 }
                 finally
@@ -216,10 +218,12 @@ namespace ProceduralParts
                 }
             }
             // The small end is ignored for aspects.
+            // ReSharper restore CompareOfFloatsByEqualityOperator
         }
 
         protected override void UpdateShape(bool force)
         {
+            // ReSharper disable CompareOfFloatsByEqualityOperator
             if (!force && oldTopDiameter == topDiameter && oldBottomDiameter == bottomDiameter && oldLength == length)
                 return;
 
@@ -230,7 +234,7 @@ namespace ProceduralParts
 
                 float volume = (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
 
-                if (MathUtils.TestClamp(ref volume, pPart.volumeMin, pPart.volumeMax))
+                if (MathUtils.TestClamp(ref volume, PPart.volumeMin, PPart.volumeMax))
                 {
                     if (oldLength != length)
                         length = volume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter));
@@ -255,11 +259,11 @@ namespace ProceduralParts
                         topDiameter = (det - b) / (2f * a);
                     }
                 }
-                this.volume = volume;
+                Volume = volume;
             }
             else
             {
-                volume = (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
+                Volume = (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
             }
 
             // Perpendicular.
@@ -274,6 +278,7 @@ namespace ProceduralParts
             oldTopDiameter = topDiameter;
             oldBottomDiameter = bottomDiameter;
             oldLength = length;
+            // ReSharper restore CompareOfFloatsByEqualityOperator
         }
         #endregion
     }

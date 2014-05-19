@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
 
@@ -11,9 +10,9 @@ namespace ProceduralParts
     {
         #region Config fields
 
-        internal const int minCircleVertexes = 12;
-        internal const float maxCircleError = 0.01f;
-        internal const float maxDiameterChange = 0.05f;
+        internal const int MinCircleVertexes = 12;
+        internal const float MaxCircleError = 0.01f;
+        internal const float MaxDiameterChange = 0.05f;
 
         [KSPField]
         public string topNodeName = "top";
@@ -44,22 +43,21 @@ namespace ProceduralParts
             }
         }
 
-        private LinkedList<Attachment> topAttachments = new LinkedList<Attachment>();
-        private LinkedList<Attachment> bottomAttachments = new LinkedList<Attachment>();
-        private LinkedList<Attachment> sideAttachments = new LinkedList<Attachment>();
+        private readonly LinkedList<Attachment> topAttachments = new LinkedList<Attachment>();
+        private readonly LinkedList<Attachment> bottomAttachments = new LinkedList<Attachment>();
+        private readonly LinkedList<Attachment> sideAttachments = new LinkedList<Attachment>();
 
         public override object AddAttachment(TransformFollower attach, bool normalized = false)
         {
-            if (normalized)
-                return AddAttachmentNormalized(attach);
-            else
-                return AddAttachmentNotNormalized(attach);
+            return normalized ? AddAttachmentNormalized(attach) : AddAttachmentNotNormalized(attach);
         }
 
         private object AddAttachmentNotNormalized(TransformFollower attach)
         {
-            Attachment ret = new Attachment();
-            ret.follower = attach;
+            Attachment ret = new Attachment
+            {
+                follower = attach
+            };
 
             if (lastProfile == null)
                 throw new InvalidOperationException("Can't child non-normalized attachments prior to the first update");
@@ -79,13 +77,13 @@ namespace ProceduralParts
             else
             {
                 // move the origin to the top to avoid divide by zeros.
-                r = 0.1f;
                 theta = 0;
                 phi = Mathf.PI / 2f;
             }
 
 
             // pt or bottom?
+            // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (phi != 0)
             {
                 ProfilePoint topBot = (phi < 0) ? lastProfile.First.Value : lastProfile.Last.Value;
@@ -95,10 +93,10 @@ namespace ProceduralParts
 
                 if (Mathf.Abs(phi) >= Mathf.Abs(tbPhi))
                 {
-                    if (topBot.dia < 0.001f)
-                        ret.uv = new Vector2(0.5f, 0.5f);
-                    else
-                        ret.uv = new Vector2(position.x / topBot.dia * 2f + 0.5f, position.z / topBot.dia * 2f + 0.5f);
+                    ret.uv = topBot.dia < 0.001f ? 
+                        new Vector2(0.5f, 0.5f) : 
+                        new Vector2(position.x / topBot.dia * 2f + 0.5f, position.z / topBot.dia * 2f + 0.5f);
+
                     if (phi > 0)
                     {
                         ret.location = Location.Top;
@@ -122,13 +120,12 @@ namespace ProceduralParts
             ret.location = Location.Side;
             ret.uv[0] = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
 
-            ProfilePoint pv = null;
             ProfilePoint pt = lastProfile.First.Value;
             for (LinkedListNode<ProfilePoint> ptNode = lastProfile.First.Next; ptNode != null; ptNode = ptNode.Next)
             {
                 if (!ptNode.Value.inCollider)
                     continue;
-                pv = pt;
+                ProfilePoint pv = pt;
                 pt = ptNode.Value;
 
                 float ptR = Mathf.Sqrt(pt.y * pt.y + pt.dia * pt.dia * 0.25f);
@@ -178,8 +175,10 @@ namespace ProceduralParts
 
         private object AddAttachmentNormalized(TransformFollower attach)
         {
-            Attachment ret = new Attachment();
-            ret.follower = attach;
+            Attachment ret = new Attachment
+            {
+                follower = attach
+            };
 
             Vector3 position = attach.transform.localPosition;
 
@@ -263,13 +262,18 @@ namespace ProceduralParts
                     if (ptNode == null)
                     {
                         ptNode = pts.Last;
-                        Debug.LogError("Child v greater than last node child v=" + a.uv[1] + " last node v=" + ptNode.Value.v);
+                        Debug.LogError("Child v greater than last point. Child v=" + a.uv[1] + " last point v=" + ptNode.Value.v);
                         break;
                     }
                     if (!ptNode.Value.inCollider)
                         continue;
                     pv = pt;
                     pt = ptNode.Value;
+                }
+                if (pv == null)
+                {
+                    Debug.LogError("Child v smaller than first point. Child v=" + a.uv[1] + " first point v=" + ptNode.Value.v);
+                    continue;                    
                 }
 
                 float t = Mathf.InverseLerp(pv.v, pt.v, a.uv[1]);
@@ -379,11 +383,11 @@ namespace ProceduralParts
                 this.norm = norm;
                 this.inRender = inRender;
                 this.inCollider = inCollider;
-                this.circ = inRender ? (circ ?? CirclePoints.ForDiameter(dia, maxCircleError, minCircleVertexes)) : null;
-                this.colliderCirc = inCollider ? (colliderCirc ?? this.circ ?? CirclePoints.ForDiameter(dia, maxCircleError, minCircleVertexes)) : null;
+                this.circ = inRender ? (circ ?? CirclePoints.ForDiameter(dia, MaxCircleError, MinCircleVertexes)) : null;
+                this.colliderCirc = inCollider ? (colliderCirc ?? this.circ ?? CirclePoints.ForDiameter(dia, MaxCircleError, MinCircleVertexes)) : null;
             }
 
-            public bool customCollider
+            public bool CustomCollider
             {
                 get
                 {
@@ -392,7 +396,7 @@ namespace ProceduralParts
             }
         }
 
-        private LinkedList<ProfilePoint> lastProfile = null;
+        private LinkedList<ProfilePoint> lastProfile;
 
         protected void WriteMeshes(params ProfilePoint[] pts)
         {
@@ -421,7 +425,6 @@ namespace ProceduralParts
             SubdivHorizontal(pts);
 
             // Tank stats
-            float tankULength = 0;
             float tankVLength = 0;
 
             int nVrt = 0;
@@ -438,7 +441,7 @@ namespace ProceduralParts
 
             foreach (ProfilePoint pt in pts)
             {
-                customCollider = customCollider || pt.customCollider;
+                customCollider = customCollider || pt.CustomCollider;
 
                 if (pt.inRender)
                 {
@@ -506,14 +509,14 @@ namespace ProceduralParts
             }
 
             // Use the weighted average diameter across segments to set the ULength
-            tankULength = Mathf.PI * sumDiameters / (last.y - first.y);
+            float tankULength = Mathf.PI * sumDiameters / (last.y - first.y);
 
             //print("ULength=" + tankULength + " VLength=" + tankVLength);
 
             // set the texture scale.
-            RaiseChangeTextureScale("sides", pPart.sidesMaterial, new Vector2(tankULength, tankVLength));
+            RaiseChangeTextureScale("sides", PPart.SidesMaterial, new Vector2(tankULength, tankVLength));
 
-            m.WriteTo(sidesMesh);
+            m.WriteTo(SidesMesh);
 
             // The endcaps.
             nVrt = first.circ.totVertexes + last.circ.totVertexes;
@@ -523,7 +526,7 @@ namespace ProceduralParts
             first.circ.WriteEndcap(first.dia, first.y, false, 0, 0, m, false);
             last.circ.WriteEndcap(last.dia, last.y, true, first.circ.totVertexes, (first.circ.totVertexes - 2) * 3, m, !odd);
 
-            m.WriteTo(endsMesh);
+            m.WriteTo(EndsMesh);
 
             // build the collider mesh at a lower resolution than the visual mesh.
             if (customCollider)
@@ -559,11 +562,11 @@ namespace ProceduralParts
 
                 m.WriteTo(colliderMesh);
 
-                pPart.colliderMesh = colliderMesh;
+                PPart.ColliderMesh = colliderMesh;
             }
             else
             {
-                pPart.colliderMesh = sidesMesh;
+                PPart.ColliderMesh = SidesMesh;
             }
 
             RaiseModelAndColliderChanged();
@@ -577,15 +580,14 @@ namespace ProceduralParts
         private void SubdivHorizontal(LinkedList<ProfilePoint> pts)
         {
             ProfilePoint prev = pts.First.Value;
-            ProfilePoint curr;
             for (LinkedListNode<ProfilePoint> node = pts.First.Next; node != null; node = node.Next)
             {
-                curr = node.Value;
+                ProfilePoint curr = node.Value;
                 if (!curr.inRender)
                     continue;
 
                 float dDiameter = curr.dia - prev.dia;
-                int subdiv = Math.Min((int)Math.Truncate(Mathf.Abs(dDiameter) / maxDiameterChange), 30);
+                int subdiv = Math.Min((int)Math.Truncate(Mathf.Abs(dDiameter) / MaxDiameterChange), 30);
                 if (subdiv > 1)
                 {
                     // slerp alg for normals  http://http://en.wikipedia.org/wiki/Slerp
@@ -599,7 +601,7 @@ namespace ProceduralParts
 
                     for (int i = 1; i < subdiv; ++i)
                     {
-                        float t = (float)i / (float)subdiv;
+                        float t = i / (float)subdiv;
                         float tDiameter = prev.dia + dDiameter * t;
                         float tY = Mathf.Lerp(prev.y, curr.y, t);
                         float tV = Mathf.Lerp(prev.v, curr.v, t);
@@ -623,7 +625,7 @@ namespace ProceduralParts
             AttachNode node = part.attachNodes.Find(n => n.id == nodeName);
             if (node == null)
                 return;
-            node.size = Math.Min((int)(pt.dia / pPart.diameterLargeStep), 3);
+            node.size = Math.Min((int)(pt.dia / PPart.diameterLargeStep), 3);
 
             // Breaking force and torque scales with the area of the surface (node size).
             node.breakingTorque = node.breakingForce = Mathf.Max(50 * node.size * node.size, 50);
@@ -632,7 +634,7 @@ namespace ProceduralParts
             RaiseChangeAttachNodeSize(node, pt.dia, Mathf.PI * pt.dia * pt.dia * 0.25f);
 
             // TODO: separate out the meshes for each end so we can use the scale for texturing.
-            RaiseChangeTextureScale(nodeName, pPart.endsMaterial, new Vector2(pt.dia, pt.dia));
+            RaiseChangeTextureScale(nodeName, PPart.EndsMaterial, new Vector2(pt.dia, pt.dia));
         }
 
         #endregion
@@ -666,7 +668,6 @@ namespace ProceduralParts
                                 return prev;
                             prev = nxt;
                         }
-                        throw new InvalidProgramException();
                     default:
                         return circlePoints[Math.Min(idx - 1, maxVertexes / 4 - 1)];
                 }
@@ -687,42 +688,42 @@ namespace ProceduralParts
                 return circlePoints[idx];
             }
 
-            private static List<CirclePoints> circlePoints = new List<CirclePoints>();
+            private static readonly List<CirclePoints> circlePoints = new List<CirclePoints>();
 
 
             private readonly int subdivCount;
             public readonly int totVertexes;
             public readonly float maxError;
 
-            private static float maxError0 = Mathf.Sqrt(2) * (Mathf.Sin(Mathf.PI / 4.0f) - 0.5f) * 0.5f;
+            private static readonly float MaxError0 = Mathf.Sqrt(2) * (Mathf.Sin(Mathf.PI / 4.0f) - 0.5f) * 0.5f;
 
             private float[][] uCoords;
             private float[][] xCoords;
             private float[][] zCoords;
 
-            private bool complete = false;
+            private bool complete;
 
             private CirclePoints(int subdivCount)
             {
                 this.subdivCount = subdivCount;
-                this.totVertexes = (1 + subdivCount) * 4;
+                totVertexes = (1 + subdivCount) * 4;
 
                 if (subdivCount == 0)
                 {
-                    uCoords = new float[][] { new float[] { 0.0f }, new float[] { 0.125f } };
-                    xCoords = new float[][] { new float[] { 0.0f }, new float[] { -1f / Mathf.Sqrt(2) } };
-                    zCoords = new float[][] { new float[] { 1.0f }, new float[] { 1f / Mathf.Sqrt(2) } };
+                    uCoords = new[] { new[] { 0.0f }, new[] { 0.125f } };
+                    xCoords = new[] { new[] { 0.0f }, new[] { -1f / Mathf.Sqrt(2) } };
+                    zCoords = new[] { new[] { 1.0f }, new[] { 1f / Mathf.Sqrt(2) } };
 
-                    maxError = maxError0;
+                    maxError = MaxError0;
                     complete = true;
                 }
                 else
                 {
                     // calculate the max error.
-                    uCoords = new float[][] { new float[] { 0.0f, 1f / (float)totVertexes }, new float[] { 0.5f / (float)totVertexes, 1.5f / (float)totVertexes } };
+                    uCoords = new[] { new[] { 0.0f, 1f / totVertexes }, new[] { 0.5f / totVertexes, 1.5f / totVertexes } };
                     float theta = uCoords[0][1] * Mathf.PI * 2.0f;
-                    xCoords = new float[][] { new float[] { 0.0f, -Mathf.Sin(theta) }, new float[] { -Mathf.Sin(theta * 0.5f), -Mathf.Sin(theta * 1.5f) } };
-                    zCoords = new float[][] { new float[] { 1.0f, Mathf.Cos(theta) }, new float[] { Mathf.Cos(theta * 0.5f), Mathf.Cos(theta * 1.5f) } };
+                    xCoords = new[] { new[] { 0.0f, -Mathf.Sin(theta) }, new[] { -Mathf.Sin(theta * 0.5f), -Mathf.Sin(theta * 1.5f) } };
+                    zCoords = new[] { new[] { 1.0f, Mathf.Cos(theta) }, new[] { Mathf.Cos(theta * 0.5f), Mathf.Cos(theta * 1.5f) } };
 
                     float dX = xCoords[1][0] - xCoords[0][1] / 2.0f;
                     float dY = zCoords[1][0] - (1f + zCoords[0][1]) / 2.0f;
@@ -743,9 +744,9 @@ namespace ProceduralParts
                 float[][] oldUCoords = uCoords;
                 float[][] oldXCoords = xCoords;
                 float[][] oldYCoords = zCoords;
-                uCoords = new float[][] { new float[totalCoords], new float[totalCoords] };
-                xCoords = new float[][] { new float[totalCoords], new float[totalCoords] };
-                zCoords = new float[][] { new float[totalCoords], new float[totalCoords] };
+                uCoords = new[] { new float[totalCoords], new float[totalCoords] };
+                xCoords = new[] { new float[totalCoords], new float[totalCoords] };
+                zCoords = new[] { new float[totalCoords], new float[totalCoords] };
                 Array.Copy(oldUCoords[0], uCoords[0], 2);
                 Array.Copy(oldXCoords[0], xCoords[0], 2);
                 Array.Copy(oldYCoords[0], zCoords[0], 2);
@@ -753,11 +754,11 @@ namespace ProceduralParts
                 Array.Copy(oldXCoords[1], xCoords[1], 2);
                 Array.Copy(oldYCoords[1], zCoords[1], 2);
 
-                float denom = (float)(4 * (subdivCount + 1));
+                float denom = 4 * (subdivCount + 1);
                 for (int i = 2; i <= subdivCount; ++i)
                 {
-                    uCoords[0][i] = (float)i / denom;
-                    uCoords[1][i] = ((float)i + 0.5f) / denom;
+                    uCoords[0][i] = i / denom;
+                    uCoords[1][i] = (i + 0.5f) / denom;
 
                     float theta = uCoords[0][i] * Mathf.PI * 2.0f;
                     float theta1 = uCoords[1][i] * Mathf.PI * 2.0f;
@@ -776,12 +777,11 @@ namespace ProceduralParts
             /// </summary>
             /// <param name="dia">diameter of circle</param>
             /// <param name="y">y dimension for points</param>
+            /// <param name="up">If this endcap faces up</param>
             /// <param name="vOff">offset into xy, verticies, and normal arrays to begin at</param>
-            /// <param name="xy">xy array, data will be written</param>
-            /// <param name="verticies">verticies array</param>
-            /// <param name="tangents">tangents array</param>
             /// <param name="to">offset into triangles array</param>
-            /// <param name="triangles"></param>
+            /// <param name="m">Mesh to write into</param>
+            /// <param name="odd">If this is an odd row</param>
             public void WriteEndcap(float dia, float y, bool up, int vOff, int to, UncheckedMesh m, bool odd)
             {
                 Complete();
@@ -826,10 +826,8 @@ namespace ProceduralParts
             /// <param name="norm">unit normal vector along the generator curve for increasing y. The y param becomes the y of the normal, the x multiplies the normals to the circle</param>
             /// <param name="v">v coordinate for UV</param>
             /// <param name="off">offset into following arrays</param>
-            /// <param name="xy">UVs to copy into</param>
-            /// <param name="verticies">vertexes</param>
-            /// <param name="normals">normals</param>
-            /// <param name="tangents">tangents</param>
+            /// <param name="odd">If this is an odd row</param>
+            /// <param name="m">Mesh to write vertexes into</param>
             public void WriteVertexes(float diameter, float y, float v, Vector2 norm, int off, bool odd, UncheckedMesh m)
             {
                 Complete();
@@ -872,7 +870,7 @@ namespace ProceduralParts
                 m.tangents[lp] = m.tangents[off];
             }
 
-            private const float uDelta = 1e-5f;
+            private const float UDelta = 1e-5f;
 
             public IEnumerable<Vector3> PointsXZU(float uFrom, float uTo)
             {
@@ -882,8 +880,8 @@ namespace ProceduralParts
 
                 if (uFrom <= uTo)
                 {
-                    int iFrom = Mathf.CeilToInt((uFrom + uDelta) * denom);
-                    int iTo = Mathf.FloorToInt((uTo - uDelta) * denom);
+                    int iFrom = Mathf.CeilToInt((uFrom + UDelta) * denom);
+                    int iTo = Mathf.FloorToInt((uTo - UDelta) * denom);
 
                     if (iFrom < 0)
                     {
@@ -894,13 +892,11 @@ namespace ProceduralParts
 
                     for (int i = iFrom; i <= iTo; ++i)
                         yield return PointXZU(i);
-
-                    yield break;
                 }
                 else
                 {
-                    int iFrom = Mathf.FloorToInt((uFrom - uDelta) * denom);
-                    int iTo = Mathf.CeilToInt((uTo + uDelta) * denom);
+                    int iFrom = Mathf.FloorToInt((uFrom - UDelta) * denom);
+                    int iTo = Mathf.CeilToInt((uTo + UDelta) * denom);
 
                     if (iTo < 0)
                     {
@@ -911,8 +907,6 @@ namespace ProceduralParts
 
                     for (int i = iFrom; i >= iTo; --i)
                         yield return PointXZU(i);
-
-                    yield break;
                 }
             }
 
@@ -944,10 +938,9 @@ namespace ProceduralParts
             /// <param name="bo">offset into vertex array for b points</param>
             /// <param name="triangles">triangles array for output</param>
             /// <param name="to">offset into triangles array. This must be a multiple of 3</param>
-            public static void WriteTriangles(CirclePoints a, int ao, CirclePoints b, int bo, int[] triangles, int too, bool odd)
+            /// <param name="odd">Is this an odd row</param>
+            public static void WriteTriangles(CirclePoints a, int ao, CirclePoints b, int bo, int[] triangles, int to, bool odd)
             {
-                int to = too;
-
                 int aq = a.subdivCount + 1, bq = b.subdivCount + 1;
                 int ai = 0, bi = 0;
                 int ad = (odd ? 1 : 0), bd = (odd ? 0 : 1);

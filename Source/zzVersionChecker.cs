@@ -24,7 +24,6 @@
 */
 
 using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -72,6 +71,7 @@ namespace ProceduralParts
             | IMPLEMENTERS SHOULD NOT EDIT BEYOND THIS POINT! |
             \*-----------------------------------------------*/
         }
+// ReSharper disable PossibleNullReferenceException, InconsistentNaming
 
         // Version of the compatibility checker itself.
         private static int _version = 2;

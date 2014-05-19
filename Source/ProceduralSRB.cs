@@ -1,9 +1,6 @@
 ﻿using System;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using KSPAPIExtensions;
 using KSPAPIExtensions.PartMessage;
@@ -32,7 +29,7 @@ namespace ProceduralParts
             catch (Exception ex)
             {
                 print("OnLoad exception: " + ex);
-                throw ex;
+                throw;
             }
         }
 
@@ -48,7 +45,7 @@ namespace ProceduralParts
             node.SetValue("isEnabled", "True");
         }
 
-        public override void OnStart(PartModule.StartState state)
+        public override void OnStart(StartState state)
         {
             try
             {
@@ -57,7 +54,7 @@ namespace ProceduralParts
             catch (Exception ex)
             {
                 print("OnStart exception: " + ex);
-                throw ex;
+                throw;
             }
         }
 
@@ -83,7 +80,7 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
-        private void PartResourceChanged(PartResource resource, double amount)
+        public void PartResourceChanged(PartResource resource, double amount)
         {
             if (selectedBell == null)
                 return;
@@ -91,7 +88,7 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
-        private void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+        public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
         {
             if (node.id != bottomAttachNodeName)
                 return;
@@ -117,12 +114,7 @@ namespace ProceduralParts
         private EngineWrapper _engineWrapper;
         private EngineWrapper Engine
         {
-            get
-            {
-                if (_engineWrapper == null)
-                    _engineWrapper = new EngineWrapper(part);
-                return _engineWrapper;
-            }
+            get { return _engineWrapper ?? (_engineWrapper = new EngineWrapper(part)); }
         }
 
         #endregion
@@ -132,6 +124,7 @@ namespace ProceduralParts
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "SRB Type"), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedBellName;
 
+        // ReSharper disable once InconsistentNaming
         [KSPField(isPersistant = false, guiName = "ISP", guiActive = false, guiActiveEditor = true)]
         public string srbISP;
 
@@ -216,6 +209,7 @@ namespace ProceduralParts
                 LoadSRBConfigs();
 
             BaseField field = Fields["selectedBellName"];
+            // ReSharper disable once PossibleNullReferenceException
             switch (srbConfigs.Count)
             {
                 case 0:
@@ -268,6 +262,7 @@ namespace ProceduralParts
             // Config for Real Fuels.
             if (part.Modules.Contains("ModuleEngineConfigs"))
             {
+                // ReSharper disable once InconsistentNaming
                 var mEC = part.Modules["ModuleEngineConfigs"];
                 ModuleEnginesChangeThrust = (Action<float>)Delegate.CreateDelegate(typeof(Action<float>), mEC, "ChangeThrust");
                 Fields["burnTime"].guiActiveEditor = false;
@@ -336,7 +331,7 @@ namespace ProceduralParts
 
         private void UpdateBell()
         {
-            if (selectedBell != null && selectedBellName == selectedBell.name)
+            if (selectedBell == null || selectedBellName == selectedBell.name)
                 return;
 
             SRBBellConfig oldSelectedBell = selectedBell;
@@ -373,10 +368,12 @@ namespace ProceduralParts
 
         #region Thrust 
 
-        private bool usingME
+        // ReSharper disable once InconsistentNaming
+        private bool UsingME
         {
             get { return ModuleEnginesChangeThrust != null; }
         }
+        // ReSharper disable once InconsistentNaming
         private Action<float> ModuleEnginesChangeThrust;
 
         [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "S4+3", guiUnits = "N"),
@@ -387,6 +384,7 @@ namespace ProceduralParts
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Burn Time")]
         public string burnTime;
 
+        // ReSharper disable once InconsistentNaming
         [KSPField]
         public float thrust1m = 0;
 
@@ -409,6 +407,7 @@ namespace ProceduralParts
 
         private void UpdateThrust(bool force = false)
         {
+            // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (!force && oldThrust == thrust)
                 return;
 
@@ -442,6 +441,7 @@ namespace ProceduralParts
             else
                 heatProduction = heatPerThrust * Mathf.Sqrt(thrust) / (1 + part.mass);
 
+            // ReSharper disable once InconsistentNaming
             // Rescale the bell.
             float bellScale1m = selectedBell.chokeEndRatio / selectedBell.bellChokeDiameter;
             bellScale = bellScale1m * Mathf.Sqrt(thrust / thrust1m);
@@ -456,7 +456,7 @@ namespace ProceduralParts
 
             selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
 
-            if (usingME)
+            if (UsingME)
                 ModuleEnginesChangeThrust(thrust);
         }
 
@@ -499,13 +499,13 @@ namespace ProceduralParts
         [KSPField]
         public bool useOldHeatEquation = false;
 
-        internal const float draperPoint = 525f;
+        internal const float DraperPoint = 525f;
 
 
         private void AnimateHeat()
         {
             // The emmissive module is too much effort to get working, just do it the easy way.
-            float num = Mathf.Clamp01((part.temperature - draperPoint) / (part.maxTemp - draperPoint));
+            float num = Mathf.Clamp01((part.temperature - DraperPoint) / (part.maxTemp - DraperPoint));
             if (float.IsNaN(num))
                 num = 0f;
 

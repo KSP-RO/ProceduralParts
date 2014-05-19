@@ -1,10 +1,5 @@
-﻿using KSPAPIExtensions;
-using KSPAPIExtensions.PartMessage;
+﻿using KSPAPIExtensions.PartMessage;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using UnityEngine;
 
 namespace ProceduralParts
 {
@@ -53,8 +48,8 @@ namespace ProceduralParts
             CopyNodeSizeAndStrength();
         }
 
-		[PartMessageListener(typeof(PartResourceMaxAmountChanged))]
-		private void PartResourceMaxAmountChanged(PartResource resource, double maxAmount)
+        [PartMessageListener(typeof(PartResourceMaxAmountChanged))]
+        public void PartResourceMaxAmountChanged(PartResource resource, double maxAmount)
 		{
 			if (resource.name != "AblativeShielding")
 				return;

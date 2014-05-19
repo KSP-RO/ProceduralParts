@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using UnityEngine;
+﻿using UnityEngine;
 using KSPAPIExtensions;
 
 namespace ProceduralParts
@@ -23,54 +19,57 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
+            // ReSharper disable CompareOfFloatsByEqualityOperator
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
 
-            if (pPart.lengthMin == pPart.lengthMax)
+            if (PPart.lengthMin == PPart.lengthMax)
                 Fields["length"].guiActiveEditor = false;
             else
             {
                 UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
-                lengthEdit.maxValue = pPart.lengthMax;
-                lengthEdit.minValue = pPart.lengthMin;
-                lengthEdit.incrementLarge = pPart.lengthLargeStep;
-                lengthEdit.incrementSmall = pPart.lengthSmallStep;
+                lengthEdit.maxValue = PPart.lengthMax;
+                lengthEdit.minValue = PPart.lengthMin;
+                lengthEdit.incrementLarge = PPart.lengthLargeStep;
+                lengthEdit.incrementSmall = PPart.lengthSmallStep;
             }
 
-            if (pPart.diameterMin == pPart.diameterMax)
+            if (PPart.diameterMin == PPart.diameterMax)
                 Fields["diameter"].guiActiveEditor = false;
             else
             {
                 UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
-                diameterEdit.maxValue = pPart.diameterMax;
-                diameterEdit.minValue = pPart.diameterMin;
-                diameterEdit.incrementLarge = pPart.diameterLargeStep;
-                diameterEdit.incrementSmall = pPart.diameterSmallStep;
+                diameterEdit.maxValue = PPart.diameterMax;
+                diameterEdit.minValue = PPart.diameterMin;
+                diameterEdit.incrementLarge = PPart.diameterLargeStep;
+                diameterEdit.incrementSmall = PPart.diameterSmallStep;
             }
+            // ReSharper restore CompareOfFloatsByEqualityOperator
         }
 
 
         protected override void UpdateShape(bool force)
         {
+            // ReSharper disable CompareOfFloatsByEqualityOperator
             if (!force && oldDiameter == diameter && oldLength == length)
                 return;
 
-            volume = diameter * diameter * 0.25f * Mathf.PI * length;
+            Volume = diameter * diameter * 0.25f * Mathf.PI * length;
 
             if (HighLogic.LoadedSceneIsEditor)
             {
                 // Maxmin the volume.
-                if (volume > pPart.volumeMax)
-                    volume = pPart.volumeMax;
-                else if (volume < pPart.volumeMin)
-                    volume = pPart.volumeMin;
+                if (Volume > PPart.volumeMax)
+                    Volume = PPart.volumeMax;
+                else if (Volume < PPart.volumeMin)
+                    Volume = PPart.volumeMin;
                 else
                     goto nochange;
 
                 if (oldDiameter != diameter)
-                    diameter = Mathf.Sqrt(volume / (0.25f * Mathf.PI * length));
+                    diameter = Mathf.Sqrt(Volume / (0.25f * Mathf.PI * length));
                 else
-                    length = volume / (diameter * diameter * 0.25f * Mathf.PI);
+                    length = Volume / (diameter * diameter * 0.25f * Mathf.PI);
             }
         nochange:
 
@@ -83,6 +82,7 @@ namespace ProceduralParts
 
             oldDiameter = diameter;
             oldLength = length;
+            // ReSharper restore CompareOfFloatsByEqualityOperator
         }
     }
 }

@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using UnityEngine;
-using KSPAPIExtensions;
+﻿using UnityEngine;
 
 namespace ProceduralParts
 {
@@ -14,7 +7,7 @@ namespace ProceduralParts
         [SerializeField]
         private Transformable target;
         [SerializeField]
-        private bool hasParent = false;
+        private bool hasParent;
         [SerializeField]
         private Vector3 oldOffset;
         [SerializeField]
@@ -44,7 +37,7 @@ namespace ProceduralParts
 
         public void Update()
         {
-            if (target.destroyed)
+            if (target.Destroyed)
             {
                 Destroy(gameObject);
                 print("Target destroyed: " + ((target==null)?"null":target.name));
@@ -120,22 +113,22 @@ namespace ProceduralParts
             oldLocalRotation = transform.localRotation;
         }
 
-        public static TransformFollower createFollower(Transform attached)
+        public static TransformFollower CreateFollower(Transform attached)
         {
-            return createFollower(null, attached.position, new TransformTransformable(attached));
+            return CreateFollower(null, attached.position, new TransformTransformable(attached));
         }
 
-        public static TransformFollower createFollower(Transform parent, Transform attached)
+        public static TransformFollower CreateFollower(Transform parent, Transform attached)
         {
-            return createFollower(parent, attached.position, new TransformTransformable(attached));
+            return CreateFollower(parent, attached.position, new TransformTransformable(attached));
         }
 
-        public static TransformFollower createFollower(Transform attached, Vector3 offset, Space offsetSpace = Space.Self)
+        public static TransformFollower CreateFollower(Transform attached, Vector3 offset, Space offsetSpace = Space.Self)
         {
-            return createFollower(null, attached, offset, offsetSpace);
+            return CreateFollower(null, attached, offset, offsetSpace);
         }
 
-        public static TransformFollower createFollower(Transform parent, Transform attached, Vector3 offset, Space offsetSpace = Space.Self)
+        public static TransformFollower CreateFollower(Transform parent, Transform attached, Vector3 offset, Space offsetSpace = Space.Self)
         {
             Vector3 worldOffset, localOffset;
             if (offsetSpace == Space.Self)
@@ -148,17 +141,17 @@ namespace ProceduralParts
                 worldOffset = offset;
                 localOffset = attached.InverseTransformDirection(offset);
             }
-            return createFollower(parent, attached.position + worldOffset, new TransformTransformable(attached, localOffset));
+            return CreateFollower(parent, attached.position + worldOffset, new TransformTransformable(attached, localOffset));
         }
 
-        public static TransformFollower createFollower(Vector3 position, Transformable target)
+        public static TransformFollower CreateFollower(Vector3 position, Transformable target)
         {
-            return createFollower(null, position, target);
+            return CreateFollower(null, position, target);
         }
 
-        public static TransformFollower createFollower(Transform parent, Vector3 position, Transformable target)
+        public static TransformFollower CreateFollower(Transform parent, Vector3 position, Transformable target)
         {
-            GameObject go = new GameObject("Follower:" + target.ToString(), typeof(TransformFollower));
+            GameObject go = new GameObject("Follower:" + target, typeof(TransformFollower));
             TransformFollower loc = go.GetComponent<TransformFollower>();
 
             loc.target = target;
@@ -169,9 +162,9 @@ namespace ProceduralParts
             return loc;
         }
 
-        public abstract class Transformable : UnityEngine.Object
+        public abstract class Transformable : Object
         {
-            public abstract bool destroyed { get; }
+            public abstract bool Destroyed { get; }
 
             public abstract void Translate(Vector3 translation);
 
@@ -182,10 +175,11 @@ namespace ProceduralParts
         {
 
             [SerializeField]
-            private Transform transform;
+            private readonly Transform transform;
             [SerializeField]
             private Vector3? offset;
 
+            // ReSharper disable once RedundantArgumentDefaultValue
             public TransformTransformable(Transform transform) : this(transform, null) { }
 
             public TransformTransformable(Transform transform, Vector3 offset, Space offsetSpace = Space.Self) : this(transform, (Vector3?)offset, offsetSpace) { }
@@ -201,7 +195,7 @@ namespace ProceduralParts
                     this.offset = transform.InverseTransformDirection(offset.Value);
             }
 
-            override public bool destroyed
+            override public bool Destroyed
             {
                 get
                 {

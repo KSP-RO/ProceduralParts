@@ -1,9 +1,6 @@
 ﻿using KSPAPIExtensions;
 using KSPAPIExtensions.PartMessage;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 namespace ProceduralParts
@@ -66,13 +63,11 @@ namespace ProceduralParts
 
         private ModuleDecouple decouple;
 
-        internal const float impulsePerForceUnit = 0.02f;
+        internal const float ImpulsePerForceUnit = 0.02f;
 
-        public override void OnStart(PartModule.StartState state)
+        public override void OnStart(StartState state)
         {
-            FindDecoupler();
-
-            if (decouple == null)
+            if (!FindDecoupler())
             {
                 Debug.LogError("Unable to find any decoupler modules");
                 isEnabled = enabled = false;
@@ -81,14 +76,16 @@ namespace ProceduralParts
 
             if (HighLogic.LoadedSceneIsEditor)
             {
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
                 if (mass != 0)
                     UpdateMass(mass);
 
                 Fields["isOmniDecoupler"].guiActiveEditor =
                     string.IsNullOrEmpty(separatorTechRequired) || ResearchAndDevelopment.GetTechnologyState(separatorTechRequired) == RDTech.State.Available;
 
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
                 if (ejectionImpulse == 0)
-                    ejectionImpulse = (float)Math.Round(decouple.ejectionForce * impulsePerForceUnit, 1);
+                    ejectionImpulse = (float)Math.Round(decouple.ejectionForce * ImpulsePerForceUnit, 1);
 
                 UI_FloatEdit ejectionImpulseEdit = (UI_FloatEdit)Fields["ejectionImpulse"].uiControlEditor;
                 ejectionImpulseEdit.maxValue = maxImpulse;
@@ -100,23 +97,25 @@ namespace ProceduralParts
             }
         }
 
-        private void FindDecoupler()
+        private bool FindDecoupler()
         {
-            decouple = part.Modules["ModuleDecouple"] as ModuleDecouple;
+            if(decouple == null)
+                decouple = part.Modules["ModuleDecouple"] as ModuleDecouple;
+            return decouple != null;
         }
 
         public override void OnUpdate()
         {
-            if (decouple == null)
-                FindDecoupler();
-            decouple.ejectionForce = ejectionImpulse / TimeWarp.fixedDeltaTime;
+            if (FindDecoupler())
+                decouple.ejectionForce = ejectionImpulse / TimeWarp.fixedDeltaTime;
         }
 
         // Plugs into procedural parts.
         [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes:GameSceneFilter.AnyEditor)]
-        private void ChangeAttachNodeSize(string name, float minDia, float area)
+        public void ChangeAttachNodeSize(string nodeName, float minDia, float area)
         {
-            if (name != textureMessageName || maxImpulseDiameterRatio == 0)
+            // ReSharper disable once CompareOfFloatsByEqualityOperator
+            if (nodeName != textureMessageName || maxImpulseDiameterRatio == 0)
                 return;
 
             UI_FloatEdit ejectionImpulseEdit = (UI_FloatEdit)Fields["ejectionImpulse"].uiControlEditor;
@@ -128,18 +127,18 @@ namespace ProceduralParts
             ejectionImpulse = Mathf.Round(maxImpulse * oldRatio / 0.1f) * 0.1f;
         }
 
-        [PartMessageListener(typeof(PartVolumeChanged), scenes:GameSceneFilter.AnyEditor)]
-        private void ChangeVolume(string volumeName, float volume)
+        [PartMessageListener(typeof(PartVolumeChanged), scenes: GameSceneFilter.AnyEditor)]
+        public void ChangeVolume(string volumeName, float volume)
         {
             if (density > 0)
                 UpdateMass(density * volume);
         }
 
-        private void UpdateMass(float mass)
+        private void UpdateMass(float updateMass)
         {
-            part.mass = this.mass = mass;
+            part.mass = mass = updateMass;
             BaseField fld = Fields["mass"];
-            if (mass < 0.1)
+            if (updateMass < 0.1)
             {
                 fld.guiUnits = "g";
                 fld.guiFormat = "S3+6";

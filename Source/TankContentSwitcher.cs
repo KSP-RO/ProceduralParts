@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using UnityEngine;
 
 namespace ProceduralParts
@@ -56,6 +55,7 @@ namespace ProceduralParts
                     tankVolumeName = PartVolumes.Tankage.ToString();
                 }
             }
+            // ReSharper disable once EmptyGeneralCatchClause
             catch { }
         }
 
@@ -65,7 +65,7 @@ namespace ProceduralParts
             node.SetValue("isEnabled", "True");
         }
 
-        public override void OnStart(PartModule.StartState state)
+        public override void OnStart(StartState state)
         {
             if (HighLogic.LoadedSceneIsFlight)
             {
@@ -79,6 +79,7 @@ namespace ProceduralParts
             }
 
             InitializeTankType();
+            // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (tankVolume != 0)
                 UpdateTankType();
             isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
@@ -113,9 +114,9 @@ namespace ProceduralParts
         /// Message sent from ProceduralAbstractShape when it updates.
         /// </summary>
         [PartMessageListener(typeof(PartVolumeChanged), scenes:~GameSceneFilter.Flight)]
-        private void ChangeVolume(string volumeName, float volume)
+        public void ChangeVolume(string volumeName, float volume)
         {
-            if (volumeName != this.tankVolumeName)
+            if (volumeName != tankVolumeName)
                 return;
 
             if (volume <= 0f)
@@ -205,9 +206,8 @@ namespace ProceduralParts
 
             int IComparable<TankResource>.CompareTo(TankResource other)
             {
-                if (other == null)
-                    return 1;
-                return name.CompareTo(other.name);
+                return other == null ? 1 : 
+                    string.Compare(name, other.name, StringComparison.Ordinal);
             }
         }
 
@@ -229,7 +229,7 @@ namespace ProceduralParts
             BaseField field = Fields["tankType"];
             UI_ChooseOption options = (UI_ChooseOption)field.uiControlEditor;
 
-            options.options = tankTypeOptions.ConvertAll<string>(opt => opt.name).ToArray();
+            options.options = tankTypeOptions.ConvertAll(opt => opt.name).ToArray();
 
             field.guiActiveEditor = (tankTypeOptions.Count > 1);
 
@@ -302,9 +302,7 @@ namespace ProceduralParts
 
             if (tankVolumeName != null)
             {
-                double resourceMass = 0;
-                foreach (PartResource r in part.Resources)
-                    resourceMass += r.maxAmount * r.info.density;
+                double resourceMass = part.Resources.Cast<PartResource>().Sum(r => r.maxAmount*r.info.density);
 
                 float totalMass = part.mass + (float)resourceMass;
                 if (selectedTankType.isStructural)
@@ -315,7 +313,7 @@ namespace ProceduralParts
         }
 
         [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
-        private void ResourceChanged(PartResource resource, double amount)
+        public void ResourceChanged(PartResource resource, double amount)
         {
             if(selectedTankType == null)
                 return;
@@ -354,6 +352,7 @@ namespace ProceduralParts
 
                 double maxAmount = (float)Math.Round(tankRes.unitsConst + tankVolume * tankRes.unitsPerKL + mass * tankRes.unitsPerT, 2);
 
+                // ReSharper disable CompareOfFloatsByEqualityOperator
                 if (partRes.maxAmount == maxAmount)
                     continue;
 
@@ -367,6 +366,7 @@ namespace ProceduralParts
                     partRes.amount = pfx.Round(partRes.amount * maxAmount / partRes.maxAmount, 4);
                 }
                 partRes.maxAmount = maxAmount;
+                // ReSharper restore CompareOfFloatsByEqualityOperator
 
                 MaxAmountChanged(partRes, partRes.maxAmount);
                 InitialAmountChanged(partRes, partRes.amount);
@@ -387,7 +387,7 @@ namespace ProceduralParts
             // the sliders that affect part contents properly cos they get recreated underneith you and the drag dies.
             foreach (TankResource res in selectedTankType.resources)
             {
-                double maxAmount = (double)Math.Round(res.unitsConst + tankVolume * res.unitsPerKL + part.mass * res.unitsPerT, 2);
+                double maxAmount = Math.Round(res.unitsConst + tankVolume * res.unitsPerKL + part.mass * res.unitsPerT, 2);
 
                 ConfigNode node = new ConfigNode("RESOURCE");
                 node.AddValue("name", res.name);
@@ -412,24 +412,24 @@ namespace ProceduralParts
         // From the next update of EPL, this won't be required.
 
         [PartMessageListener(typeof(PartResourcesChanged))]
-        private void ResourcesModified()
+        public void ResourcesModified()
         {
             BaseEventData data = new BaseEventData(BaseEventData.Sender.USER);
-            data.Set<Part>("part", part);
+            data.Set("part", part);
             part.SendEvent("OnResourcesModified", data, 0);
         }
 
-        private float oldmass = 0;
+        private float oldmass;
 
         [PartMessageListener(typeof(PartMassChanged))]
-        private void MassModified(float mass)
+        public void MassModified(float paramMass)
         {
             BaseEventData data = new BaseEventData(BaseEventData.Sender.USER);
-            data.Set<Part>("part", part);
+            data.Set("part", part);
             data.Set<float>("oldmass", oldmass);
             part.SendEvent("OnMassModified", data, 0);
 
-            oldmass = mass;
+            oldmass = paramMass;
         }
 
         #endregion
@@ -470,6 +470,7 @@ namespace ProceduralParts
         [KSPField(guiActive = false, guiActiveEditor = true, guiName = "Mass")]
         public string massDisplay;
 
+        // ReSharper disable once InconsistentNaming
         [KSPField(isPersistant = false, guiActiveEditor = true, guiActive = false, guiName = "Real Fuels"),
          UI_Toggle(enabledText="GUI", disabledText="GUI")]
         public bool showRFGUI = false;
@@ -492,7 +493,7 @@ namespace ProceduralParts
         private MethodInfo fuelManagerGUIMethod;
         private MethodInfo changeVolume;
 
-        public override void OnStart(PartModule.StartState state)
+        public override void OnStart(StartState state)
         {
             if (!part.Modules.Contains("ModuleFuelTanks")
                 || HighLogic.LoadedSceneIsFlight)
@@ -536,6 +537,7 @@ namespace ProceduralParts
 
             Fields["showRFGUI"].guiActiveEditor = EditorLogic.fetch.editorScreen == EditorLogic.EditorScreen.Parts;
 
+            // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (utilization != oldUtilization)
             {
                 ChangeVolume(PartVolumes.Tankage.ToString(), partVolume);
@@ -565,7 +567,7 @@ namespace ProceduralParts
         /// Message sent from ProceduralAbstractShape when it updates.
         /// </summary>
         [PartMessageListener(typeof(PartVolumeChanged), scenes:GameSceneFilter.AnyEditor)]
-        private void ChangeVolume(string volumeName, float volume)
+        public void ChangeVolume(string volumeName, float volume)
         {
             if (volumeName != PartVolumes.Tankage.ToString())
                 return;
@@ -619,9 +621,7 @@ namespace ProceduralParts
                 massDisplay = MathUtils.FormatMass(part.mass);
             else
             {
-                double resourceMass = 0;
-                foreach (PartResource r in part.Resources)
-                    resourceMass += r.maxAmount * r.info.density;
+                double resourceMass = part.Resources.Cast<PartResource>().Sum(r => r.maxAmount*r.info.density);
 
                 float totalMass = part.mass + (float)resourceMass;
                 massDisplay = "Dry: " + MathUtils.FormatMass(part.mass) + " / Wet: " + MathUtils.FormatMass(totalMass);
