@@ -104,6 +104,9 @@ namespace ProceduralParts
 
             try
             {
+                if(needsTechInit)
+                    InitializeTechLimits();
+
                 UpdateTexture();
                 UpdateShape();
             }
@@ -329,11 +332,20 @@ namespace ProceduralParts
             techLimitsSerialized = ObjectSerializer.Serialize(techLimits);
         }
 
+        private bool needsTechInit = false;
+
         private void InitializeTechLimits()
         {
             if (HighLogic.CurrentGame == null || HighLogic.CurrentGame.Mode != Game.Modes.CAREER || techLimitsSerialized == null)
                 return;
 
+            if (ResearchAndDevelopment.Instance == null)
+            {
+                needsTechInit = true;
+                return;
+            }
+            needsTechInit = false;
+  
             List<TechLimit> techLimits;
             ObjectSerializer.Deserialize(techLimitsSerialized, out techLimits);
 
