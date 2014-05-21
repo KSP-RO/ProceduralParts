@@ -50,7 +50,8 @@ namespace ProceduralParts
         {
             try
             {
-                InitializeBells();                    
+                InitializeBells();
+                UpdateMaxThrust();  
             }
             catch (Exception ex)
             {
@@ -83,16 +84,22 @@ namespace ProceduralParts
         {
             if (selectedBell == null)
                 return;
-            UpdateThrustDependentCalcs();
+
+            if (UsingME)
+                UpdateMaxThrust();
+            else
+                UpdateThrustDependentCalcs();
         }
 
         [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
         public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
         {
-            if (node.id != bottomAttachNodeName)
+            // ReSharper disable once CompareOfFloatsByEqualityOperator
+            if (node.id != bottomAttachNodeName || minDia == attachedEndSize)
                 return;
 
-            UpdateMaxThrust(minDia);
+            attachedEndSize = minDia;
+            UpdateMaxThrust();
         }
 
         #endregion
@@ -164,6 +171,8 @@ namespace ProceduralParts
             [Persistent]
             public float chokeEndRatio = 0.5f;
 
+            [Persistent] 
+            public string realFuelsEngineType;
 
             public void Load(ConfigNode node)
             {
@@ -263,11 +272,24 @@ namespace ProceduralParts
             {
                 // ReSharper disable once InconsistentNaming
                 var mEC = part.Modules["ModuleEngineConfigs"];
-                ModuleEnginesChangeThrust = (Action<float>)Delegate.CreateDelegate(typeof(Action<float>), mEC, "ChangeThrust");
-                Fields["burnTime"].guiActiveEditor = false;
-                Fields["srbISP"].guiActiveEditor = false;
-                Fields["heatProduction"].guiActiveEditor = false;
+                ModularEnginesChangeThrust = (Action<float>)Delegate.CreateDelegate(typeof(Action<float>), mEC, "ChangeThrust");
+                try
+                {
+                    ModularEnginesChangeEngineType = (Action<string>) Delegate.CreateDelegate(typeof (Action<string>), mEC, "ChangeEngineType");
+                }
+                catch
+                {
+                    ModularEnginesChangeEngineType = null;
+                }
+
+                //Fields["burnTime"].guiActiveEditor = false;
+                //Fields["srbISP"].guiActiveEditor = false;
+                //Fields["heatProduction"].guiActiveEditor = false;
             }
+            Fields["thrust"].guiActiveEditor = !UsingME;
+            Fields["burnTime"].guiActiveEditor = !UsingME;
+            Fields["burnTimeME"].guiActiveEditor = UsingME;
+            Fields["thrustME"].guiActiveEditor = UsingME;
 
             // Initialize the modules.
             InitModulesFromBell();
@@ -349,7 +371,7 @@ namespace ProceduralParts
 
             InitModulesFromBell();
 
-            UpdateThrust(true);
+            UpdateMaxThrust();
         }
 
         private void InitModulesFromBell()
@@ -360,6 +382,8 @@ namespace ProceduralParts
                 Engine.atmosphereCurve = selectedBell.atmosphereCurve;
             if (selectedBell.gimbalRange >= 0)
                 GetComponent<ModuleGimbal>().gimbalRange = selectedBell.gimbalRange;
+            if (ModularEnginesChangeEngineType != null && selectedBell.realFuelsEngineType != null)
+                ModularEnginesChangeEngineType(selectedBell.realFuelsEngineType);
             srbISP = string.Format("{0:F0}s ({1:F0}s Vac)", Engine.atmosphereCurve.Evaluate(1), Engine.atmosphereCurve.Evaluate(0));
         }
 
@@ -370,10 +394,12 @@ namespace ProceduralParts
         // ReSharper disable once InconsistentNaming
         private bool UsingME
         {
-            get { return ModuleEnginesChangeThrust != null; }
+            get { return ModularEnginesChangeThrust != null; }
         }
         // ReSharper disable once InconsistentNaming
-        private Action<float> ModuleEnginesChangeThrust;
+        private Action<float> ModularEnginesChangeThrust;
+        // ReSharper disable once InconsistentNaming
+        private Action<string> ModularEnginesChangeEngineType;
 
         [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "S4+3", guiUnits = "N"),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = float.PositiveInfinity, incrementLarge = 100f, incrementSmall = 10, incrementSlide = 1f)]
@@ -383,38 +409,72 @@ namespace ProceduralParts
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Burn Time")]
         public string burnTime;
 
+        [KSPField(isPersistant = true, guiName = "Burn Time", guiActive = false, guiActiveEditor = false, guiFormat = "F0", guiUnits = "s"),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 600f, incrementLarge = 60f, incrementSmall = 0, incrementSlide = 2e-4f)]
+        public float burnTimeME = 60;
+        private float oldBurnTimeME;
+
+        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = false, guiName = "Thrust")]
+        public string thrustME;
+
         // ReSharper disable once InconsistentNaming
         [KSPField]
         public float thrust1m = 0;
 
         private float maxThrust = float.PositiveInfinity;
+        private float attachedEndSize = float.PositiveInfinity;
 
-        private void UpdateMaxThrust(float attachedEndSize)
+        // Real fuels integration
+        [PartMessageListener(typeof(PartEngineConfigChanged))]
+        public void PartEngineConfigsChanged()
+        {
+            UpdateMaxThrust();
+        }
+
+        private void UpdateMaxThrust()
         {
             if (selectedBell == null)
                 return;
 
-            maxThrust = Mathf.Max(Mathf.Round(attachedEndSize * attachedEndSize * thrust1m * 0.1f) * 10f, 10f);
+            maxThrust = (float)Math.Max(Math.Round(attachedEndSize * attachedEndSize * thrust1m, 1), 10.0);
 
-            ((UI_FloatEdit)Fields["thrust"].uiControlEditor).maxValue = maxThrust;
-            if (thrust > maxThrust)
+            if (!UsingME)
             {
-                thrust = maxThrust;
-                UpdateThrust();
+                ((UI_FloatEdit)Fields["thrust"].uiControlEditor).maxValue = maxThrust;
+                if (thrust > maxThrust)
+                    thrust = maxThrust;
             }
+            else
+            {
+                // Work out the min burn time.
+                PartResource solidFuel = part.Resources["SolidFuel"];
+
+                float isp0 = Engine.atmosphereCurve.Evaluate(0);
+                float minBurnTime = (float) Math.Ceiling(isp0*solidFuel.maxAmount*solidFuel.info.density*Engine.g/maxThrust);
+
+                ((UI_FloatEdit)Fields["burnTimeME"].uiControlEditor).minValue = minBurnTime;
+
+                // Keep the thrust constant, change the current burn time to match
+                // Don't round the value, this stops it jumping around and won't matter that much
+                burnTimeME = (float)(isp0 * solidFuel.maxAmount * solidFuel.info.density * Engine.g / thrust);
+            }
+
+            UpdateThrust(true);
         }
 
         private void UpdateThrust(bool force = false)
         {
-            // ReSharper disable once CompareOfFloatsByEqualityOperator
-            if (!force && oldThrust == thrust)
+            // ReSharper disable CompareOfFloatsByEqualityOperator
+            if (!force && oldThrust == thrust && burnTimeME == oldBurnTimeME)
                 return;
+            // ReSharper restore CompareOfFloatsByEqualityOperator
 
             Vector3 oldAttach = selectedBell.srbAttach.position;
             UpdateThrustDependentCalcs();
             MoveBottomAttachmentAndNode(selectedBell.srbAttach.position - oldAttach);
 
             oldThrust = thrust;
+            oldBurnTimeME = burnTimeME;
         }
 
         private void UpdateThrustDependentCalcs()
@@ -423,19 +483,37 @@ namespace ProceduralParts
 
             double solidFuelMassG;
             if (solidFuel == null)
-                solidFuelMassG = 30.75;
+                solidFuelMassG = UsingME ? 7.454 : 30.75;
             else
-                solidFuelMassG = solidFuel.amount * solidFuel.info.density * Engine.g;
+                solidFuelMassG = solidFuel.amount*solidFuel.info.density*Engine.g;
 
-            FloatCurve atmosphereCurve = (selectedBell.atmosphereCurve ?? Engine.atmosphereCurve);
+            FloatCurve atmosphereCurve = Engine.atmosphereCurve;
 
-            float burnTime0 = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
-            float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
-            burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
+            if (!UsingME)
+            {
+                float burnTime0 = burnTimeME = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
+                float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
+                burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);                
+            }
+            else
+            {
+                thrust = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
+                if (thrust > maxThrust)
+                {
+                    burnTimeME = (float)Math.Ceiling(atmosphereCurve.Evaluate(0) * solidFuelMassG / maxThrust);
+                    thrust = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
+                }
+
+                float thrust0 = Engine.maxThrust = thrust;
+                float thrust1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / burnTimeME);
+
+                thrustME = thrust0.ToStringSI(unit: "N", exponent: 3) + " Vac / " + thrust1.ToStringSI(unit: "N", exponent: 3) + " ASL";
+                srbISP = string.Format("{1:F0}s Vac / {0:F0}s ASL", atmosphereCurve.Evaluate(1), atmosphereCurve.Evaluate(0));
+            }
 
             // This equation is much easier. From StretchySRBs
             if (useOldHeatEquation)
-                heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((Math.Min(burnTime0, burnTime1) + 20f), 0.75f)) * 0.5f);
+                heatProduction = (float)Math.Round((200f + 5200f / Math.Pow((burnTimeME + 20f), 0.75f)) * 0.5f);
             // My equation.
             else
                 heatProduction = heatPerThrust * Mathf.Sqrt(thrust) / (1 + part.mass);
@@ -456,7 +534,7 @@ namespace ProceduralParts
             selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
 
             if (UsingME)
-                ModuleEnginesChangeThrust(thrust);
+                ModularEnginesChangeThrust(thrust);
         }
 
         #endregion
