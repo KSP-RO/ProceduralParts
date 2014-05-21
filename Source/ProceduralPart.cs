@@ -94,7 +94,7 @@ namespace ProceduralParts
             }
         }
 
-        public virtual void OnUpdateEditor()
+        public void OnUpdateEditor()
         {
             if (skipNextUpdate)
             {
@@ -332,7 +332,7 @@ namespace ProceduralParts
             techLimitsSerialized = ObjectSerializer.Serialize(techLimits);
         }
 
-        private bool needsTechInit = false;
+        private bool needsTechInit;
 
         private void InitializeTechLimits()
         {
