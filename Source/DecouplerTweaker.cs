@@ -112,10 +112,10 @@ namespace ProceduralParts
 
         // Plugs into procedural parts.
         [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes:GameSceneFilter.AnyEditor)]
-        public void ChangeAttachNodeSize(string nodeName, float minDia, float area)
+        public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
         {
             // ReSharper disable once CompareOfFloatsByEqualityOperator
-            if (nodeName != textureMessageName || maxImpulseDiameterRatio == 0)
+            if (node.id != textureMessageName || maxImpulseDiameterRatio == 0)
                 return;
 
             UI_FloatEdit ejectionImpulseEdit = (UI_FloatEdit)Fields["ejectionImpulse"].uiControlEditor;
