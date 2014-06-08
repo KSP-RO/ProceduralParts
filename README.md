@@ -106,7 +106,7 @@ If you'd like more generous limits, you can create a MM patch (ie: cut and paste
 
 This will affect all procedural tanks and the SRB. The name of the Real Fuels SRB is "proceduralSRBRealFuels" so you'll need to make another similar patch for that one if you want to mess with that too.
 
-* **TODO:** show how to remove tech level limits on shapes. Stay tuned.*
+**TODO:** _show how to remove tech level limits on shapes. Stay tuned._
 
 ## Future plans
 * Cuboid parts, with customizable side lengths
