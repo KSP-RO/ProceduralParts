@@ -840,26 +840,26 @@ namespace ProceduralParts
                     m.uv[o0] = new Vector2(uCoords[o][i], v);
                     m.verticies[o0] = new Vector3(xCoords[o][i] * 0.5f * diameter, y, zCoords[o][i] * 0.5f * diameter);
                     m.normals[o0] = new Vector3(xCoords[o][i] * norm.x, norm.y, zCoords[o][i] * norm.x);
-                    m.tangents[o0] = new Vector4(-zCoords[o][i], 0, xCoords[o][i], 1.0f);
+                    m.tangents[o0] = new Vector4(-zCoords[o][i], 0, xCoords[o][i], -1.0f);
                     //MonoBehaviour.print("Vertex #" + i + " off=" + o0 + " u=" + xy[o0][0] + " coords=" + verticies[o0]);
 
                     int o1 = off + i + subdivCount + 1;
                     m.uv[o1] = new Vector2(uCoords[o][i] + 0.25f, v);
                     m.verticies[o1] = new Vector3(-zCoords[o][i] * 0.5f * diameter, y, xCoords[o][i] * 0.5f * diameter);
                     m.normals[o1] = new Vector3(-zCoords[o][i] * norm.x, norm.y, xCoords[o][i] * norm.x);
-                    m.tangents[o1] = new Vector4(-xCoords[o][i], 0, -zCoords[o][i], 1.0f);
+                    m.tangents[o1] = new Vector4(-xCoords[o][i], 0, -zCoords[o][i], -1.0f);
 
                     int o2 = off + i + 2 * (subdivCount + 1);
                     m.uv[o2] = new Vector2(uCoords[o][i] + 0.50f, v);
                     m.verticies[o2] = new Vector3(-xCoords[o][i] * 0.5f * diameter, y, -zCoords[o][i] * 0.5f * diameter);
                     m.normals[o2] = new Vector3(-xCoords[o][i] * norm.x, norm.y, -zCoords[o][i] * norm.x);
-                    m.tangents[o2] = new Vector4(zCoords[o][i], 0, -xCoords[o][i], 1.0f);
+                    m.tangents[o2] = new Vector4(zCoords[o][i], 0, -xCoords[o][i], -1.0f);
 
                     int o3 = off + i + 3 * (subdivCount + 1);
                     m.uv[o3] = new Vector2(uCoords[o][i] + 0.75f, v);
                     m.verticies[o3] = new Vector3(zCoords[o][i] * 0.5f * diameter, y, -xCoords[o][i] * 0.5f * diameter);
                     m.normals[o3] = new Vector3(zCoords[o][i] * norm.x, norm.y, -xCoords[o][i] * norm.x);
-                    m.tangents[o3] = new Vector4(xCoords[o][i], 0, zCoords[o][i], 1.0f);
+                    m.tangents[o3] = new Vector4(xCoords[o][i], 0, zCoords[o][i], -1.0f);
                 }
 
                 // write the wrapping vertex. This is identical to the first one except for u coord += 1
