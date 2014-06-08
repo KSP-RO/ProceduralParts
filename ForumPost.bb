@@ -107,7 +107,7 @@ The tank types will automatically appear if the mods are installed. They should 
 [SIZE=4][B]How to [s]cheat in career mode[/s] have lower tech restrictions[/B][/SIZE]
 The current tech restrictions have been tailored to closely mimic stock, with a bit of room to alter the original specs. Note that [B]this will not be changed[/B] with the out of the box config.
 
-[spoiler=how to change it yourself]
+[spoiler=how to increase dimension text limits]
 If you'd like more generous limits, you can create a MM patch (ie: cut and paste this into a file called mycheats.cfg in your GameData dir) and tweak to your liking:
 
 [CODE]
@@ -130,11 +130,21 @@ If you'd like more generous limits, you can create a MM patch (ie: cut and paste
 	}
 }
 [/CODE]
-
 This will affect all procedural tanks and the SRB. The name of the Real Fuels SRB is "proceduralSRBRealFuels" so you'll need to make another similar patch for that one if you want to mess with that too.
+[/spoiler]
 
-[I]TODO: show how to remove tech level limits on shapes. Stay tuned.[/I]
-
+[spoiler=how to allow all shapes in early tech levels]
+If you'd like to be able to use all the shapes from the early game then use the following MM patch:
+[CODE]
+@PART[*] 
+{
+	@MODULE[ProceduralShape*]
+	{
+		-techRequired = dummy
+	}
+}
+[/CODE]
+This will affect all parts.
 [/spoiler]
 
 [SIZE=4][B]Future plans[/B][/SIZE]
