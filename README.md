@@ -1,81 +1,118 @@
-ProceduralParts allows you to procedurally generate (currently) fuel tanks, SRBs, Structural parts, and decouplers in a range of sizes and shapes. The parts are fully tweakable with multiple options for customization of the shape, surface texture, and other parameters.
+ProceduralParts allows you to procedurally generate a number of different parts in a range of sizes and shapes. The parts are fully tweakable with multiple options for customization of the shape, surface texture, and other parameters.
+
+This is nearing official release. Will concentrate on finding any more bugs and then make an official first release.
 
 ## Features
 
-The features include:
+### The features include:
 * Everything accessible by tweaking
 * A broad range of shapes including cylinders, truncated cones, filleted cylinders, bezier cones.
 * New part shapes are easy to develop and plug in, so cuboid / pill shaped / whatever else you want shaped will be able to be created.
 * Most stuff configurable in the config file, including resources and fill ratios, tech levels, available shapes
 * Diverse support for career mode - tank shapes, dimensions, and contents all limited by researched tech
 * All supplied parts are carefully designed to be as 'stock alike' as possible in their tech level requirements - You can't create a monster tank before you've discovered basic rocketry for example.
-* Other mod support - tanks for RealFuels, Kethane, Extraplanetary Launchpads, and TAC. (thanks to OtherBarry)
+* Other mod support - tanks for RealFuels, Kethane, Extraplanetary Launchpads, and TAC. Heat shields for Deadly Reentry. (thanks to OtherBarry)
+* Plays nicely with Ferram Aerospace Research
 * Multiple textures available for part surfaces. These are fully compatible with StretchySRB textures.
 * Deprecation support for StretchySRB - see below for details.
-* A Module - TankContentSwitcher that can be applied to existing tanks (with say module manager) and allow their contents to be tweaked. Tweak any tank in the VAB into a Liquid fuel only or oxidizer 
+* A Module - TankContentSwitcher that can be applied to existing tanks (with say module manager) and allow their contents to be tweaked. Tweak any tank in the VAB into a Liquid fuel only or oxidizer tank.
 
-Parts available:
+### Parts available:
 * **Tanks** Different parts supplied for different 'groups' of fuels (Liquid fuels, SRBs, Monoprop, Xenon). The multiple part approach is to allow for tech limiting of sizes and volumes.
 * **SRBs** Tweakable thrust (or burn time for real fuels). Tweak between a choice of two bells that are designed for surface or vacuum, with varying ISPs.
 * **Decoupler** Tweakable diameters (with tech defined limits), ejection impulse, and can be in either decoupler or separator mode (again tech dependent).
 * **Structural Part** Good for fuselage, adapters, whatever. Half as light as the equivalent tank.
+* **Batteries** It's a bit rough and ready, but it works well enough. 
 * **Nose Cone** Specialized structural part for nose cones. The shape is limited to a smooth cone with a bounded ratio of diameter to length. 
+* **Heat Shield** Built to the same specs as Deadly Reentry. Will shield any sized object from heat. (requires deadly reentry) 
 
 ## Installation
-
-Just extract the zip into your KSP folder and you should be away.
-Some of the integration with other mods requires the latest version of ModuleManager, which is included in the zip.
+Just extract the zip into your KSP folder and you should be away. Some of the integration with other mods requires the latest version of ModuleManager, which is included in the zip. 
 
 ## Upgrades
+* Make sure you delete any old versions of ProceduralParts. 
+* There's a handful of deprecated parts as was previously used for real fuels. If you didn't use these parts, then you can safely delete the PartsDeprecated folder in the main install directory.
 
-Make sure you delete any old versions of ProceduralParts
-There is sometimes some changes to parts which may require editing of your save file if you have ships in flight. Details of how to do this [are here](https://github.com/Swamp-Ig/ProceduralParts/wiki/Upgrading-between-versions)
+## Known Issues
+* Sometimes if the procedural part is the lowest part on the rocket, it may explode on the launch pad. Easily worked around with a launch clamp. This is fixable but will take more effort than its worth.
 
-## Customization
+## Custom Textures and Texture Packs 
+Procedural Parts is compatible with all texture packs for StretchySRBs. It's easy to [roll your own texture packs](https://github.com/Swamp-Ig/ProceduralParts/blob/master/Parts/STTextures.cfg) too. 
 
-The original texture customization system from StretchySRB is still present. This system works off confignodes. There is a file in the StretchyTanks/Parts folder called STTextures.cfg that defines the textures. 
+Here's some texture packs that other people have compiled:
 
-You can create your own textures, place them in any location, and create a config file with STRETCHYTANKTEXTURES nodes for each texture. All documentation on the node syntax is in the STTextures.cfg file.
+#### Planeguy868
+[Download](http://www.mediafire.com/download/gz8f35398bs7a14/planeguy868.zip). 
+Installation instructions: download and extract it to KSP's GameData folder.
+![image](http://i.imgur.com/Zsq4zeYm.png)![image](http://i.imgur.com/6uSoyXCm.png)
 
-Most other stuff including fuel mass ratios, fuel types, tech levels etc are all available within the config file and are well documented. Note that I tried to make everything as 'stock alike' as possible to ensure the mod isn't cheaty. This means a few things have changed as compared to StretchySRB. If you want it back the old way then look through the config file and fiddle with it.
+#### Ferram4's Saturn and Nova Textures
+[Download](http://www.mediafire.com/download/9mi9tjb5akaiaaz/SaturnNovaTexturePack.zip). 
+Installation instructions in zip.
+![image](http://i.imgur.com/YZyRRBN.jpg)
 
-There is the scope for adding your own tank shapes, however if you want to do this you'd best get in touch with me so I can talk you though it. Other surface of revolution type tanks will be pretty easy to implement, just calculate the profile.
+#### blackheart612
+[Full thread!](http://forum.kerbalspaceprogram.com/threads/68892)
+Install instructions and sample images in link.
 
-## Compatibility with StretchyTanks / StretchySRBs
-
+## Compatibility with StretchyTanks / StretchySRBs 
 This is essentially a completely new mod and can run alongside either of the previous mods. This is useful if you have pre-existing ships in your save file still using those parts. If you don't have any ships using those parts, then you can delete the old mod.
 
 There's a module manager patch file present that will hide all the StretchySRB tanks in the VAB so they don't clutter it up. If for whatever reason you want to continue using StretchySRBs, then delete ProceduralParts\ModuleManager\StretchyTanks_Hide.cfg and this won't happen.
 
-## Integration with Real Fuels
+##  Integration with Real Fuels and Modular Fuel Tanks 
+Integration with Real Fuels and Modular Fuels Tanks is complete. Ensure you have Real Fuels version 6.1 or newer, and Modular Fuel Tanks 5.0.1 or newer. There's one or two bugs still to get through, stay tuned for updates on those two.
 
-Real Fuels integration is a work in progress, but does currently work fairly reasonably. You need the latest version of RF - v5.1.
+For MFT, the existing tank types are turned into the corresponding MFT type.
 
-I have created several different tank types including Standard, Cryo, Balloon, BalloonCryo, and Service.
+For real fuels, there's an SRB which can be switched between low altitude and high altitude versions, plus a tank which can be switched between the various RF tank types. 
 
-For the SRBs, there are two parts available, one for surface and one for vac. You can tweak the sea-level thrust, but all the information displays as available in stock stretchy SRBs will require an update to Real Fuels to get it working.
-
-Ultimately all the different tank types will be rolled into one part, with a tweaker to switch between the different tank types available to RF. Similar treatment will be given to the SRBs. When this happens the existing parts will be deprecated and optionally either hidden in the VAB, or removed entirely (if you have no flying ships).
-
-Getting this to work will require some updates to real fuels, there's no specific time-frame, I will need to collaborate with the RF developers. Be patient 
-
-You no longer need to download a separate part pack for real fuels, the mod will detect if it's installed and offer you the right tanks.
+The old system with multiple parts is preserved as a deprecated option (hidden in the VAB). If you don't have any old tanks on ships or craft you can delete the PartsDeprecated from the root of the install.
 
 ## Integration with other mods
-
 Thanks to OtherBarry, there are now tanks for RealFuels, Kethane, Extraplanetary Launchpads, and TAC.
+There's also a procedural heat-shield for Deadly Reentry.
+All part's drag models will automatically update if using Ferram Aerospace Research.
 The tank types will automatically appear if the mods are installed. They should be 'fair' compared to their unmodded versions.
 
-## Plans for the future
+## How to ~~cheat in career mode~~ have lower tech restrictions
+The current tech restrictions have been tailored to closely mimic stock, with a bit of room to alter the original specs. Note that **this will not be changed** with the out of the box config.
 
-* Improve functionality with Real Fuels. This will need some code changes on the real fuels end.
+If you'd like more generous limits, you can create a MM patch (ie: cut and paste this into a file called mycheats.cfg in your GameData dir) and tweak to your liking:
+
+~~~~
+@PART[proceduralTank*] 
+{
+	@MODULE[ProceduralPart]
+	{
+		@TECHLIMIT,*
+		{
+			// Increase the max length for all tech levels by 3*
+			@lengthMax *= 3
+			// Corresponding volume increase
+			@volumeMax *= 3
+
+			// Increase the max diameter by double
+			@diameterMax *= 2
+			// Since volume goes up on diameter^2, need to use increase^2
+			@volumeMax *= 4
+		}
+	}
+}
+~~~~
+
+This will affect all procedural tanks and the SRB. The name of the Real Fuels SRB is "proceduralSRBRealFuels" so you'll need to make another similar patch for that one if you want to mess with that too.
+
+* **TODO:** show how to remove tech level limits on shapes. Stay tuned.*
+
+## Future plans
 * Cuboid parts, with customizable side lengths
 * Extruded parts, such as hexagonal and octagonal pieces
-* Add optional mounting pod for surface mounts to pod tank.
+* Add optional mounting pod for surface mounts to pod tank. 
 * Procedural command module, possibly with rescaling / tweakable IVA.
 
-## Features That Are Not Planned
 
+## Features That Are Not Planned
 * Shapes with 'holes' in them and concave shapes - including toroids. 
 * Procedural wings, procedural fairings - there's good mods for these already.
 * Procedural engines - May happen one day, but not a priority.
