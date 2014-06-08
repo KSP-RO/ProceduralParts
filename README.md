@@ -4,7 +4,7 @@ This is nearing official release. Will concentrate on finding any more bugs and 
 
 ## Features
 
-### The features include:
+#### The features include
 * Everything accessible by tweaking
 * A broad range of shapes including cylinders, truncated cones, filleted cylinders, bezier cones.
 * New part shapes are easy to develop and plug in, so cuboid / pill shaped / whatever else you want shaped will be able to be created.
@@ -17,7 +17,7 @@ This is nearing official release. Will concentrate on finding any more bugs and 
 * Deprecation support for StretchySRB - see below for details.
 * A Module - TankContentSwitcher that can be applied to existing tanks (with say module manager) and allow their contents to be tweaked. Tweak any tank in the VAB into a Liquid fuel only or oxidizer tank.
 
-### Parts available:
+#### Parts available
 * **Tanks** Different parts supplied for different 'groups' of fuels (Liquid fuels, SRBs, Monoprop, Xenon). The multiple part approach is to allow for tech limiting of sizes and volumes.
 * **SRBs** Tweakable thrust (or burn time for real fuels). Tweak between a choice of two bells that are designed for surface or vacuum, with varying ISPs.
 * **Decoupler** Tweakable diameters (with tech defined limits), ejection impulse, and can be in either decoupler or separator mode (again tech dependent).
@@ -70,7 +70,7 @@ For MFT, the existing tank types are turned into the corresponding MFT type.
 
 For real fuels, there's an SRB which can be switched between low altitude and high altitude versions, plus a tank which can be switched between the various RF tank types. 
 
-The old system with multiple parts is preserved as a deprecated option (hidden in the VAB). If you don't have any old tanks on ships or craft you can delete the PartsDeprecated from the root of the install.
+The old real fuels system with multiple parts for different tank types is preserved as a deprecated option (hidden in the VAB). If you don't have any old tanks on ships or craft you can delete the PartsDeprecated from the root of the install.
 
 ## Integration with other mods
 Thanks to OtherBarry, there are now tanks for RealFuels, Kethane, Extraplanetary Launchpads, and TAC.
@@ -108,12 +108,12 @@ This will affect all procedural tanks and the SRB. The name of the Real Fuels SR
 
 **TODO:** _show how to remove tech level limits on shapes. Stay tuned._
 
+
 ## Future plans
 * Cuboid parts, with customizable side lengths
 * Extruded parts, such as hexagonal and octagonal pieces
 * Add optional mounting pod for surface mounts to pod tank. 
 * Procedural command module, possibly with rescaling / tweakable IVA.
-
 
 ## Features That Are Not Planned
 * Shapes with 'holes' in them and concave shapes - including toroids. 
@@ -121,20 +121,13 @@ This will affect all procedural tanks and the SRB. The name of the Real Fuels SR
 * Procedural engines - May happen one day, but not a priority.
 
 ## Acknowledgements
-
-ProceduralParts has an extended family tree:
-
+#### ProceduralParts has an extended family tree
 * StretchyTanks is the original module by the great Ancient Gammoner.
 * StretchySRBs was created and updated by NathanKell and e-dog.
 * ProceduralParts is a near complete re-write by Swamp Ig. 
 
-Also featuring:
-
+#### Also featuring
 * Extensive work on config and mod integration by OtherBarry
 * Models by Tiberion 
 * Further textures by Chestburster and Dante80.
 * Config code by jsimmonds
-
-## Licence
-
-Remains as CC-BY-SA 3.0 Unported.

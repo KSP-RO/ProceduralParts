@@ -22,3 +22,4 @@
 *.RTF	 diff=astextplain
 
 version-gen text eol=lf
+*.sh text eol=lf
