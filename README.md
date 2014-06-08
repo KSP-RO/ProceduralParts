@@ -44,11 +44,14 @@ Here's some texture packs that other people have compiled:
 #### Planeguy868
 [Download](http://www.mediafire.com/download/gz8f35398bs7a14/planeguy868.zip). 
 Installation instructions: download and extract it to KSP's GameData folder.
-![image](http://i.imgur.com/Zsq4zeYm.png)![image](http://i.imgur.com/6uSoyXCm.png)
+
+![image](http://i.imgur.com/Zsq4zeYm.png)
+![image](http://i.imgur.com/6uSoyXCm.png)
 
 #### Ferram4's Saturn and Nova Textures
 [Download](http://www.mediafire.com/download/9mi9tjb5akaiaaz/SaturnNovaTexturePack.zip). 
 Installation instructions in zip.
+
 ![image](http://i.imgur.com/YZyRRBN.jpg)
 
 #### blackheart612
