@@ -699,7 +699,10 @@ namespace ProceduralParts
                 }
                 else
                 {
-                    scaleUV.y *= sideTextureScale.y;
+                    if (tex.autoHeightSteps > 0)
+                        scaleUV.y = (float)Math.Max(Math.Round(sideTextureScale.y / tex.autoHeightSteps), 1f) * tex.autoHeightSteps;
+                    else
+                        scaleUV.y *= sideTextureScale.y;
                 }
             }
 
