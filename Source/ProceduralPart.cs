@@ -484,6 +484,9 @@ namespace ProceduralParts
             public string sidesName;
             public string endsName;
             public string sidesBumpName;
+
+            public Color sidesSpecular = new Color(0.2f, 0.2f, 0.2f);
+            public float sidesShininess = 0.4f;
         }
         private static List<TextureSet> loadedTextureSets;
         private static string[] loadedTextureSetNames;
@@ -564,6 +567,11 @@ namespace ProceduralParts
                 bool.TryParse(node.GetNode("sides").GetValue("autoWidthDivide"), out tex.autoWidthDivide);
             if (node.GetNode("sides").HasValue("autoHeightSteps"))
                 float.TryParse(node.GetNode("sides").GetValue("autoHeightSteps"), out tex.autoHeightSteps);
+
+            if (node.GetNode("sides").HasValue("specular"))
+                tex.sidesSpecular = ConfigNode.ParseColor(node.GetNode("sides").GetValue("specular"));
+            if (node.GetNode("sides").HasValue("shininess"))
+                float.TryParse(node.GetNode("sides").GetValue("shininess"), out tex.sidesShininess);
 
             Texture[] textures = Resources.FindObjectsOfTypeAll(typeof(Texture)) as Texture[];
 
@@ -656,12 +664,15 @@ namespace ProceduralParts
             // Set shaders
             if (!part.Modules.Contains("ModulePaintable"))
             {
-                SidesMaterial.shader = Shader.Find(tex.sidesBump != null ? "KSP/Bumped" : "KSP/Diffuse");
+                SidesMaterial.shader = Shader.Find(tex.sidesBump != null ? "KSP/Bumped Specular" : "KSP/Specular");
 
                 // pt is no longer specular ever, just diffuse.
                 if (EndsMaterial != null)
                     EndsMaterial.shader = Shader.Find("KSP/Diffuse");
             }
+
+            SidesMaterial.SetColor("_SpecColor", tex.sidesSpecular);
+            SidesMaterial.SetFloat("_Shininess", tex.sidesShininess);
 
             // TODO: shove into config file.
             if (EndsMaterial != null)
@@ -694,10 +705,12 @@ namespace ProceduralParts
 
             // apply
             SidesMaterial.mainTextureScale = scaleUV;
+            SidesMaterial.mainTextureOffset = Vector2.zero;
             SidesMaterial.SetTexture("_MainTex", tex.sides);
             if (tex.sidesBump != null)
             {
                 SidesMaterial.SetTextureScale("_BumpMap", scaleUV);
+                SidesMaterial.SetTextureOffset("_BumpMap", Vector2.zero);
                 SidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
             }
             if (EndsMaterial != null)
