@@ -448,15 +448,17 @@ namespace ProceduralParts
             {
                 // Work out the min burn time.
                 PartResource solidFuel = part.Resources["SolidFuel"];
+                if (solidFuel != null)
+                {
+                    float isp0 = Engine.atmosphereCurve.Evaluate(0);
+                    float minBurnTime = (float) Math.Ceiling(isp0*solidFuel.maxAmount*solidFuel.info.density*Engine.g/maxThrust);
 
-                float isp0 = Engine.atmosphereCurve.Evaluate(0);
-                float minBurnTime = (float) Math.Ceiling(isp0*solidFuel.maxAmount*solidFuel.info.density*Engine.g/maxThrust);
+                    ((UI_FloatEdit)Fields["burnTimeME"].uiControlEditor).minValue = minBurnTime;
 
-                ((UI_FloatEdit)Fields["burnTimeME"].uiControlEditor).minValue = minBurnTime;
-
-                // Keep the thrust constant, change the current burn time to match
-                // Don't round the value, this stops it jumping around and won't matter that much
-                burnTimeME = (float)(isp0 * solidFuel.maxAmount * solidFuel.info.density * Engine.g / thrust);
+                    // Keep the thrust constant, change the current burn time to match
+                    // Don't round the value, this stops it jumping around and won't matter that much
+                    burnTimeME = (float)(isp0 * solidFuel.maxAmount * solidFuel.info.density * Engine.g / thrust);   
+                }
             }
 
             UpdateThrust(true);
