@@ -49,6 +49,9 @@
     <Reference Include="Assembly-CSharp-firstpass, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
     </Reference>
+    <Reference Include="KSPAPIExtensions">
+      <HintPath>..\..\KSPAPIExtensions\KSPAPIExtensions.dll</HintPath>
+    </Reference>
     <Reference Include="System, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e, processorArchitecture=MSIL" />
     <Reference Include="UnityEngine">
       <Private>False</Private>
@@ -71,12 +74,6 @@
     <Compile Include="TransformFollower.cs" />
     <Compile Include="zzVersionChecker.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\KSPAPIExtensions\Source\KSPAPIExtensions.csproj">
-      <Project>{4282b0da-c314-4524-9c32-edab2c9666a9}</Project>
-      <Name>KSPAPIExtensions</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy /y "$(TargetPath)" "$(SolutionDir)..\Plugins\"
@@ -85,7 +82,7 @@ if exist "$(SolutionDir)\KSPAPIExtensions.dll" move "$(SolutionDir)\KSPAPIExtens
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>cd "$(ProjectDir)"\..
-sh version-gen</PreBuildEvent>
+rem sh version-gen</PreBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
