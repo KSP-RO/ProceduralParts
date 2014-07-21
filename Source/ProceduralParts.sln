@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual C# Express 2010
+# Visual C# Express 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProceduralParts", "ProceduralParts.csproj", "{BB7C12FE-8189-4A56-B058-58C1B7366E60}"
 EndProject
 Global
