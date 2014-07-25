@@ -1,10 +1,10 @@
 {
   "NAME": "Procedural Parts",
   "URL": "https://raw.githubusercontent.com/Swamp-Ig/ProceduralParts/master/ProceduralParts.version",
-  "VERSION": "0.9.14",
+  "VERSION": "0.9.15",
   "KSP_VERSION": {
     "MAJOR": 0,
-    "MINOR": 23,
-    "PATCH": 5
+    "MINOR": 24,
+    "PATCH": 1
   }
 }
