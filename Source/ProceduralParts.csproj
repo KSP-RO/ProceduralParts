@@ -84,8 +84,8 @@ rem if exist "$(SolutionDir)\KSPAPIExtensions.dll" move "$(SolutionDir)\KSPAPIEx
 del "System.Core.dll"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
-    <PreBuildEvent>rem cd "$(ProjectDir)"\..
-rem sh version-gen</PreBuildEvent>
+    <PreBuildEvent>cd "$(ProjectDir)"\..
+sh version-gen</PreBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
