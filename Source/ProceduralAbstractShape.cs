@@ -11,7 +11,7 @@ namespace ProceduralParts
         {
             base.OnAwake();
             PartMessageService.Register(this);
-            this.RegisterOnUpdateEditor(OnUpdateEditor);
+            //this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
 
         #region Config data
@@ -121,6 +121,11 @@ namespace ProceduralParts
         public override void OnUpdate()
         {
             OnUpdateEditor();
+        }
+        public void Update()
+        {
+            if (HighLogic.LoadedSceneIsEditor)
+                OnUpdateEditor();
         }
 
         public void OnUpdateEditor()
