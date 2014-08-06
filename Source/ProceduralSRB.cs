@@ -17,7 +17,13 @@ namespace ProceduralParts
         {
             base.OnAwake();
             PartMessageService.Register(this);
-            this.RegisterOnUpdateEditor(OnUpdateEditor);
+            //this.RegisterOnUpdateEditor(OnUpdateEditor);
+        }
+
+        public void Update()
+        {
+            if (HighLogic.LoadedSceneIsEditor)
+                OnUpdateEditor();
         }
 
         public override void OnLoad(ConfigNode node)
