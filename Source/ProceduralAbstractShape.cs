@@ -2,6 +2,7 @@
 using KSPAPIExtensions;
 using UnityEngine;
 using KSPAPIExtensions.PartMessage;
+using System.Reflection;
 
 namespace ProceduralParts
 {
@@ -26,6 +27,9 @@ namespace ProceduralParts
 
         [KSPField]
         public string volumeName = PartVolumes.Tankage.ToString();
+
+        [KSPField]
+        public float costMultiplier = 1.0f;
 
         #endregion
 
@@ -59,6 +63,8 @@ namespace ProceduralParts
                 {
                     _volume = value;
                     ChangeVolume(volumeName, value);
+                    if (HighLogic.LoadedSceneIsEditor)
+                        GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                 }
             }
         }
@@ -128,6 +134,15 @@ namespace ProceduralParts
                 OnUpdateEditor();
         }
 
+        public void UpdateFAR()
+        {
+            /*if (part.Modules.Contains("FARBasicDragModel"))
+            {
+                PartModule pModule = part.Modules["FARBasicDragModel"];
+                pModule.GetType().GetMethod("UpdatePropertiesWithShapeChange").Invoke(pModule, null);
+            }*/
+        }
+
         public void OnUpdateEditor()
         {
             try
@@ -140,7 +155,11 @@ namespace ProceduralParts
                     UpdateShape(wasForce);
 
                     if (wasForce)
+                    {
                         ChangeVolume(volumeName, Volume);
+                        if (HighLogic.LoadedSceneIsEditor)
+                            GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+                    }
                 }
             }
             catch (Exception ex)

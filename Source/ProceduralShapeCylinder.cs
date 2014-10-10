@@ -83,6 +83,8 @@ namespace ProceduralParts
             oldDiameter = diameter;
             oldLength = length;
             // ReSharper restore CompareOfFloatsByEqualityOperator
+
+            UpdateFAR();
         }
     }
 }

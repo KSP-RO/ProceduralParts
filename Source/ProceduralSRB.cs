@@ -9,7 +9,7 @@ using KSPAPIExtensions.Utils;
 namespace ProceduralParts
 {
 
-    public class ProceduralSRB : PartModule
+    public class ProceduralSRB : PartModule, IPartCostModifier
     {
         #region callbacks
 
@@ -106,6 +106,14 @@ namespace ProceduralParts
 
             attachedEndSize = minDia;
             UpdateMaxThrust();
+        }
+
+        [KSPField]
+        public float costMultiplier = 1.0f;
+
+        public float GetModuleCost()
+        {
+            return thrust * 0.5f * costMultiplier;
         }
 
         #endregion
@@ -218,6 +226,7 @@ namespace ProceduralParts
 
         private void InitializeBells()
         {
+            print("*PP* InitializeBells");
             // Initialize the configs.
             if (srbConfigs == null)
                 LoadSRBConfigs();
@@ -335,6 +344,7 @@ namespace ProceduralParts
             if (pPart != null)
             {
                 // Attach the bell. In the config file this isn't in normalized position, move it into normalized position first.
+                print("*PP* Setting bell position: " + pPart.transform.TransformPoint(0, -0.5f, 0));
                 srbBell.position = pPart.transform.TransformPoint(0, -0.5f, 0);
                 pPart.AddAttachment(srbBell, true);
 
@@ -483,6 +493,8 @@ namespace ProceduralParts
 
             oldThrust = thrust;
             oldBurnTimeME = burnTimeME;
+            if(HighLogic.LoadedSceneIsEditor)
+                GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
         }
 
         private void UpdateThrustDependentCalcs()

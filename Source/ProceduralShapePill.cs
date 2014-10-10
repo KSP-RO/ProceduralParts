@@ -248,6 +248,8 @@ namespace ProceduralParts
             oldLength = length;
             oldFillet = fillet;
             // ReSharper restore CompareOfFloatsByEqualityOperator
+
+            UpdateFAR();
         }
 
         private float CalcVolume()

@@ -10,7 +10,7 @@ namespace ProceduralParts
     [PartMessageDelegate]
     public delegate void ChangeTextureScaleDelegate(string name, [UseLatest] Material material, [UseLatest] Vector2 targetScale);
 
-    public class ProceduralPart : PartModule
+    public class ProceduralPart : PartModule, IPartCostModifier
     {
         #region Initialization
 
@@ -977,7 +977,11 @@ namespace ProceduralParts
 
         private PartAttachment AddPartAttachment(Vector3 position, TransformFollower.Transformable target, bool normalized = false)
         {
+            if ((object)target == null)
+                Debug.Log("AddPartAttachment: null target!");
             TransformFollower follower = TransformFollower.CreateFollower(partModel, position, target);
+            if((object)follower == null)
+                Debug.Log("AddPartAttachment: null follower!");
             object data = shape.AddAttachment(follower, normalized);
 
             return new PartAttachment(follower, data);
@@ -1144,8 +1148,33 @@ namespace ProceduralParts
             shape.isEnabled = shape.enabled = true;
 
             oldShapeName = shapeName;
+
+            if (HighLogic.LoadedSceneIsEditor)
+                GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
         }
 
+        #endregion
+
+        #region Cost
+        [KSPField]
+        public float costPerkL = 0.00957f;
+
+        public float GetModuleCost()
+        {
+            float cost = 0f;
+            if((object)shape != null)
+                cost = shape.costMultiplier * shape.Volume * costPerkL;
+            if (!part.Modules.Contains("ModuleFuelTanks") && (object)PartResourceLibrary.Instance != null)
+            {
+                foreach (PartResource r in part.Resources)
+                {
+                    PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
+                    if((object)d != null)
+                        cost += (float)(r.amount * d.unitCost);
+                }
+            }
+            return cost;
+        }
         #endregion
 
     }

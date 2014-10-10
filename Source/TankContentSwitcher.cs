@@ -265,6 +265,8 @@ namespace ProceduralParts
                     Debug.LogWarning("*TCS* Selected part type '" + tankType + "' does not exist, reverting to previous");
                     selectedTankType = oldTankType;
                     tankType = selectedTankType.name;
+                    if (HighLogic.LoadedSceneIsEditor)
+                        GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                     return;
                 }
             }
@@ -275,6 +277,8 @@ namespace ProceduralParts
                 Fields["tankVolume"].guiActiveEditor = tankVolumeName != null;
 
             UpdateMassAndResources(true);
+            if (HighLogic.LoadedSceneIsEditor)
+                GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
         }
 
         #endregion

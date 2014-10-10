@@ -104,6 +104,8 @@ namespace ProceduralParts
 
             oldTopDiameter = topDiameter; oldBottomDiameter = bottomDiameter; oldLength = length;
             oldSelectedShape = selectedShape;
+
+            UpdateFAR();
         }
 
         #region Control point calculation and volume limits
