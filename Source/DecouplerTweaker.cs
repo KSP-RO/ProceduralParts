@@ -59,7 +59,7 @@ namespace ProceduralParts
         public float ejectionImpulse;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="S3")]
-        public float mass;
+        public float mass = 0;
 
         private ModuleDecouple decouple;
 
@@ -93,7 +93,8 @@ namespace ProceduralParts
             else if (HighLogic.LoadedSceneIsFlight)
             {
                 decouple.isOmniDecoupler = isOmniDecoupler;
-                part.mass = mass;
+                if(!float.IsNaN(mass))
+                    part.mass = mass;
             }
         }
 
@@ -106,7 +107,7 @@ namespace ProceduralParts
 
         public override void OnUpdate()
         {
-            if (FindDecoupler())
+            if (HighLogic.LoadedSceneIsFlight && TimeWarp.fixedDeltaTime > 0 && FindDecoupler())
                 decouple.ejectionForce = ejectionImpulse / TimeWarp.fixedDeltaTime;
         }
 
