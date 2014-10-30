@@ -1157,20 +1157,25 @@ namespace ProceduralParts
 
         #region Cost
         [KSPField]
-        public float costPerkL = 0.00957f;
+        public float costPerkL = 245f;
 
         public float GetModuleCost()
         {
             float cost = 0f;
             if((object)shape != null)
                 cost = shape.costMultiplier * shape.Volume * costPerkL;
+            if (part.Modules.Contains("TankContentSwitcher"))
+            {
+                TankContentSwitcher switcher = (TankContentSwitcher)part.Modules["TankContentSwitcher"];
+                cost *= switcher.GetCurrentCostMult();
+            }
             if (!part.Modules.Contains("ModuleFuelTanks") && (object)PartResourceLibrary.Instance != null)
             {
                 foreach (PartResource r in part.Resources)
                 {
                     PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
                     if((object)d != null)
-                        cost += (float)(r.amount * d.unitCost);
+                        cost += (float)(r.maxAmount * d.unitCost);
                 }
             }
             return cost;

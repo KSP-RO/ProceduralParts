@@ -141,6 +141,7 @@ namespace ProceduralParts
         public string tankType;
 
         private TankTypeOption selectedTankType;
+        public float GetCurrentCostMult() { return selectedTankType.costMultiplier; }
         private List<TankTypeOption> tankTypeOptions;
 
         // This should be private, but there's a bug in KSP.
@@ -158,6 +159,8 @@ namespace ProceduralParts
             public float massConstant;
             [Persistent]
             public bool isStructural = false;
+            [Persistent]
+            public float costMultiplier = 1.0f;
             
             public List<TankResource> resources;
 

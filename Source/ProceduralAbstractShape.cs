@@ -136,11 +136,14 @@ namespace ProceduralParts
 
         public void UpdateFAR()
         {
-            /*if (part.Modules.Contains("FARBasicDragModel"))
+            if (HighLogic.LoadedSceneIsEditor)
             {
-                PartModule pModule = part.Modules["FARBasicDragModel"];
-                pModule.GetType().GetMethod("UpdatePropertiesWithShapeChange").Invoke(pModule, null);
-            }*/
+                if (part.Modules.Contains("FARBasicDragModel"))
+                {
+                    PartModule pModule = part.Modules["FARBasicDragModel"];
+                    pModule.GetType().GetMethod("UpdatePropertiesWithShapeChange").Invoke(pModule, null);
+                }
+            }
         }
 
         public void OnUpdateEditor()
