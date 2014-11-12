@@ -141,7 +141,14 @@ namespace ProceduralParts
         public string tankType;
 
         private TankTypeOption selectedTankType;
-        public float GetCurrentCostMult() { return selectedTankType.costMultiplier; }
+        
+        public float GetCurrentCostMult()
+        {
+            if (null != selectedTankType)
+                return selectedTankType.costMultiplier;
+            else
+                return 0; // tank type has not been initialized yet
+        }
         private List<TankTypeOption> tankTypeOptions;
 
         // This should be private, but there's a bug in KSP.
