@@ -50,7 +50,7 @@ namespace ProceduralParts
             else
             {
                 diameterEdit.maxValue = PPart.diameterMax;
-                diameterEdit.minValue = useEndDiameter ? 0 : PPart.diameterMin;
+                diameterEdit.minValue = PPart.diameterMin;
                 diameterEdit.incrementLarge = PPart.diameterLargeStep;
                 diameterEdit.incrementSmall = PPart.diameterSmallStep;
             }
