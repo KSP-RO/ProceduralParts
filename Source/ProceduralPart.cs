@@ -1162,9 +1162,9 @@ namespace ProceduralParts
         [KSPField(isPersistant=true, guiActiveEditor=true, guiName="cost")]
         public float moduleCost = 0f;
 
-        public float GetModuleCost()
+        public float GetModuleCost(float stdCost)
         {
-            if (HighLogic.LoadedScene == GameScenes.EDITOR || HighLogic.LoadedScene == GameScenes.SPH)
+            if (HighLogic.LoadedScene == GameScenes.EDITOR)
             {
                 float cost = 0f;
                 if ((object)shape != null)

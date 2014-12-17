@@ -558,7 +558,7 @@ namespace ProceduralParts
 
         public void OnUpdateEditor()
         {
-            Fields["showRFGUI"].guiActiveEditor = EditorLogic.fetch.editorScreen == EditorLogic.EditorScreen.Parts;
+            Fields["showRFGUI"].guiActiveEditor = EditorLogic.fetch.editorScreen == EditorScreen.Parts;
 
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (utilization != oldUtilization)
@@ -573,7 +573,7 @@ namespace ProceduralParts
         public void OnGUI()
         {
             EditorLogic editor = EditorLogic.fetch;
-            if (!HighLogic.LoadedSceneIsEditor || !showRFGUI || !editor || editor.editorScreen != EditorLogic.EditorScreen.Parts)
+            if (!HighLogic.LoadedSceneIsEditor || !showRFGUI || !editor || editor.editorScreen != EditorScreen.Parts)
             {
                 return;
             }
