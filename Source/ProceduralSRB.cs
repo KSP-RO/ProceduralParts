@@ -111,7 +111,7 @@ namespace ProceduralParts
         [KSPField]
         public float costMultiplier = 1.0f;
 
-        public float GetModuleCost()
+        public float GetModuleCost(float stdCost)
         {
             return thrust * 0.5f * costMultiplier;
         }
