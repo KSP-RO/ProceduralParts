@@ -21,7 +21,7 @@ namespace ProceduralParts
     /// The class also accepts the message ChangeVolume(float volume) if attached to a dynamic resizing part
     /// such as ProceeduralTanks.
     /// </summary>
-    public class TankContentSwitcher : PartModule
+    public class TankContentSwitcher : PartModule, IPartMassModifier
     {
         #region Callbacks
         public override void OnAwake()
@@ -453,10 +453,17 @@ namespace ProceduralParts
         }
 
         #endregion
+        
+        #region Mass
+		public float GetModuleMass(float defaultMass)
+		{
+			return part.mass - defaultMass;
+		}
+		#endregion
     }
 
 
-    public class TankContentSwitcherRealFuels : PartModule
+    public class TankContentSwitcherRealFuels : PartModule, IPartMassModifier
     {
         public override void OnAwake()
         {
@@ -650,5 +657,12 @@ namespace ProceduralParts
                 massDisplay = "Dry: " + MathUtils.FormatMass(part.mass) + " / Wet: " + MathUtils.FormatMass(totalMass);
             }
         }
+        
+        #region Mass
+		public float GetModuleMass(float defaultMass)
+		{
+			return part.mass - defaultMass;
+		}
+		#endregion
     }
 }
