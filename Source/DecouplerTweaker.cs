@@ -12,7 +12,7 @@ namespace ProceduralParts
     /// This fairly flexible module allows tech dependent tweaking of the type and size of modules.
     /// There are options for it to target just one specific module, or all the modules on a part.
     /// </summary>
-    public class DecouplerTweaker : PartModule
+    public class DecouplerTweaker : PartModule, IPartMassModifier
     {
         public override void OnAwake()
         {
@@ -132,7 +132,10 @@ namespace ProceduralParts
         public void ChangeVolume(string volumeName, float volume)
         {
             if (density > 0)
+            {
                 UpdateMass(density * volume);
+                GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+            }
         }
 
         private void UpdateMass(float updateMass)
@@ -149,6 +152,14 @@ namespace ProceduralParts
                 fld.guiUnits = "T";
                 fld.guiFormat = "S3";
             }
+        }
+
+        public float GetModuleMass(float defaultMass)
+        {
+            if (density > 0)
+                return part.mass - defaultMass;
+            else
+                return 0.0f;
         }
     }
 
