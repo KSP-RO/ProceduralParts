@@ -71,11 +71,11 @@ namespace ProceduralParts
             Vector3 trans;
             if (hasParent)
             {
-                if (oldParentRotation != transform.parent.rotation)
-                {
+                //if (oldParentRotation != transform.parent.rotation) // http://docs.unity3d.com/ScriptReference/Quaternion-operator_ne.html
+                //{
                     oldOffset = transform.parent.rotation * (Quaternion.Inverse(oldParentRotation) * oldOffset);
                     oldParentRotation = transform.parent.rotation;
-                }
+                //}
 
                 Vector3 offset = transform.position - transform.parent.position;
 
