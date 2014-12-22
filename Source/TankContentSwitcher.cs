@@ -88,7 +88,7 @@ namespace ProceduralParts
             InitializeTankType();
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (tankVolume != 0)
-                UpdateTankType();
+                UpdateTankType(true);
             isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
         }
 
@@ -255,7 +255,7 @@ namespace ProceduralParts
                 tankType = tankTypeOptions[0].name;
         }
 
-        private void UpdateTankType()
+        private void UpdateTankType(bool init = false)
         {
             if (tankTypeOptions == null || ( selectedTankType != null && selectedTankType.name == tankType))
                 return;
@@ -288,7 +288,7 @@ namespace ProceduralParts
             else
                 Fields["tankVolume"].guiActiveEditor = tankVolumeName != null;
 
-            UpdateMassAndResources(true);
+            UpdateMassAndResources(true, init);
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
         }
@@ -306,7 +306,7 @@ namespace ProceduralParts
         [PartMessageEvent]
         public event PartResourceInitialAmountChanged InitialAmountChanged;
 
-        private void UpdateMassAndResources(bool typeChanged)
+        private void UpdateMassAndResources(bool typeChanged, bool keepAmount = false) // keep amount when rebuild (for saved part loading)
         {
             // Wait for the first update...
             if (selectedTankType == null)
@@ -320,7 +320,7 @@ namespace ProceduralParts
 
             // Update the resources list.
             if (typeChanged || !UpdateResources())
-                RebuildResources();
+                RebuildResources(keepAmount);
 
             if (tankVolumeName != null)
             {
@@ -397,11 +397,20 @@ namespace ProceduralParts
             return true;
         }
 
-        private void RebuildResources()
+        private void RebuildResources(bool keepAmount = false)
         {
+            List<PartResource> partResources = new List<PartResource>();
+
             // Purge the old resources
             foreach (PartResource res in part.Resources)
-                Destroy(res);
+            {
+                print(res.resourceName);
+                if (keepAmount && selectedTankType.resources.FirstOrDefault(tr => tr.name == res.resourceName) != null)
+                    partResources.Add(res);
+                else
+                    Destroy(res);
+            }
+
             part.Resources.list.Clear();
 
             // Build them afresh. This way we don't need to do all the messing around with reflection
@@ -414,10 +423,21 @@ namespace ProceduralParts
                 ConfigNode node = new ConfigNode("RESOURCE");
                 node.AddValue("name", res.name);
                 node.AddValue("maxAmount", maxAmount);
-                node.AddValue("amount", res.forceEmpty ? 0 : maxAmount);
+
+                PartResource partResource = partResources.FirstOrDefault(r => r.resourceName == res.name);
+                if (!res.forceEmpty && null != partResource)
+                { 
+                    node.AddValue("amount", Math.Min(partResource.amount, maxAmount));
+                }
+                else
+                    node.AddValue("amount", res.forceEmpty ? 0 : maxAmount);
+
                 node.AddValue("isTweakable", res.isTweakable);
                 part.AddResource(node);
             }
+
+            foreach (PartResource res in partResources)
+                Destroy(res);
 
             UIPartActionWindow window = part.FindActionWindow();
             if (window != null)
