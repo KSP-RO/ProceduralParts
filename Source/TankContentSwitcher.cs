@@ -404,7 +404,6 @@ namespace ProceduralParts
             // Purge the old resources
             foreach (PartResource res in part.Resources)
             {
-                print(res.resourceName);
                 if (keepAmount && selectedTankType.resources.FirstOrDefault(tr => tr.name == res.resourceName) != null)
                     partResources.Add(res);
                 else
