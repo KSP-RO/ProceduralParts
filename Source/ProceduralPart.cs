@@ -341,7 +341,9 @@ namespace ProceduralParts
 
         private void InitializeTechLimits()
         {
-            if (HighLogic.CurrentGame == null || HighLogic.CurrentGame.Mode != Game.Modes.CAREER || techLimitsSerialized == null)
+            if (HighLogic.CurrentGame == null || 
+                (HighLogic.CurrentGame.Mode != Game.Modes.CAREER && HighLogic.CurrentGame.Mode != Game.Modes.SCIENCE_SANDBOX) || 
+                techLimitsSerialized == null)
                 return;
 
             if (ResearchAndDevelopment.Instance == null)
