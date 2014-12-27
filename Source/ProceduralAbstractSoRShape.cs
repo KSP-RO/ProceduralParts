@@ -234,7 +234,7 @@ namespace ProceduralParts
                     (a.uv[1] - 0.5f) * top.dia * 0.5f);
                 //Debug.LogWarning("Moving attachment:" + a + " to:" + pos.ToString("F7") + " uv: " + a.uv.ToString("F5"));
                 a.follower.transform.localPosition = pos;
-                a.follower.Update();
+                a.follower.ForceUpdate();
             }
 
             // bottom points
@@ -247,7 +247,7 @@ namespace ProceduralParts
                     (a.uv[1] - 0.5f) * bot.dia * 0.5f);
                 //Debug.LogWarning("Moving attachment:" + a + " to:" + pos.ToString("F7") + " uv: " + a.uv.ToString("F5"));
                 a.follower.transform.localPosition = pos;
-                a.follower.Update();
+                a.follower.ForceUpdate();
             }
 
             // sides
@@ -298,7 +298,7 @@ namespace ProceduralParts
                 //Debug.LogWarning("Moving to orientation: normal: " + normal.ToString("F3") + " theta:" + (theta * 180f / Mathf.PI) + rot.ToStringAngleAxis());
 
                 a.follower.transform.localRotation = rot;
-                a.follower.Update();
+                a.follower.ForceUpdate();
             }
         }
 
@@ -351,7 +351,7 @@ namespace ProceduralParts
             }
 
             if (normalize)
-                attach.follower.Update();
+                attach.follower.ForceUpdate();
             return attach.follower;
         }
 
