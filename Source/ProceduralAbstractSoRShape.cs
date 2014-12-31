@@ -355,6 +355,35 @@ namespace ProceduralParts
             return attach.follower;
         }
 
+        /// <summary>
+        /// Fix for issue #92.  Removes top or bottom nodes if trivially sized and not
+        /// attached to anything.  Should probably be called only in the flight scene
+        /// during startup.
+        /// </summary>
+        /// <param name="bottomDiameter"></param>
+        /// <param name="topDiameter"></param>
+        public void RemoveTrivialNodes(float bottomDiameter, float topDiameter)
+        {
+            if (!isEnabled)
+                return;
+
+            AttachNode node;
+            // bottom node
+            node = part.attachNodes.Find(n => n.id == bottomNodeName);
+            if (node != null && node.attachedPart == null && bottomDiameter < 0.1f)
+            {
+                Debug.Log ("Removing trivial unused bottom node from " + part.name);
+                part.attachNodes.Remove (node);
+            }
+            // top node
+            node = part.attachNodes.Find(n => n.id == topNodeName);
+            if (node != null && node.attachedPart == null && topDiameter < 0.1f)
+            {
+                Debug.Log ("Removing trivial unused top node from " + part.name);
+              part.attachNodes.Remove (node);
+            }
+        }
+
         #endregion
 
         #region Mesh Writing

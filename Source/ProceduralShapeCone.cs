@@ -84,7 +84,12 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            if (!HighLogic.LoadedSceneIsEditor)
+            if (HighLogic.LoadedSceneIsFlight)
+            {
+                RemoveTrivialNodes(bottomDiameter, topDiameter);
+                return;
+            }
+            else if (!HighLogic.LoadedSceneIsEditor)
                 return;
 
             // ReSharper disable CompareOfFloatsByEqualityOperator
