@@ -1,5 +1,16 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.0.0 ===
+Use the engine wrapper module so that hot rockets can be used.
+Official support for Kethane / Extraplanetary Lanchpads / TAC
+Allow either end of cone shapes to be the small end
+Support for rebuilding the drag model in Ferram Aerospace Research
+Battery Part
+Shape limiting on tech levels.
+Implement procedural cost support (needs balancing)
+Switch to PNG until Squad fixes the TGA loader bug.
+Various bugfixes and tweaks.
+
 === 0.9.0 ===
 Procedural heat-shields for Deadly Re-entry
 Procedural tanks for resources in other mods: Kethane, TAC, Extraplanetary Launchpads
