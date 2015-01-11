@@ -1,17 +1,80 @@
-#!/bin/sh
-#
-# Updates the version code
+#!/usr/bin/perl
+use 5.010;
+use strict;
+use warnings;
+use autodie;
+use FindBin qw($Bin);
+use JSON::PP;
 
-cd "$(dirname "$0")"
-cd "$(git rev-parse --show-toplevel)"
+# Write various version things for ProceduralParts.
+# Paul Fenwick, January 2015.
+# This code is CC-0 licensed. You can use it for anything, without attribution.
 
-version=$(git describe --tags --long --match "v*" | sed 's:v\(.*\)-\(.*\)-.*:\1.\2:')
-short_version=$(git describe --tags --long --match "v*" | sed 's:v\([^-]*\).*:\1:')
+# This requires JSON::PP to run, which comes with Perl since v5.14, or can be
+# installed with `cpanm JSON::PP`.
 
-sed -e "s/@VERSION@/$version/" Source/Properties/AssemblyInfo.in > tmp
-cmp -s Source/Properties/AssemblyInfo.cs tmp || cp tmp Source/Properties/AssemblyInfo.cs
+my $VERSION_FILE      = "ProceduralParts.version";
+my $ASSEMBLY_TEMPLATE = "Source/Properties/AssemblyInfo.in";
+my $ASSEMBLY_FILE     = "Source/Properties/AssemblyInfo.cs";
 
-sed -e "s/@VERSION@/$short_version/" ProceduralParts.version.in > tmp
-cmp -s ProceduralParts.version tmp || cp tmp ProceduralParts.version
+# Here's our base metadata. We'll add VERSION info to this before outputting.
+my $metadata = {
+    NAME => "Procedural Parts",
+    URL  => "https://raw.githubusercontent.com/Swamp-Ig/ProceduralParts/master/ProceduralParts.version",
+    KSP_VERSION => {
+        MAJOR => 0,
+        MINOR => 90,
+        PATCH => 0,
+    },
+};
 
-rm tmp
+chdir($Bin);
+
+my $version = `git describe --tags --long --match "v*"`;
+chomp($version);
+
+if ($version !~ m{
+    # Parse a version in the form v1.2.3-4
+    ^v
+    (?<major>\d+)\.
+    (?<minor>\d+)\.
+    (?<patch>\d+)-
+    (?<build>\d+)
+}x) {
+    die "Cannot parse $version as a version!";
+}
+
+my $assembly_version = "$+{major}.$+{minor}.$+{patch}.$+{build}";
+
+say "Writing metadata for version $assembly_version";
+
+# Using `int` below forces Perl to internally represent these as numbers,
+# even though they were the result of a string operation. This means no
+# unsightly quotes in the output JSON.
+
+$metadata->{VERSION} = {
+    MAJOR => int $+{major},
+    MINOR => int $+{minor},
+    PATCH => int $+{patch},
+    BUILD => 0              # If used, AVC could try to get the user to
+                            # install git builds, which we don't want.
+};
+
+# Write our AVC metadata
+
+open(my $version_fh, '>', $VERSION_FILE);
+say {$version_fh} JSON::PP->new->pretty->encode( $metadata );
+close $version_fh;
+
+# Write our AssemblyInfo
+
+open(my $template_fh, '<', $ASSEMBLY_TEMPLATE);
+open(my $assembly_fh, '>', $ASSEMBLY_FILE);
+
+while (<$template_fh>) {
+    s{\@VERSION\@}{$assembly_version};
+    print {$assembly_fh} $_;
+}
+
+close($template_fh);
+close($assembly_fh);
