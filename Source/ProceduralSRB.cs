@@ -572,7 +572,7 @@ namespace ProceduralParts
             if (bottomAttachNode.attachedPart.transform == part.transform.parent)
             {
                 part.transform.Translate(-delta, Space.World);
-                Part root = EditorLogic.SortedShipList[0];
+                Part root = KSPAPIExtensions.GameSceneFilter.AnyEditor.IsLoaded() ? EditorLogic.RootPart : part.vessel.rootPart;
                 int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
 
                 root.transform.Translate(delta / siblings, Space.World);

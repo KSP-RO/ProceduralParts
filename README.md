@@ -1,7 +1,5 @@
 ProceduralParts allows you to procedurally generate a number of different parts in a range of sizes and shapes. The parts are fully tweakable with multiple options for customization of the shape, surface texture, and other parameters.
 
-This is nearing official release. Will concentrate on finding any more bugs and then make an official first release.
-
 ## Features
 
 #### The features include
