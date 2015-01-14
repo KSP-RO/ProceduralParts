@@ -1,5 +1,10 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.x.x ===
+Fixed a bug that appeared when the stack below a procedural SRB contained the root part.
+Added Procedural Liquid Fuel Tank Cone
+Tweaked NoseCone Cost and mass
+
 === 1.0.0 ===
 Use the engine wrapper module so that hot rockets can be used.
 Official support for Kethane / Extraplanetary Lanchpads / TAC
