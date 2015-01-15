@@ -1161,8 +1161,11 @@ namespace ProceduralParts
         [KSPField]
         public float costPerkL = 245f;
 
-        [KSPField(isPersistant=true, guiActiveEditor=true, guiName="cost")]
+        [KSPField(isPersistant=true)]
         public float moduleCost = 0f;
+
+        [KSPField(guiActiveEditor=true, guiName="cost")]
+        private string costDisplay = "";
 
         public float GetModuleCost(float stdCost)
         {
@@ -1170,22 +1173,31 @@ namespace ProceduralParts
             {
                 float cost = 0f;
                 if ((object)shape != null)
-                    cost = shape.costMultiplier * shape.Volume * costPerkL;
-                if (part.Modules.Contains("TankContentSwitcher"))
+                    cost = shape.GetCurrentCostMult() * shape.Volume * costPerkL;
+                
+                foreach (PartModule pm in part.Modules)
                 {
-                    TankContentSwitcher switcher = (TankContentSwitcher)part.Modules["TankContentSwitcher"];
-                    cost *= switcher.GetCurrentCostMult();
+                    if(pm is ICostMultiplier)
+                    {
+                       cost *= (pm as ICostMultiplier).GetCurrentCostMult();
+                    }
                 }
+                float dryCost = cost;
+                float actualCost = cost;
                 if (!part.Modules.Contains("ModuleFuelTanks") && (object)PartResourceLibrary.Instance != null)
                 {
                     foreach (PartResource r in part.Resources)
                     {
                         PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
                         if ((object)d != null)
+                        {
                             cost += (float)(r.maxAmount * d.unitCost);
+                            actualCost += (float)(r.amount * d.unitCost);
+                        }
                     }
                 }
                 moduleCost = cost;
+                costDisplay = String.Format("Dry: {0:N0} Wet: {1:N0}", dryCost, actualCost);
             }
             return moduleCost;
         }

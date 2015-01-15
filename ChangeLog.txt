@@ -2,8 +2,9 @@
 
 === 1.x.x ===
 Fixed a bug that appeared when the stack below a procedural SRB contained the root part.
-Added Procedural Liquid Fuel Tank Cone
-Tweaked NoseCone Cost and mass
+Added procedural liquid fuel tank cone
+Tweaked nose cone cost and mass
+Cost display now shows dry and actual cost
 
 === 1.0.0 ===
 Use the engine wrapper module so that hot rockets can be used.

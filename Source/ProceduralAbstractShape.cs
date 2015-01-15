@@ -201,5 +201,10 @@ namespace ProceduralParts
         public abstract TransformFollower RemoveAttachment(object data, bool normalize);
 
         #endregion
+
+        public float GetCurrentCostMult()
+        {
+            return costMultiplier;
+        }
     }
 }

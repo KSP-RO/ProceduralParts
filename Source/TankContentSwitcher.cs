@@ -21,7 +21,7 @@ namespace ProceduralParts
     /// The class also accepts the message ChangeVolume(float volume) if attached to a dynamic resizing part
     /// such as ProceeduralTanks.
     /// </summary>
-    public class TankContentSwitcher : PartModule, IPartMassModifier
+    public class TankContentSwitcher : PartModule, IPartMassModifier, ICostMultiplier
     {
         #region Callbacks
         public override void OnAwake()

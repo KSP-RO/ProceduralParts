@@ -64,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DecouplerTweaker.cs" />
+    <Compile Include="ICostModifier.cs" />
     <Compile Include="ObjectSerializer.cs" />
     <Compile Include="ProceduralHeatshield.cs" />
     <Compile Include="ProceduralShapeBezierCone.cs" />
