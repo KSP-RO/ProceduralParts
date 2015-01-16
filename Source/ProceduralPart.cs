@@ -91,6 +91,9 @@ namespace ProceduralParts
 
                 if (HighLogic.LoadedSceneIsEditor)
                     symmetryClone = true;
+
+                Fields["costDisplay"].guiActiveEditor = displayCost;
+                print(displayCost);
             }
             catch (Exception ex)
             {
@@ -1166,6 +1169,9 @@ namespace ProceduralParts
 
         [KSPField(guiActiveEditor=true, guiName="cost")]
         private string costDisplay = "";
+
+        [KSPField]
+        public bool displayCost = true;
 
         public float GetModuleCost(float stdCost)
         {

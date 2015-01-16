@@ -11,8 +11,8 @@ namespace ProceduralParts
         #region Config fields
 
         internal const int MinCircleVertexes = 12;
-        internal const float MaxCircleError = 0.01f;
-        internal const float MaxDiameterChange = 0.05f;
+        internal const float MaxCircleError = 0.05f;
+        internal const float MaxDiameterChange = 0.2f;
 
         [KSPField]
         public string topNodeName = "top";
