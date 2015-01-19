@@ -1,6 +1,6 @@
 ============= Changelog for ProceduralParts  =========
 
-=== 1.x.x ===
+=== 1.0.1 ===
 Fixed a bug that appeared when the stack below a procedural SRB contained the root part.
 Added procedural liquid fuel tank cone
 Tweaked nose cone cost and mass

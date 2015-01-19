@@ -93,7 +93,6 @@ namespace ProceduralParts
                     symmetryClone = true;
 
                 Fields["costDisplay"].guiActiveEditor = displayCost;
-                print(displayCost);
             }
             catch (Exception ex)
             {
