@@ -1,5 +1,8 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.0.2 ===
+Shapes now use as much polygons as before 1.0.1
+
 === 1.0.1 ===
 Fixed a bug that appeared when the stack below a procedural SRB contained the root part.
 Added procedural liquid fuel tank cone
