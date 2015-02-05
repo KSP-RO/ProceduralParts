@@ -12,7 +12,7 @@ namespace ProceduralParts
 
         internal const int MinCircleVertexes = 12;
         internal const float MaxCircleError = 0.01f;
-        internal const float MaxDiameterChange = 0.05f;
+        internal const float MaxDiameterChange = 5.0f;
 
         [KSPField]
         public string topNodeName = "top";
@@ -587,7 +587,9 @@ namespace ProceduralParts
                     continue;
 
                 float dDiameter = curr.dia - prev.dia;
-                int subdiv = Math.Min((int)Math.Truncate(Mathf.Abs(dDiameter) / MaxDiameterChange), 30);
+                float dPercentage = Math.Abs(curr.dia - prev.dia) / (Math.Max(curr.dia, prev.dia) / 100.0f);
+                int subdiv = Math.Min((int)(Math.Truncate(dPercentage / MaxDiameterChange)), 30);
+                //int subdiv = Math.Min((int)Math.Truncate(Mathf.Abs(dDiameter) / MaxDiameterChange), 30);
                 if (subdiv > 1)
                 {
                     // slerp alg for normals  http://http://en.wikipedia.org/wiki/Slerp
@@ -608,7 +610,7 @@ namespace ProceduralParts
 
                         Vector2 norm;
                         if (doSlerp)
-                            norm = Mathf.Sin(omega * (1f - t)) / sinOmega * prev.norm + Mathf.Sin(omega * t) / sinOmega * curr.norm;
+                            norm = (Mathf.Sin(omega * (1f - t)) / sinOmega * prev.norm + Mathf.Sin(omega * t) / sinOmega * curr.norm);
                         else
                             norm = prev.norm;
 
@@ -842,7 +844,7 @@ namespace ProceduralParts
                     m.normals[o0] = new Vector3(xCoords[o][i] * norm.x, norm.y, zCoords[o][i] * norm.x);
                     m.tangents[o0] = new Vector4(-zCoords[o][i], 0, xCoords[o][i], -1.0f);
                     //MonoBehaviour.print("Vertex #" + i + " off=" + o0 + " u=" + xy[o0][0] + " coords=" + verticies[o0]);
-
+                    
                     int o1 = off + i + subdivCount + 1;
                     m.uv[o1] = new Vector2(uCoords[o][i] + 0.25f, v);
                     m.verticies[o1] = new Vector3(-zCoords[o][i] * 0.5f * diameter, y, xCoords[o][i] * 0.5f * diameter);
