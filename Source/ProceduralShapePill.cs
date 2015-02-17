@@ -30,45 +30,7 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (PPart.lengthMin == PPart.lengthMax)
-                Fields["length"].guiActiveEditor = false;
-            else
-            {
-                UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
-                lengthEdit.maxValue = PPart.lengthMax;
-                lengthEdit.minValue = PPart.lengthMin;
-                lengthEdit.incrementLarge = PPart.lengthLargeStep;
-                lengthEdit.incrementSmall = PPart.lengthSmallStep;
-            }
-
-            UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
-            if (PPart.diameterMin == PPart.diameterMax)
-                Fields["diameter"].guiActiveEditor = false;
-            else
-            {
-                diameterEdit.maxValue = PPart.diameterMax;
-                diameterEdit.minValue = PPart.diameterMin;
-                diameterEdit.incrementLarge = PPart.diameterLargeStep;
-                diameterEdit.incrementSmall = PPart.diameterSmallStep;
-            }
-
-            if (!PPart.allowCurveTweaking)
-            {
-                Fields["fillet"].guiActiveEditor = false;
-                diameterEdit.maxValue = PPart.diameterMax - fillet;
-            }
-            else
-            {
-                filletEdit = (UI_FloatEdit)Fields["fillet"].uiControlEditor;
-                filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
-                filletEdit.minValue = 0;
-                filletEdit.incrementLarge = PPart.diameterLargeStep;
-                filletEdit.incrementSmall = PPart.diameterSmallStep;
-            }
-            // ReSharper restore CompareOfFloatsByEqualityOperator
+            UpdateTechConstraints();
         }
 
         // A few shortcuts to use in formulas.
@@ -293,6 +255,52 @@ namespace ProceduralParts
                 return excess;
             }
             return 0;
+        }
+
+        public override void UpdateTechConstraints()
+        {
+            if (!HighLogic.LoadedSceneIsEditor)
+                return;
+            // ReSharper disable CompareOfFloatsByEqualityOperator
+            if (PPart.lengthMin == PPart.lengthMax)
+                Fields["length"].guiActiveEditor = false;
+            else
+            {
+                UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
+                lengthEdit.maxValue = PPart.lengthMax;
+                lengthEdit.minValue = PPart.lengthMin;
+                lengthEdit.incrementLarge = PPart.lengthLargeStep;
+                lengthEdit.incrementSmall = PPart.lengthSmallStep;
+                length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
+            }
+
+            UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
+            if (PPart.diameterMin == PPart.diameterMax)
+                Fields["diameter"].guiActiveEditor = false;
+            else
+            {
+                diameterEdit.maxValue = PPart.diameterMax;
+                diameterEdit.minValue = PPart.diameterMin;
+                diameterEdit.incrementLarge = PPart.diameterLargeStep;
+                diameterEdit.incrementSmall = PPart.diameterSmallStep;
+                diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
+            }
+
+            if (!PPart.allowCurveTweaking)
+            {
+                Fields["fillet"].guiActiveEditor = false;
+                diameterEdit.maxValue = PPart.diameterMax - fillet;
+            }
+            else
+            {
+                filletEdit = (UI_FloatEdit)Fields["fillet"].uiControlEditor;
+                filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
+                filletEdit.minValue = 0;
+                filletEdit.incrementLarge = PPart.diameterLargeStep;
+                filletEdit.incrementSmall = PPart.diameterSmallStep;
+                fillet = Mathf.Clamp(fillet, filletEdit.minValue, filletEdit.maxValue);
+            }
+            // ReSharper restore CompareOfFloatsByEqualityOperator    
         }
     }
 }

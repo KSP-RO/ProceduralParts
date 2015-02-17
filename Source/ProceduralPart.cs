@@ -425,6 +425,9 @@ namespace ProceduralParts
             // ReSharper restore LocalVariableHidesMember
 
             //Debug.Log(string.Format("TechLimits applied: diameter=({0:G3}, {1:G3}) length=({2:G3}, {3:G3}) volume=({4:G3}, {5:G3}) allowCurveTweaking={6}", diameterMin, diameterMax, lengthMin, lengthMax, volumeMin, volumeMax, allowCurveTweaking));
+
+            foreach (ProceduralAbstractShape shape in GetComponents<ProceduralAbstractShape>())
+                shape.UpdateTechConstraints();
         }
 
         [Serializable]

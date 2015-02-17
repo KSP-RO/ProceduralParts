@@ -206,5 +206,7 @@ namespace ProceduralParts
         {
             return costMultiplier;
         }
+
+        public abstract void UpdateTechConstraints();
     }
 }
