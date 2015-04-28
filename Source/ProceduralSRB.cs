@@ -156,8 +156,8 @@ namespace ProceduralParts
 
         private SRBBellConfig selectedBell;
         private Dictionary<string, SRBBellConfig> srbConfigs;
-        [SerializeField]
-        public ConfigNode[] srbConfigsSerialized;
+        
+        private static ConfigNode[] srbConfigsSerialized;
 
         [Serializable]
         public class SRBBellConfig : IConfigNode
