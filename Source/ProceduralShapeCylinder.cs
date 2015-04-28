@@ -68,9 +68,6 @@ namespace ProceduralParts
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
 
-            print("diameter min: " + PPart.diameterMin);
-            print("diameter max: " + PPart.diameterMax);
-
             if (PPart.lengthMin == PPart.lengthMax)
                 Fields["length"].guiActiveEditor = false;
             else

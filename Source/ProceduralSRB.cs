@@ -602,7 +602,7 @@ namespace ProceduralParts
         private void AnimateHeat()
         {
             // The emmissive module is too much effort to get working, just do it the easy way.
-            float num = Mathf.Clamp01((part.temperature - DraperPoint) / (part.maxTemp - DraperPoint));
+            float num = Mathf.Clamp01(((float)part.temperature - DraperPoint) / ((float)part.maxTemp - DraperPoint));
             if (float.IsNaN(num))
                 num = 0f;
 
