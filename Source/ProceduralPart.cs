@@ -92,10 +92,6 @@ namespace ProceduralParts
                 if (HighLogic.LoadedSceneIsEditor)
                     symmetryClone = true;
 
-                while (toAttach.Count() > 0) {
-                    toAttach.Dequeue().Invoke();
-                }
-
                 Fields["costDisplay"].guiActiveEditor = displayCost;
             }
             catch (Exception ex)
@@ -901,11 +897,6 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildAttached(Part child)
         {
-            if (shape == null) //OnUpdate hasn't fired yet
-            {
-                toAttach.Enqueue(() => PartChildAttached(child));
-                return;
-            }
             AttachNode node = child.findAttachNodeByPart(part);
             if (node == null)
             {
@@ -956,11 +947,6 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
         public void PartParentChanged(Part newParent)
         {
-            if (shape == null) //OnUpdate hasn't fired yet
-            {
-                toAttach.Enqueue(() => PartParentChanged(newParent));
-                return;
-            }
             if (parentAttachment != null)
             {
                 RemovePartAttachment(parentAttachment);
@@ -996,17 +982,13 @@ namespace ProceduralParts
             shape.ForceNextUpdate();
         }
 
-        private Queue<Action> toAttach = new Queue<Action>();
         private PartAttachment AddPartAttachment(Vector3 position, TransformFollower.Transformable target, bool normalized = false)
         {
             if ((object)target == null)
                 Debug.Log("AddPartAttachment: null target!");
-
             TransformFollower follower = TransformFollower.CreateFollower(partModel, position, target);
-
             if((object)follower == null)
                 Debug.Log("AddPartAttachment: null follower!");
-
             object data = shape.AddAttachment(follower, normalized);
 
             return new PartAttachment(follower, data);
