@@ -146,6 +146,15 @@ namespace ProceduralParts
             }
         }
 
+        public void UpdateDragCube()
+        {
+            DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
+
+            base.part.DragCubes.ClearCubes();
+            base.part.DragCubes.Cubes.Add(dragCube);
+            base.part.DragCubes.ResetCubeWeights();
+        }
+
         public void OnUpdateEditor()
         {
             try
@@ -160,6 +169,7 @@ namespace ProceduralParts
                     if (wasForce)
                     {
                         ChangeVolume(volumeName, Volume);
+                        UpdateDragCube();
                         if (HighLogic.LoadedSceneIsEditor)
                             GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                     }

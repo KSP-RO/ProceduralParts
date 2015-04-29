@@ -26,6 +26,7 @@ namespace ProceduralParts
             new ShapePreset { name="Peaked #2", curve=new[] { 0.3f, 0.2f, 1.0f, 0.5f } },
             new ShapePreset { name="Sharp #1", curve=new[] { 0.1f, 0.001f, 0.7f, 2f/3f } },
             new ShapePreset { name="Sharp #2", curve=new[] { 1f/3f, 0.3f, 1.0f, 0.9f } },
+            new ShapePreset { name="Waisted", curve=new[] { 0f, 0.5f, 1.0f, 0.5f } },
         };
 
         private static readonly string[] oldShapeNames =
