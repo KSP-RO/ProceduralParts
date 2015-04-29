@@ -92,6 +92,10 @@ namespace ProceduralParts
                 if (HighLogic.LoadedSceneIsEditor)
                     symmetryClone = true;
 
+                while (toAttach.Count() > 0) {
+                    toAttach.Dequeue().Invoke();
+                }
+
                 Fields["costDisplay"].guiActiveEditor = displayCost;
             }
             catch (Exception ex)
@@ -779,6 +783,8 @@ namespace ProceduralParts
                 //Debug.LogWarning("Transforming node:" + node.id + " rotation=" + rotate.ToStringAngleAxis() + " new position=" + node.position.ToString("F3") + " orientation=" + node.orientation.ToString("F3"));
             }
 
+            public bool AttachedToNode(AttachNode other) { return node == other; }
+
             public Part ProxyPart
             {
                 get { return part; }
@@ -894,9 +900,30 @@ namespace ProceduralParts
             }
         }
 
+        private class NodeFollowerTransformable : TransformFollower.TransformTransformable
+        {
+            private Func<Vector3> computedOffset;
+            public NodeFollowerTransformable(Transform transform, Vector3 offset, Func<Vector3> computedOffset, Space offsetSpace = Space.Self)
+                : base(transform, offset, offsetSpace)
+            {
+                this.computedOffset = computedOffset;
+            }
+
+
+            override public void Translate(Vector3 translation)
+            {
+                base.Translate(translation + computedOffset());
+            }
+        }
+
         [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildAttached(Part child)
         {
+            if (shape == null) //OnUpdate hasn't fired yet
+            {
+                toAttach.Enqueue(() => PartChildAttached(child));
+                return;
+            }
             AttachNode node = child.findAttachNodeByPart(part);
             if (node == null)
             {
@@ -905,6 +932,7 @@ namespace ProceduralParts
             }
             Vector3 position = child.transform.TransformPoint(node.position);
 
+            Func<Vector3> offsetFunc = () => Vector3.zero;
             // Handle node offsets
             if (child.attachMode != AttachModes.SRF_ATTACH)
             {
@@ -916,13 +944,18 @@ namespace ProceduralParts
                 }
                 // ReSharper disable once InconsistentNaming
                 Func<Vector3> Offset;
-                if (nodeOffsets.TryGetValue(ourNode.id, out Offset))
-                    position -= Offset();
+                offsetFunc = () =>
+                {
+                    Vector3 res = Vector3.zero;
+                    if (nodeOffsets.TryGetValue(ourNode.id, out Offset))
+                        res += Offset();
+                    return res;
+                };
             }
 
             //Debug.LogWarning("Attaching to parent: " + part + " child: " + child.transform.name);
 
-            PartAttachment attach = AddPartAttachment(position, new TransformFollower.TransformTransformable(child.transform, node.position));
+            PartAttachment attach = AddPartAttachment(position, new NodeFollowerTransformable(child.transform, node.position, offsetFunc));
             attach.child = child;
 
             childAttachments.AddLast(attach);
@@ -947,6 +980,11 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
         public void PartParentChanged(Part newParent)
         {
+            if (shape == null) //OnUpdate hasn't fired yet
+            {
+                toAttach.Enqueue(() => PartParentChanged(newParent));
+                return;
+            }
             if (parentAttachment != null)
             {
                 RemovePartAttachment(parentAttachment);
@@ -982,13 +1020,17 @@ namespace ProceduralParts
             shape.ForceNextUpdate();
         }
 
+        private Queue<Action> toAttach = new Queue<Action>();
         private PartAttachment AddPartAttachment(Vector3 position, TransformFollower.Transformable target, bool normalized = false)
         {
             if ((object)target == null)
                 Debug.Log("AddPartAttachment: null target!");
+
             TransformFollower follower = TransformFollower.CreateFollower(partModel, position, target);
+
             if((object)follower == null)
                 Debug.Log("AddPartAttachment: null follower!");
+
             object data = shape.AddAttachment(follower, normalized);
 
             return new PartAttachment(follower, data);
