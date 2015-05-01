@@ -30,6 +30,15 @@ namespace ProceduralParts
                 OnUpdateEditor();
         }
 
+        public void LateUpdate()
+        {
+            if(HighLogic.LoadedSceneIsEditor)
+            while (toAttach.Count() > 0)
+            {
+                toAttach.Dequeue().Invoke();
+            }
+        }
+
         public override void OnLoad(ConfigNode node)
         {
             // Load stuff from config files
@@ -66,6 +75,7 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
+            Debug.Log("OnStart");
             // Update internal state
             try
             {
@@ -894,9 +904,17 @@ namespace ProceduralParts
             }
         }
 
+        private Queue<Action> toAttach = new Queue<Action>();
+
         [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildAttached(Part child)
         {
+            if (shape == null) //OnUpdate hasn't fired yet
+            {
+                toAttach.Enqueue(() => PartChildAttached(child));
+                return;
+            }
+            Debug.Log("PartChildAttached");
             AttachNode node = child.findAttachNodeByPart(part);
             if (node == null)
             {
@@ -947,6 +965,12 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
         public void PartParentChanged(Part newParent)
         {
+            if (shape == null) //OnUpdate hasn't fired yet
+            {
+                toAttach.Enqueue(() => PartParentChanged(newParent));
+                return;
+            }
+            Debug.Log("PartParentChanged");
             if (parentAttachment != null)
             {
                 RemovePartAttachment(parentAttachment);
