@@ -92,10 +92,6 @@ namespace ProceduralParts
                 if (HighLogic.LoadedSceneIsEditor)
                     symmetryClone = true;
 
-                if (HighLogic.LoadedSceneIsEditor)
-                    while (toAttach.Count() > 0) {
-                        toAttach.Dequeue().Invoke();
-                    }
 
                 Fields["costDisplay"].guiActiveEditor = displayCost;
             }
@@ -104,6 +100,15 @@ namespace ProceduralParts
                 Debug.LogException(ex);
                 isEnabled = enabled = false;
             }
+        }
+
+        public void LateUpdate()
+        {
+            if (HighLogic.LoadedSceneIsEditor)
+                while (toAttach.Count() > 0)
+                {
+                    toAttach.Dequeue().Invoke();
+                }
         }
 
         public void OnUpdateEditor()
