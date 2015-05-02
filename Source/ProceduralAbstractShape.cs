@@ -147,12 +147,8 @@ namespace ProceduralParts
             }
         }
 
-        public IEnumerator<YieldInstruction> UpdateDragCube()
+        public void UpdateDragCube()
         {
-            while (!FlightGlobals.ready || this.part.packed || !this.vessel.loaded)
-            {
-                yield return new WaitForFixedUpdate();
-            }
             DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
 
             base.part.DragCubes.ClearCubes();
@@ -174,7 +170,8 @@ namespace ProceduralParts
                     if (wasForce)
                     {
                         ChangeVolume(volumeName, Volume);
-                        StartCoroutine(UpdateDragCube());
+                        //if (FlightGlobals.ready && !this.part.packed && this.vessel.loaded)
+                            UpdateDragCube();
                         if (HighLogic.LoadedSceneIsEditor)
                             GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                     }
