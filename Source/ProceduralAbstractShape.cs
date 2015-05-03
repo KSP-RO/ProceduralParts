@@ -3,6 +3,7 @@ using KSPAPIExtensions;
 using UnityEngine;
 using KSPAPIExtensions.PartMessage;
 using System.Reflection;
+using System.Collections.Generic;
 
 namespace ProceduralParts
 {
@@ -150,8 +151,12 @@ namespace ProceduralParts
             }
         }
 
-        public void UpdateDragCube()
+        public IEnumerator<YieldInstruction> UpdateDragCube()
         {
+            while (!FlightGlobals.ready || this.part.packed || !this.vessel.loaded)
+            {
+                yield return new WaitForFixedUpdate();
+            }
             DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
 
             base.part.DragCubes.ClearCubes();
@@ -173,7 +178,7 @@ namespace ProceduralParts
                     if (wasForce)
                     {
                         ChangeVolume(volumeName, Volume);
-                        UpdateDragCube();
+                        StartCoroutine(UpdateDragCube());
                         if (HighLogic.LoadedSceneIsEditor)
                             GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                     }
