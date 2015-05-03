@@ -136,13 +136,17 @@ namespace ProceduralParts
 
         public void UpdateFAR()
         {
-            if (HighLogic.LoadedSceneIsEditor)
+            /*if (HighLogic.LoadedSceneIsEditor)
             {
                 if (part.Modules.Contains("FARBasicDragModel"))
                 {
                     PartModule pModule = part.Modules["FARBasicDragModel"];
                     pModule.GetType().GetMethod("UpdatePropertiesWithShapeChange").Invoke(pModule, null);
                 }
+            }*/
+            if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
+            {
+                part.SendMessage("GeometryPartModuleRebuildMeshData");
             }
         }
 
