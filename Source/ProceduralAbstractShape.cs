@@ -144,6 +144,8 @@ namespace ProceduralParts
                     pModule.GetType().GetMethod("UpdatePropertiesWithShapeChange").Invoke(pModule, null);
                 }
             }*/
+
+            PPart.ShapeChanged();
             if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
             {
                 part.SendMessage("GeometryPartModuleRebuildMeshData");
@@ -213,6 +215,10 @@ namespace ProceduralParts
         /// <param name="normalize">If true, the transform positon follower will be relocated to a 'normalized' 
         /// offset - where i would appear on a unit length and diameter cylinder</param>
         public abstract TransformFollower RemoveAttachment(object data, bool normalize);
+
+        public abstract void GetCylindricCoordinates(Vector3 position, out float u, out float y, out float r, bool radiusFromCenter);
+
+        public abstract Vector3 FromCylindricCoordinates(float u, float y, float r, bool radiusFromCenter);
 
         #endregion
 

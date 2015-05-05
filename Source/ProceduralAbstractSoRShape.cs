@@ -24,6 +24,111 @@ namespace ProceduralParts
 
         #region attachments
 
+        public override Vector3 FromCylindricCoordinates(float u, float y, float r, bool radiusFromCenter)
+        {
+            Vector3 position;
+
+            float halfLength = (lastProfile.Last.Value.y - lastProfile.First.Value.y) / 2.0f;
+            float radius=r;
+
+            position.y = halfLength * y;
+
+            if (!radiusFromCenter)
+            {
+                if (position.y < lastProfile.First.Value.y)
+                    //radius = lastProfile.First.Value.dia / 2.0f * r;
+                    radius = lastProfile.First.Value.dia / 2.0f + r;
+                else if (position.y > lastProfile.Last.Value.y)
+                    //radius = lastProfile.Last.Value.dia / 2.0f * r;
+                    radius = lastProfile.Last.Value.dia / 2.0f + r;
+                else
+                {
+                    ProfilePoint pt = lastProfile.First.Value;
+                    for (LinkedListNode<ProfilePoint> ptNode = lastProfile.First.Next; ptNode != null; ptNode = ptNode.Next)
+                    {
+                        if (!ptNode.Value.inCollider)
+                            continue;
+                        ProfilePoint pv = pt;
+                        pt = ptNode.Value;
+
+                        if (position.y >= Mathf.Min(pv.y, pt.y) && position.y < Mathf.Max(pv.y, pt.y))
+                        {
+                            float t = Mathf.InverseLerp(Mathf.Min(pv.y, pt.y), Mathf.Max(pv.y, pt.y), position.y);
+                            float profileRadius = Mathf.Lerp(pv.dia, pt.dia, t) / 2.0f;
+
+                            //radius = profileRadius * r;
+                            radius = profileRadius + r;
+                        }
+                    }
+                }
+            }
+
+            
+            float theta = Mathf.Lerp(0, Mathf.PI * 2f, u);
+
+            position.x = Mathf.Cos(theta) * radius;
+            position.z = -Mathf.Sin(theta) * radius;
+
+            return position;
+            
+        }
+
+        public override void GetCylindricCoordinates(Vector3 position, out float u, out float y, out float radius, bool radiusFromCenter)
+        {
+            //Vector3 position = source.localPosition;
+            Vector2 direction = new Vector2(position.x, position.z);
+
+            float halfLength = (lastProfile.Last.Value.y - lastProfile.First.Value.y) / 2.0f;
+
+            //Debug.Log("y: " + position.y);
+            //Debug.Log("First y: " + lastProfile.First.Value.y);
+            //Debug.Log("Last y: " + lastProfile.Last.Value.y);
+
+            y = position.y / halfLength;
+            radius = 0;
+            //float theta = Mathf.Atan2(direction.x, -direction.y);
+            float theta = Mathf.Atan2(-direction.y, direction.x);
+            //theta = Mathf.Atan2(-position.z, position.x);
+
+            u = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
+
+            if(radiusFromCenter)
+            {
+                radius = direction.magnitude;
+                return;
+            }
+
+            if (position.y < lastProfile.First.Value.y)
+                radius = direction.magnitude - lastProfile.First.Value.dia / 2.0f;
+                //radius = direction.magnitude / lastProfile.First.Value.dia / 2.0f;
+            else if (position.y > lastProfile.Last.Value.y)
+                //radius = direction.magnitude / lastProfile.Last.Value.dia / 2.0f;
+                radius = direction.magnitude - lastProfile.Last.Value.dia / 2.0f;
+            else
+            {
+                ProfilePoint pt = lastProfile.First.Value;
+                for (LinkedListNode<ProfilePoint> ptNode = lastProfile.First.Next; ptNode != null; ptNode = ptNode.Next)
+                {
+                    if (!ptNode.Value.inCollider)
+                        continue;
+                    ProfilePoint pv = pt;
+                    pt = ptNode.Value;
+
+                    if(position.y >= Mathf.Min(pv.y, pt.y) && position.y < Mathf.Max(pv.y, pt.y))
+                    {
+                        float t = Mathf.InverseLerp(Mathf.Min(pv.y, pt.y), Mathf.Max(pv.y, pt.y), position.y);
+                        float r = Mathf.Lerp(pv.dia, pt.dia, t) / 2.0f;
+
+                        //radius = direction.magnitude / r;
+                        radius = direction.magnitude - r;
+                    }
+
+                }
+
+            }
+
+        }
+
         private enum Location
         {
             Top, Bottom, Side
