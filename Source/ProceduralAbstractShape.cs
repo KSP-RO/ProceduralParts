@@ -145,20 +145,11 @@ namespace ProceduralParts
                 }
             }*/
 
-            PPart.ShapeChanged();
+  
             if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
             {
                 part.SendMessage("GeometryPartModuleRebuildMeshData");
             }
-        }
-
-        public void UpdateDragCube()
-        {
-            DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
-
-            base.part.DragCubes.ClearCubes();
-            base.part.DragCubes.Cubes.Add(dragCube);
-            base.part.DragCubes.ResetCubeWeights();
         }
 
         public void OnUpdateEditor()
@@ -175,7 +166,6 @@ namespace ProceduralParts
                     if (wasForce)
                     {
                         ChangeVolume(volumeName, Volume);
-                        UpdateDragCube();
                         if (HighLogic.LoadedSceneIsEditor)
                             GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                     }

@@ -119,14 +119,14 @@ namespace ProceduralParts
             switch(type)
             {
                 case ConstructionEventType.PartOffset:
-                    foreach (ChildAttachment ca in childAttach)
+                    foreach (FreePartAttachment ca in childAttach)
                     {
-                        if (ca.child == part || ca.child.isSymmetryCounterPart(part))
+                        if (ca.Child == part || ca.Child.isSymmetryCounterPart(part))
                         {
-                            Vector3 position = ca.child.transform.TransformPoint(ca.node.position);
+                            Vector3 position = ca.Child.transform.TransformPoint(ca.AttachNode.position);
                             //ca.node.nodeType
                             //shape.GetCylindricCoordinates(part.transform.localPosition, out ca.u, out ca.y, out ca.r);
-                            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), out ca.u, out ca.y, out ca.r, ca.node.nodeType != AttachNode.NodeType.Surface);
+                            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), out ca.u, out ca.y, out ca.r, ca.AttachNode.nodeType != AttachNode.NodeType.Surface);
 
                             Debug.Log("y: " + ca.y);
                             Debug.Log("u: " + ca.u);
@@ -902,12 +902,28 @@ namespace ProceduralParts
             }
         }
 
-        private readonly LinkedList<ChildAttachment> childAttach = new LinkedList<ChildAttachment>();
-        private class ChildAttachment
+        private readonly LinkedList<FreePartAttachment> childAttach = new LinkedList<FreePartAttachment>();
+        private class FreePartAttachment
         {
-            public Part child;
-            public AttachNode node;
+            private Part child;
+            private AttachNode node; // the attachment node of the child (not the one which it is attached to)
 
+            public Part Child
+            {
+                get { return child; }
+            }
+
+            public AttachNode AttachNode
+            {
+                get {return node;}
+            }
+
+            public FreePartAttachment(Part child, AttachNode node)
+            {
+                this.child = child;
+                this.node = node;
+            }
+            
             // cylindric coordinates
 
             public float r;
@@ -991,11 +1007,10 @@ namespace ProceduralParts
             }
 
             //Debug.LogWarning("Attaching to parent: " + part + " child: " + child.transform.name);
-            ChildAttachment newAttachment = new ChildAttachment();
-            newAttachment.child = child;
-            newAttachment.node = node;
+            FreePartAttachment newAttachment = new FreePartAttachment(child, node);
+            
             //shape.GetCylindricCoordinates(child.transform.localPosition, out newAttachment.u, out newAttachment.y, out newAttachment.r);
-            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), out newAttachment.u, out newAttachment.y, out newAttachment.r, newAttachment.node.nodeType != AttachNode.NodeType.Surface);
+            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), out newAttachment.u, out newAttachment.y, out newAttachment.r, newAttachment.AttachNode.nodeType != AttachNode.NodeType.Surface);
             
             //Debug.Log(node.nodeTransform);
             //Debug.Log(node.position);
@@ -1028,7 +1043,7 @@ namespace ProceduralParts
             //    }
 
             for (var node = childAttach.First; node != null; node = node.Next)
-                if (node.Value.child == child)
+                if (node.Value.Child == child)
                 {
 
                     childAttach.Remove(node);
@@ -1311,25 +1326,40 @@ namespace ProceduralParts
         }
         #endregion
 
-        public void ShapeChanged()
+       
+        [PartMessageListener(typeof(PartModelChanged), scenes: ~GameSceneFilter.Flight)]
+        public void PartModelChanged()
         {
             Debug.Log("Shape Changed");
-            foreach(ChildAttachment ca in childAttach)
+            foreach (FreePartAttachment ca in childAttach)
             {
-                Vector3 newPosition = shape.FromCylindricCoordinates(ca.u, ca.y, ca.r, ca.node.nodeType != AttachNode.NodeType.Surface);
+                Vector3 newPosition = shape.FromCylindricCoordinates(ca.u, ca.y, ca.r, ca.AttachNode.nodeType != AttachNode.NodeType.Surface);
                 newPosition = transform.TransformPoint(newPosition);
 
-                Vector3 oldPosition = ca.child.transform.TransformPoint(ca.node.position);
+                Vector3 oldPosition = ca.Child.transform.TransformPoint(ca.AttachNode.position);
 
                 Vector3 offset = newPosition - oldPosition;
 
-                ca.child.transform.Translate(offset, Space.World);
+                ca.Child.transform.Translate(offset, Space.World);
                 //ca.child.transform.localPosition = shape.FromCylindricCoordinates(ca.u, ca.y, ca.r);// -ca.node.position;
-                Debug.Log(ca.child.transform.localPosition);
+                Debug.Log(ca.Child.transform.localPosition);
                 Debug.Log("u: " + ca.u);
                 Debug.Log("y: " + ca.y);
                 Debug.Log("r: " + ca.r);
             }
+
         }
+
+        [PartMessageListener(typeof(PartColliderChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
+        public void PartColliderChanged()
+        {
+            DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
+
+            base.part.DragCubes.ClearCubes();
+            base.part.DragCubes.Cubes.Add(dragCube);
+            base.part.DragCubes.ResetCubeWeights();
+
+        }
+
     }
 }
