@@ -75,7 +75,6 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            Debug.Log("OnStart");
             // Update internal state
             try
             {
@@ -102,6 +101,9 @@ namespace ProceduralParts
                 if (HighLogic.LoadedSceneIsEditor)
                     symmetryClone = true;
 
+                if (GameSceneFilter.AnyEditor.IsLoaded())
+                    GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
+
                 Fields["costDisplay"].guiActiveEditor = displayCost;
             }
             catch (Exception ex)
@@ -109,6 +111,43 @@ namespace ProceduralParts
                 Debug.LogException(ex);
                 isEnabled = enabled = false;
             }
+        }
+
+        public void OnEditorPartEvent(ConstructionEventType type, Part part)
+        {
+            
+            switch(type)
+            {
+                case ConstructionEventType.PartOffset:
+                    foreach (FreePartAttachment ca in childAttach)
+                    {
+                        if (ca.Child == part || ca.Child.isSymmetryCounterPart(part))
+                        {
+                            Vector3 position = ca.Child.transform.TransformPoint(ca.AttachNode.position);
+                            //ca.node.nodeType
+                            //shape.GetCylindricCoordinates(part.transform.localPosition, out ca.u, out ca.y, out ca.r);
+                            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), out ca.u, out ca.y, out ca.r, ca.AttachNode.nodeType != AttachNode.NodeType.Surface);
+
+                            Debug.Log("y: " + ca.y);
+                            Debug.Log("u: " + ca.u);
+                            Debug.Log("r: " + ca.r);
+                            //RemovePartAttachment(pa);
+                            //childAttachments.Remove(pa);
+                            //PartChildAttached(part);
+                            
+                            
+                            //break;
+                        }
+                    }
+                    break;
+
+
+                case ConstructionEventType.PartRootSelected:
+                    Debug.Log("Part Root selected " + part.name);
+
+                    break;
+            }
+             
         }
 
         public void OnUpdateEditor()
@@ -863,6 +902,35 @@ namespace ProceduralParts
             }
         }
 
+        private readonly LinkedList<FreePartAttachment> childAttach = new LinkedList<FreePartAttachment>();
+        private class FreePartAttachment
+        {
+            private Part child;
+            private AttachNode node; // the attachment node of the child (not the one which it is attached to)
+
+            public Part Child
+            {
+                get { return child; }
+            }
+
+            public AttachNode AttachNode
+            {
+                get {return node;}
+            }
+
+            public FreePartAttachment(Part child, AttachNode node)
+            {
+                this.child = child;
+                this.node = node;
+            }
+            
+            // cylindric coordinates
+
+            public float r;
+            public float u;
+            public float y;
+        }
+
         private class ParentTransformable : TransformFollower.Transformable
         {
             private readonly Part root;
@@ -939,23 +1007,46 @@ namespace ProceduralParts
             }
 
             //Debug.LogWarning("Attaching to parent: " + part + " child: " + child.transform.name);
+            FreePartAttachment newAttachment = new FreePartAttachment(child, node);
+            
+            //shape.GetCylindricCoordinates(child.transform.localPosition, out newAttachment.u, out newAttachment.y, out newAttachment.r);
+            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), out newAttachment.u, out newAttachment.y, out newAttachment.r, newAttachment.AttachNode.nodeType != AttachNode.NodeType.Surface);
+            
+            //Debug.Log(node.nodeTransform);
+            //Debug.Log(node.position);
+            //Debug.Log(node.originalPosition);
+            Debug.Log(child.transform.localPosition);
+            Debug.Log("y: " + newAttachment.y);
+            Debug.Log("u: " + newAttachment.u);
+            Debug.Log("r: " + newAttachment.r);
 
-            PartAttachment attach = AddPartAttachment(position, new TransformFollower.TransformTransformable(child.transform, node.position));
-            attach.child = child;
+            childAttach.AddLast(newAttachment);
 
-            childAttachments.AddLast(attach);
+            //PartAttachment attach = AddPartAttachment(position, new TransformFollower.TransformTransformable(child.transform, node.position));
+            //attach.child = child;
 
-            shape.ForceNextUpdate();
+            //childAttachments.AddLast(attach);
+
+            //shape.ForceNextUpdate();
         }
 
         [PartMessageListener(typeof(PartChildDetached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildDetached(Part child)
         {
-            for (var node = childAttachments.First; node != null; node = node.Next )
-                if (node.Value.child == child)
+            //for (var node = childAttachments.First; node != null; node = node.Next)
+            //    if (node.Value.child == child)
+            //    {
+            //        RemovePartAttachment(node.Value);
+            //        childAttachments.Remove(node);
+            //        //Debug.LogWarning("Detaching from: " + part + " child: " + child.transform.name);
+            //        return;
+            //    }
+
+            for (var node = childAttach.First; node != null; node = node.Next)
+                if (node.Value.Child == child)
                 {
-                    RemovePartAttachment(node.Value);
-                    childAttachments.Remove(node);
+
+                    childAttach.Remove(node);
                     //Debug.LogWarning("Detaching from: " + part + " child: " + child.transform.name);
                     return;
                 }
@@ -998,7 +1089,7 @@ namespace ProceduralParts
 
             //Debug.LogWarning("Attaching: " + part + " to new parent: " + newParent + " node:" + childToParent.id + " position=" + childToParent.position.ToString("G3"));
 
-            // we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
+             //we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
             parentAttachment = AddPartAttachment(position, new ParentTransformable(root, part, childToParent));
             parentAttachment.child = newParent;
 
@@ -1234,6 +1325,41 @@ namespace ProceduralParts
             return moduleCost;
         }
         #endregion
+
+       
+        [PartMessageListener(typeof(PartModelChanged), scenes: ~GameSceneFilter.Flight)]
+        public void PartModelChanged()
+        {
+            Debug.Log("Shape Changed");
+            foreach (FreePartAttachment ca in childAttach)
+            {
+                Vector3 newPosition = shape.FromCylindricCoordinates(ca.u, ca.y, ca.r, ca.AttachNode.nodeType != AttachNode.NodeType.Surface);
+                newPosition = transform.TransformPoint(newPosition);
+
+                Vector3 oldPosition = ca.Child.transform.TransformPoint(ca.AttachNode.position);
+
+                Vector3 offset = newPosition - oldPosition;
+
+                ca.Child.transform.Translate(offset, Space.World);
+                //ca.child.transform.localPosition = shape.FromCylindricCoordinates(ca.u, ca.y, ca.r);// -ca.node.position;
+                Debug.Log(ca.Child.transform.localPosition);
+                Debug.Log("u: " + ca.u);
+                Debug.Log("y: " + ca.y);
+                Debug.Log("r: " + ca.r);
+            }
+
+        }
+
+        [PartMessageListener(typeof(PartColliderChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
+        public void PartColliderChanged()
+        {
+            DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
+
+            base.part.DragCubes.ClearCubes();
+            base.part.DragCubes.Cubes.Add(dragCube);
+            base.part.DragCubes.ResetCubeWeights();
+
+        }
 
     }
 }

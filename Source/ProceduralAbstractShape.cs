@@ -144,19 +144,12 @@ namespace ProceduralParts
                     pModule.GetType().GetMethod("UpdatePropertiesWithShapeChange").Invoke(pModule, null);
                 }
             }*/
+
+  
             if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
             {
                 part.SendMessage("GeometryPartModuleRebuildMeshData");
             }
-        }
-
-        public void UpdateDragCube()
-        {
-            DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
-
-            base.part.DragCubes.ClearCubes();
-            base.part.DragCubes.Cubes.Add(dragCube);
-            base.part.DragCubes.ResetCubeWeights();
         }
 
         public void OnUpdateEditor()
@@ -173,7 +166,6 @@ namespace ProceduralParts
                     if (wasForce)
                     {
                         ChangeVolume(volumeName, Volume);
-                        UpdateDragCube();
                         if (HighLogic.LoadedSceneIsEditor)
                             GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                     }
@@ -213,6 +205,10 @@ namespace ProceduralParts
         /// <param name="normalize">If true, the transform positon follower will be relocated to a 'normalized' 
         /// offset - where i would appear on a unit length and diameter cylinder</param>
         public abstract TransformFollower RemoveAttachment(object data, bool normalize);
+
+        public abstract void GetCylindricCoordinates(Vector3 position, out float u, out float y, out float r, bool radiusFromCenter);
+
+        public abstract Vector3 FromCylindricCoordinates(float u, float y, float r, bool radiusFromCenter);
 
         #endregion
 
