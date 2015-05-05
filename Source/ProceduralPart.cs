@@ -992,19 +992,19 @@ namespace ProceduralParts
             Vector3 position = child.transform.TransformPoint(node.position);
 
             // Handle node offsets
-            if (child.attachMode != AttachModes.SRF_ATTACH)
-            {
-                AttachNode ourNode = part.findAttachNodeByPart(child);
-                if (ourNode == null)
-                {
-                    Debug.LogError("*ST* unable to find our node for child: " + child.transform);
-                    return;
-                }
-                // ReSharper disable once InconsistentNaming
-                Func<Vector3> Offset;
-                if (nodeOffsets.TryGetValue(ourNode.id, out Offset))
-                    position -= Offset();
-            }
+            //if (child.attachMode != AttachModes.SRF_ATTACH)
+            //{
+            //    AttachNode ourNode = part.findAttachNodeByPart(child);
+            //    if (ourNode == null)
+            //    {
+            //        Debug.LogError("*ST* unable to find our node for child: " + child.transform);
+            //        return;
+            //    }
+            //    // ReSharper disable once InconsistentNaming
+            //    Func<Vector3> Offset;
+            //    if (nodeOffsets.TryGetValue(ourNode.id, out Offset))
+            //        position -= Offset();
+            //}
 
             //Debug.LogWarning("Attaching to parent: " + part + " child: " + child.transform.name);
             FreePartAttachment newAttachment = new FreePartAttachment(child, node);
