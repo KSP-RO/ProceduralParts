@@ -126,11 +126,11 @@ namespace ProceduralParts
                             Vector3 position = ca.Child.transform.TransformPoint(ca.AttachNode.position);
                             //ca.node.nodeType
                             //shape.GetCylindricCoordinates(part.transform.localPosition, out ca.u, out ca.y, out ca.r);
-                            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), out ca.u, out ca.y, out ca.r, ca.AttachNode.nodeType != AttachNode.NodeType.Surface);
+                            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), ca.Coordinates);
 
-                            Debug.Log("y: " + ca.y);
-                            Debug.Log("u: " + ca.u);
-                            Debug.Log("r: " + ca.r);
+                            //Debug.Log("y: " + ca.y);
+                            //Debug.Log("u: " + ca.u);
+                            //Debug.Log("r: " + ca.r);
                             //RemovePartAttachment(pa);
                             //childAttachments.Remove(pa);
                             //PartChildAttached(part);
@@ -926,9 +926,11 @@ namespace ProceduralParts
             
             // cylindric coordinates
 
-            public float r;
-            public float u;
-            public float y;
+            public ProceduralAbstractShape.ShapeCoordinates Coordinates = new ProceduralAbstractShape.ShapeCoordinates();
+
+            //public float r;
+            //public float u;
+            //public float y;
         }
 
         private class ParentTransformable : TransformFollower.Transformable
@@ -1008,18 +1010,42 @@ namespace ProceduralParts
 
             //Debug.LogWarning("Attaching to parent: " + part + " child: " + child.transform.name);
             FreePartAttachment newAttachment = new FreePartAttachment(child, node);
-            
-            //shape.GetCylindricCoordinates(child.transform.localPosition, out newAttachment.u, out newAttachment.y, out newAttachment.r);
-            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), out newAttachment.u, out newAttachment.y, out newAttachment.r, newAttachment.AttachNode.nodeType != AttachNode.NodeType.Surface);
-            
-            //Debug.Log(node.nodeTransform);
-            //Debug.Log(node.position);
-            //Debug.Log(node.originalPosition);
-            Debug.Log(child.transform.localPosition);
-            Debug.Log("y: " + newAttachment.y);
-            Debug.Log("u: " + newAttachment.u);
-            Debug.Log("r: " + newAttachment.r);
 
+            switch (child.attachMode)
+            {
+                case AttachModes.SRF_ATTACH:
+                    newAttachment.Coordinates.RadiusMode = ProceduralAbstractShape.ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS;
+                    newAttachment.Coordinates.HeightMode = ProceduralAbstractShape.ShapeCoordinates.YMode.RELATIVE_TO_SHAPE;
+                    break;
+
+                case AttachModes.STACK:
+                    newAttachment.Coordinates.RadiusMode = ProceduralAbstractShape.ShapeCoordinates.RMode.RELATIVE_TO_SHAPE_RADIUS;
+
+                    AttachNode ourNode = part.findAttachNodeByPart(child);
+                    if (ourNode == null)
+                    {
+                        Debug.LogError("*ST* unable to find our node for child: " + child.transform);
+                        return;
+                    }
+                    
+                    Debug.Log("NodeID: " + ourNode.id);
+
+                    if (ourNode.id == "top")
+                        newAttachment.Coordinates.HeightMode = ProceduralAbstractShape.ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_TOP;
+                    else if (ourNode.id == "bottom")
+                        newAttachment.Coordinates.HeightMode = ProceduralAbstractShape.ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_BOTTOM;
+                    else
+                        newAttachment.Coordinates.HeightMode = ProceduralAbstractShape.ShapeCoordinates.YMode.RELATIVE_TO_SHAPE;
+                    break;
+
+                default:
+                    Debug.LogError("Unknown AttachMode: " + child.attachMode);
+                    break;
+            }
+
+           
+            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), newAttachment.Coordinates);
+            
             childAttach.AddLast(newAttachment);
 
             //PartAttachment attach = AddPartAttachment(position, new TransformFollower.TransformTransformable(child.transform, node.position));
@@ -1333,7 +1359,7 @@ namespace ProceduralParts
             Debug.Log("Shape Changed");
             foreach (FreePartAttachment ca in childAttach)
             {
-                Vector3 newPosition = shape.FromCylindricCoordinates(ca.u, ca.y, ca.r, ca.AttachNode.nodeType != AttachNode.NodeType.Surface);
+                Vector3 newPosition = shape.FromCylindricCoordinates(ca.Coordinates);
                 newPosition = transform.TransformPoint(newPosition);
 
                 Vector3 oldPosition = ca.Child.transform.TransformPoint(ca.AttachNode.position);
@@ -1342,10 +1368,10 @@ namespace ProceduralParts
 
                 ca.Child.transform.Translate(offset, Space.World);
                 //ca.child.transform.localPosition = shape.FromCylindricCoordinates(ca.u, ca.y, ca.r);// -ca.node.position;
-                Debug.Log(ca.Child.transform.localPosition);
-                Debug.Log("u: " + ca.u);
-                Debug.Log("y: " + ca.y);
-                Debug.Log("r: " + ca.r);
+                //Debug.Log(ca.Child.transform.localPosition);
+                //Debug.Log("u: " + ca.u);
+                //Debug.Log("y: " + ca.y);
+                //Debug.Log("r: " + ca.r);
             }
 
         }

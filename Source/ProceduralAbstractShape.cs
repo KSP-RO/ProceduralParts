@@ -206,9 +206,34 @@ namespace ProceduralParts
         /// offset - where i would appear on a unit length and diameter cylinder</param>
         public abstract TransformFollower RemoveAttachment(object data, bool normalize);
 
-        public abstract void GetCylindricCoordinates(Vector3 position, out float u, out float y, out float r, bool radiusFromCenter);
+        public class ShapeCoordinates
+        {
+            public enum RMode
+            {
+                OFFSET_FROM_SHAPE_CENTER,
+                OFFSET_FROM_SHAPE_RADIUS,
+                RELATIVE_TO_SHAPE_RADIUS
+            }
 
-        public abstract Vector3 FromCylindricCoordinates(float u, float y, float r, bool radiusFromCenter);
+            public enum YMode
+            {
+                OFFSET_FROM_SHAPE_CENTER,
+                OFFSET_FROM_SHAPE_TOP,
+                OFFSET_FROM_SHAPE_BOTTOM,
+                RELATIVE_TO_SHAPE
+            }
+
+            public RMode RadiusMode = RMode.OFFSET_FROM_SHAPE_RADIUS;
+            public YMode HeightMode = YMode.RELATIVE_TO_SHAPE;
+
+            public float u;
+            public float y;
+            public float r;
+        }
+
+        public abstract void GetCylindricCoordinates(Vector3 position, ShapeCoordinates coords);
+
+        public abstract Vector3 FromCylindricCoordinates(ShapeCoordinates coords);
 
         #endregion
 

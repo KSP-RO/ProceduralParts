@@ -24,23 +24,48 @@ namespace ProceduralParts
 
         #region attachments
 
-        public override Vector3 FromCylindricCoordinates(float u, float y, float r, bool radiusFromCenter)
+        public override Vector3 FromCylindricCoordinates(ShapeCoordinates coords)
         {
-            Vector3 position;
+            Vector3 position = new Vector3();
 
-            float halfLength = (lastProfile.Last.Value.y - lastProfile.First.Value.y) / 2.0f;
-            float radius=r;
+            switch (coords.HeightMode)
+            {
+                case ShapeCoordinates.YMode.RELATIVE_TO_SHAPE:
+                    float halfLength = (lastProfile.Last.Value.y - lastProfile.First.Value.y) / 2.0f;
+                    position.y = halfLength * coords.y;
+                    break;
 
-            position.y = halfLength * y;
+                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_CENTER:
+                    position.y = coords.y;
+                    break;
 
-            if (!radiusFromCenter)
+                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_BOTTOM:
+                    position.y = coords.y + lastProfile.First.Value.y;
+                    break;
+
+                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_TOP:
+                    position.y = coords.y + lastProfile.Last.Value.y;
+                    break;
+                default:
+                    Debug.LogError("Can not handle PartCoordinate attribute: " + coords.HeightMode);
+                    position.y = 0.0f;
+                    break;
+            }
+
+
+            float radius = coords.r;
+
+            if (coords.RadiusMode != ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_CENTER)
             {
                 if (position.y < lastProfile.First.Value.y)
-                    //radius = lastProfile.First.Value.dia / 2.0f * r;
-                    radius = lastProfile.First.Value.dia / 2.0f + r;
+                    radius = coords.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
+                        lastProfile.First.Value.dia / 2.0f + coords.r :
+                        radius = lastProfile.First.Value.dia / 2.0f * coords.r;
+
                 else if (position.y > lastProfile.Last.Value.y)
-                    //radius = lastProfile.Last.Value.dia / 2.0f * r;
-                    radius = lastProfile.Last.Value.dia / 2.0f + r;
+                    radius = coords.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
+                        lastProfile.Last.Value.dia / 2.0f + coords.r :
+                        radius = lastProfile.Last.Value.dia / 2.0f * coords.r;
                 else
                 {
                     ProfilePoint pt = lastProfile.First.Value;
@@ -56,15 +81,17 @@ namespace ProceduralParts
                             float t = Mathf.InverseLerp(Mathf.Min(pv.y, pt.y), Mathf.Max(pv.y, pt.y), position.y);
                             float profileRadius = Mathf.Lerp(pv.dia, pt.dia, t) / 2.0f;
 
-                            //radius = profileRadius * r;
-                            radius = profileRadius + r;
+                            
+                            radius = coords.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ? 
+                                profileRadius + coords.r :
+                                radius = profileRadius * coords.r;
                         }
                     }
                 }
             }
 
             
-            float theta = Mathf.Lerp(0, Mathf.PI * 2f, u);
+            float theta = Mathf.Lerp(0, Mathf.PI * 2f, coords.u);
 
             position.x = Mathf.Cos(theta) * radius;
             position.z = -Mathf.Sin(theta) * radius;
@@ -73,37 +100,57 @@ namespace ProceduralParts
             
         }
 
-        public override void GetCylindricCoordinates(Vector3 position, out float u, out float y, out float radius, bool radiusFromCenter)
+        public override void GetCylindricCoordinates(Vector3 position, ShapeCoordinates result)
         {
-            //Vector3 position = source.localPosition;
+
             Vector2 direction = new Vector2(position.x, position.z);
 
-            float halfLength = (lastProfile.Last.Value.y - lastProfile.First.Value.y) / 2.0f;
-
-            //Debug.Log("y: " + position.y);
-            //Debug.Log("First y: " + lastProfile.First.Value.y);
-            //Debug.Log("Last y: " + lastProfile.Last.Value.y);
-
-            y = position.y / halfLength;
-            radius = 0;
-            //float theta = Mathf.Atan2(direction.x, -direction.y);
-            float theta = Mathf.Atan2(-direction.y, direction.x);
-            //theta = Mathf.Atan2(-position.z, position.x);
-
-            u = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
-
-            if(radiusFromCenter)
+            switch(result.HeightMode)
             {
-                radius = direction.magnitude;
+                case ShapeCoordinates.YMode.RELATIVE_TO_SHAPE:
+                    float halfLength = (lastProfile.Last.Value.y - lastProfile.First.Value.y) / 2.0f;
+                    result.y = position.y / halfLength;
+                    break;
+                    
+                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_CENTER:
+                    result.y = position.y;
+                    break;
+
+                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_BOTTOM:
+                    result.y = position.y - lastProfile.First.Value.y;
+                    break;
+
+                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_TOP:
+                    result.y = position.y - lastProfile.Last.Value.y;
+                    break;
+                default:
+                    Debug.LogError("Can not handle PartCoordinate attribute: " + result.HeightMode);
+                    result.y = 0.0f;
+                    break;
+            }
+
+            
+            result.r = 0;
+            
+            float theta = Mathf.Atan2(-direction.y, direction.x);
+           
+            result.u = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
+
+            if(result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_CENTER)
+            {
+                result.r = direction.magnitude;
                 return;
             }
 
             if (position.y < lastProfile.First.Value.y)
-                radius = direction.magnitude - lastProfile.First.Value.dia / 2.0f;
-                //radius = direction.magnitude / lastProfile.First.Value.dia / 2.0f;
+                result.r = result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ? 
+                    direction.magnitude - lastProfile.First.Value.dia / 2.0f :
+                    direction.magnitude / lastProfile.First.Value.dia / 2.0f; // RELATIVE_TO_SHAPE_RADIUS
+
             else if (position.y > lastProfile.Last.Value.y)
-                //radius = direction.magnitude / lastProfile.Last.Value.dia / 2.0f;
-                radius = direction.magnitude - lastProfile.Last.Value.dia / 2.0f;
+                result.r = result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
+                    direction.magnitude - lastProfile.Last.Value.dia / 2.0f :
+                    direction.magnitude / lastProfile.Last.Value.dia / 2.0f; // RELATIVE_TO_SHAPE_RADIUS
             else
             {
                 ProfilePoint pt = lastProfile.First.Value;
@@ -119,8 +166,8 @@ namespace ProceduralParts
                         float t = Mathf.InverseLerp(Mathf.Min(pv.y, pt.y), Mathf.Max(pv.y, pt.y), position.y);
                         float r = Mathf.Lerp(pv.dia, pt.dia, t) / 2.0f;
 
-                        //radius = direction.magnitude / r;
-                        radius = direction.magnitude - r;
+                        result.r = result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
+                            direction.magnitude - r : direction.magnitude / r;
                     }
 
                 }
