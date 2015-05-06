@@ -84,58 +84,7 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
-
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (PPart.lengthMin == PPart.lengthMax || PPart.aspectMin == PPart.aspectMax)
-                Fields["length"].guiActiveEditor = false;
-            else
-            {
-                UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
-                lengthEdit.maxValue = PPart.lengthMax;
-                lengthEdit.minValue = PPart.lengthMin;
-                lengthEdit.incrementLarge = PPart.lengthLargeStep;
-                lengthEdit.incrementSmall = PPart.lengthSmallStep;
-            }
-
-            if (PPart.diameterMin == PPart.diameterMax || (coneTopMode == ConeEndMode.Constant && coneBottomMode == ConeEndMode.Constant))
-            {
-                Fields["topDiameter"].guiActiveEditor = false;
-                Fields["bottomDiameter"].guiActiveEditor = false;
-                return;
-            }
-            // ReSharper restore CompareOfFloatsByEqualityOperator
-
-            if (coneTopMode == ConeEndMode.Constant)
-            {
-                // Top diameter is constant
-                Fields["topDiameter"].guiActiveEditor = false;
-                Fields["bottomDiameter"].guiName = "Diameter";
-            }
-            else
-            {
-                UI_FloatEdit topDiameterEdit = (UI_FloatEdit)Fields["topDiameter"].uiControlEditor;
-                topDiameterEdit.incrementLarge = PPart.diameterLargeStep;
-                topDiameterEdit.incrementSmall = PPart.diameterSmallStep;
-                topDiameterEdit.maxValue = PPart.diameterMax;
-                topDiameterEdit.minValue = (coneTopMode == ConeEndMode.CanZero && coneBottomMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
-            }
-
-            if (coneBottomMode == ConeEndMode.Constant)
-            {
-                // Bottom diameter is constant
-                Fields["bottomDiameter"].guiActiveEditor = false;
-                Fields["topDiameter"].guiName = "Diameter";
-            }
-            else
-            {
-                UI_FloatEdit bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
-                bottomDiameterEdit.incrementLarge = PPart.diameterLargeStep;
-                bottomDiameterEdit.incrementSmall = PPart.diameterSmallStep;
-                bottomDiameterEdit.maxValue = PPart.diameterMax;
-                bottomDiameterEdit.minValue = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
-            }
+            UpdateTechConstraints();
 
         }
 
@@ -283,6 +232,66 @@ namespace ProceduralParts
             UpdateFAR();
         }
         #endregion
+
+        public override void UpdateTechConstraints()
+        {
+            if (!HighLogic.LoadedSceneIsEditor)
+                return;
+
+            // ReSharper disable CompareOfFloatsByEqualityOperator
+            if (PPart.lengthMin == PPart.lengthMax || PPart.aspectMin == PPart.aspectMax)
+                Fields["length"].guiActiveEditor = false;
+            else
+            {
+                UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
+                lengthEdit.maxValue = PPart.lengthMax;
+                lengthEdit.minValue = PPart.lengthMin;
+                lengthEdit.incrementLarge = PPart.lengthLargeStep;
+                lengthEdit.incrementSmall = PPart.lengthSmallStep;
+                length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
+            }
+
+            if (PPart.diameterMin == PPart.diameterMax || (coneTopMode == ConeEndMode.Constant && coneBottomMode == ConeEndMode.Constant))
+            {
+                Fields["topDiameter"].guiActiveEditor = false;
+                Fields["bottomDiameter"].guiActiveEditor = false;
+                return;
+            }
+            // ReSharper restore CompareOfFloatsByEqualityOperator
+
+            if (coneTopMode == ConeEndMode.Constant)
+            {
+                // Top diameter is constant
+                Fields["topDiameter"].guiActiveEditor = false;
+                Fields["bottomDiameter"].guiName = "Diameter";
+            }
+            else
+            {
+                UI_FloatEdit topDiameterEdit = (UI_FloatEdit)Fields["topDiameter"].uiControlEditor;
+                topDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+                topDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+                topDiameterEdit.maxValue = PPart.diameterMax;
+                topDiameterEdit.minValue = (coneTopMode == ConeEndMode.CanZero && coneBottomMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
+                topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
+            }
+
+            if (coneBottomMode == ConeEndMode.Constant)
+            {
+                // Bottom diameter is constant
+                Fields["bottomDiameter"].guiActiveEditor = false;
+                Fields["topDiameter"].guiName = "Diameter";
+            }
+            else
+            {
+                UI_FloatEdit bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
+                bottomDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+                bottomDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+                bottomDiameterEdit.maxValue = PPart.diameterMax;
+                bottomDiameterEdit.minValue = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
+                bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
+            }
+            
+        }
     }
 
 }

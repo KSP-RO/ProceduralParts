@@ -57,7 +57,7 @@ namespace ProceduralParts
             try
             {
                 InitializeBells();
-                UpdateMaxThrust();  
+                UpdateMaxThrust();
             }
             catch (Exception ex)
             {
@@ -156,8 +156,8 @@ namespace ProceduralParts
 
         private SRBBellConfig selectedBell;
         private Dictionary<string, SRBBellConfig> srbConfigs;
-        [SerializeField]
-        public ConfigNode[] srbConfigsSerialized;
+        
+        private static ConfigNode[] srbConfigsSerialized;
 
         [Serializable]
         public class SRBBellConfig : IConfigNode
@@ -497,6 +497,9 @@ namespace ProceduralParts
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
         }
 
+        [KSPField]
+        public double fuelRate = 0.0;
+
         private void UpdateThrustDependentCalcs()
         {
             PartResource solidFuel = part.Resources["SolidFuel"];
@@ -513,7 +516,8 @@ namespace ProceduralParts
             {
                 float burnTime0 = burnTimeME = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
                 float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
-                burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);                
+                burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
+                fuelRate = solidFuelMassG / burnTime0;
             }
             else
             {
@@ -529,6 +533,7 @@ namespace ProceduralParts
 
                 thrustME = thrust0.ToStringSI(unit: "N", exponent: 3) + " Vac / " + thrust1.ToStringSI(unit: "N", exponent: 3) + " ASL";
                 srbISP = string.Format("{1:F0}s Vac / {0:F0}s ASL", atmosphereCurve.Evaluate(1), atmosphereCurve.Evaluate(0));
+                fuelRate = solidFuelMassG / burnTimeME;
             }
 
             // This equation is much easier. From StretchySRBs
@@ -550,11 +555,30 @@ namespace ProceduralParts
         {
             Engine.heatProduction = heatProduction;
             Engine.maxThrust = thrust;
+            part.GetComponent<ModuleEngines>().maxFuelFlow = (float)(0.1*fuelRate);
+
 
             selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
 
             if (UsingME)
                 ModularEnginesChangeThrust(thrust);
+            UpdateFAR();
+        }
+
+        public void UpdateFAR()
+        {
+            /*if (HighLogic.LoadedSceneIsEditor)
+            {
+                if (part.Modules.Contains("FARBasicDragModel"))
+                {
+                    PartModule pModule = part.Modules["FARBasicDragModel"];
+                    pModule.GetType().GetMethod("UpdatePropertiesWithShapeChange").Invoke(pModule, null);
+                }
+            }*/
+            if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
+            {
+                part.SendMessage("GeometryPartModuleRebuildMeshData");
+            }
         }
 
         #endregion
@@ -602,7 +626,7 @@ namespace ProceduralParts
         private void AnimateHeat()
         {
             // The emmissive module is too much effort to get working, just do it the easy way.
-            float num = Mathf.Clamp01((part.temperature - DraperPoint) / (part.maxTemp - DraperPoint));
+            float num = Mathf.Clamp01(((float)part.temperature - DraperPoint) / ((float)part.maxTemp - DraperPoint));
             if (float.IsNaN(num))
                 num = 0f;
 

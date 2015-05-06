@@ -19,32 +19,7 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
-
-            if (PPart.lengthMin == PPart.lengthMax)
-                Fields["length"].guiActiveEditor = false;
-            else
-            {
-                UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
-                lengthEdit.maxValue = PPart.lengthMax;
-                lengthEdit.minValue = PPart.lengthMin;
-                lengthEdit.incrementLarge = PPart.lengthLargeStep;
-                lengthEdit.incrementSmall = PPart.lengthSmallStep;
-            }
-
-            if (PPart.diameterMin == PPart.diameterMax)
-                Fields["diameter"].guiActiveEditor = false;
-            else
-            {
-                UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
-                diameterEdit.maxValue = PPart.diameterMax;
-                diameterEdit.minValue = PPart.diameterMin;
-                diameterEdit.incrementLarge = PPart.diameterLargeStep;
-                diameterEdit.incrementSmall = PPart.diameterSmallStep;
-            }
-            // ReSharper restore CompareOfFloatsByEqualityOperator
+            UpdateTechConstraints();
         }
 
 
@@ -85,6 +60,38 @@ namespace ProceduralParts
             // ReSharper restore CompareOfFloatsByEqualityOperator
 
             UpdateFAR();
+        }
+
+        public override void UpdateTechConstraints()
+        {
+            // ReSharper disable CompareOfFloatsByEqualityOperator
+            if (!HighLogic.LoadedSceneIsEditor)
+                return;
+
+            if (PPart.lengthMin == PPart.lengthMax)
+                Fields["length"].guiActiveEditor = false;
+            else
+            {
+                UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
+                lengthEdit.maxValue = PPart.lengthMax;
+                lengthEdit.minValue = PPart.lengthMin;
+                lengthEdit.incrementLarge = PPart.lengthLargeStep;
+                lengthEdit.incrementSmall = PPart.lengthSmallStep;
+                length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
+            }
+
+            if (PPart.diameterMin == PPart.diameterMax)
+                Fields["diameter"].guiActiveEditor = false;
+            else
+            {
+                UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
+                diameterEdit.maxValue = PPart.diameterMax;
+                diameterEdit.minValue = PPart.diameterMin;
+                diameterEdit.incrementLarge = PPart.diameterLargeStep;
+                diameterEdit.incrementSmall = PPart.diameterSmallStep;
+                diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
+            }
+            // ReSharper restore CompareOfFloatsByEqualityOperator
         }
     }
 }
