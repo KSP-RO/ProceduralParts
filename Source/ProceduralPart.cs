@@ -984,7 +984,7 @@ namespace ProceduralParts
                 toAttach.Enqueue(() => PartChildAttached(child));
                 return;
             }
-            Debug.Log("PartChildAttached");
+            //Debug.Log("PartChildAttached");
             AttachNode node = child.findAttachNodeByPart(part);
             if (node == null)
             {
@@ -1087,7 +1087,7 @@ namespace ProceduralParts
                 toAttach.Enqueue(() => PartParentChanged(newParent));
                 return;
             }
-            Debug.Log("PartParentChanged");
+            //Debug.Log("PartParentChanged");
             if (parentAttachment != null)
             {
                 RemovePartAttachment(parentAttachment);
@@ -1203,6 +1203,11 @@ namespace ProceduralParts
         private ProceduralAbstractShape shape;
         private readonly Dictionary<string, ProceduralAbstractShape> availableShapes = new Dictionary<string, ProceduralAbstractShape>();
 
+        public ProceduralAbstractShape CurrentShape
+        {
+            get { return shape; }
+        }
+
         private void InitializeShapes()
         {
             List<string> shapeNames = new List<string>();
@@ -1305,6 +1310,13 @@ namespace ProceduralParts
 
         #region Cost
         [KSPField]
+        public bool costsIncludeResources = false; // set this true to define the costs KSP style including the containing resources WARNING: (May be 
+//            incompatible with RF/MFT)
+
+        [KSPField]
+        public float baseCost = 0;
+
+        [KSPField]
         public float costPerkL = 245f;
 
         [KSPField(isPersistant=true)]
@@ -1320,10 +1332,11 @@ namespace ProceduralParts
         {
             if (HighLogic.LoadedScene == GameScenes.EDITOR)
             {
-                float cost = 0f;
+                //Debug.Log("GetModuleCost");
+                float cost = baseCost;
                 if ((object)shape != null)
-                    cost = shape.GetCurrentCostMult() * shape.Volume * costPerkL;
-                
+                    cost += shape.GetCurrentCostMult() * shape.Volume * costPerkL;
+                //Debug.Log(cost);
                 foreach (PartModule pm in part.Modules)
                 {
                     if(pm is ICostMultiplier)
@@ -1340,8 +1353,16 @@ namespace ProceduralParts
                         PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
                         if ((object)d != null)
                         {
-                            cost += (float)(r.maxAmount * d.unitCost);
-                            actualCost += (float)(r.amount * d.unitCost);
+                            if (!costsIncludeResources)
+                            {
+                                cost += (float)(r.maxAmount * d.unitCost);
+                                actualCost += (float)(r.amount * d.unitCost);
+                            }
+                            else
+                            {
+                                dryCost -= (float)(r.maxAmount * d.unitCost);
+                                actualCost -= (float)((r.maxAmount - r.amount) * d.unitCost);
+                            }
                         }
                     }
                 }
