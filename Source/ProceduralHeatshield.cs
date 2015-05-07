@@ -12,8 +12,7 @@ namespace ProceduralParts
     {
         [PartMessageEvent]
         public event PartMassChanged MassChanged;
-        [PartMessageEvent]
-        public event PartResourceListChanged ResourceListChanged;
+       
         [PartMessageEvent]
         public event PartResourceMaxAmountChanged MaxAmountChanged;
         [PartMessageEvent]
@@ -85,6 +84,9 @@ namespace ProceduralParts
         [KSPField]
         public float multiplyCostByDiameter;
 
+        [KSPField]
+        public FloatCurve CoPoffset = new FloatCurve();
+
         private AttachNode bottomNode;
         private AttachNode topNode;
 
@@ -98,7 +100,7 @@ namespace ProceduralParts
             CopyNodeSizeAndStrength();
         }
 
-        [PartMessageListener(typeof(PartModelChanged), scenes: ~GameSceneFilter.Flight)]
+        [PartMessageListener(typeof(PartModelChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
         public void PartModelChanged()
         {
             ProceduralPart ppart = PPart;
@@ -110,26 +112,41 @@ namespace ProceduralParts
                 if(null != shape)
                 {
                     float diameter = shape.topDiameter;
-                    float surfaceArea = Mathf.PI * (diameter/2) * (diameter/2);
+                    float length = shape.length;
 
-                    PartResource pr = part.Resources["Ablator"];
-
-                    if(null != pr)
+                    if (HighLogic.LoadedSceneIsEditor)
                     {
-                        double ratio = pr.amount / pr.maxAmount;
-
-                        pr.maxAmount = (double)(ablatorPerArea * surfaceArea);
-                        pr.amount = Math.Max(ratio * pr.maxAmount, pr.maxAmount);
-                        //ResourceListChanged();
-                        MaxAmountChanged(pr, pr.maxAmount);
-                        InitialAmountChanged(pr, pr.maxAmount);
-
                         
+                        float surfaceArea = Mathf.PI * (diameter / 2) * (diameter / 2);
+
+                        PartResource pr = part.Resources["Ablator"];
+
+                        if (null != pr)
+                        {
+                            double ratio = pr.amount / pr.maxAmount;
+
+                            pr.maxAmount = (double)(ablatorPerArea * surfaceArea);
+                            pr.amount = Math.Max(ratio * pr.maxAmount, pr.maxAmount);
+                            //ResourceListChanged();
+                            MaxAmountChanged(pr, pr.maxAmount);
+                            InitialAmountChanged(pr, pr.maxAmount);
+
+
+                        }
+
+                        part.mass = massPerDiameter * diameter;
+                        MassChanged(part.mass);
                     }
+                    
+                   
+                    //Debug.Log("CoL offset " + -length);
+                    
+                    part.CoLOffset.y = -length;
 
-                    part.mass = massPerDiameter * diameter;
-                    MassChanged(part.mass);
-
+                    part.CoPOffset.y = CoPoffset.Evaluate(diameter);
+                    //Debug.Log("CoP offset: "+ part.CoPOffset.y);
+                   
+                   
                     if (HighLogic.LoadedSceneIsEditor)
                         GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                 }
