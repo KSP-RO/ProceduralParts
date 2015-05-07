@@ -57,7 +57,7 @@ namespace ProceduralParts
 
             if (PPart != null)
             {
-                PPart.AddNodeOffset(topNodeId, GetNodeOffset);
+                //PPart.AddNodeOffset(topNodeId, GetNodeOffset);
             }
             else
                 Debug.LogError("Procedural Part not found");
@@ -158,10 +158,6 @@ namespace ProceduralParts
             bottomNode.breakingTorque = topNode.breakingTorque;
         }
 
-        private Vector3 GetNodeOffset()
-        {
-            return new Vector3(0f, -0.2f, 0f);
-        }
 
 
         // Thats for DRE, which is not updated yet 

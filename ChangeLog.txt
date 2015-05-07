@@ -12,6 +12,7 @@ Offset parts now stay were they were after loading a craft in editor
 Procedural ore tank
 Maximum temperatures of nearly every procedural part changed
 Texture 'ablative' endcap changed
+no more crafts bouncing off the ground at launch when the lowest part is a procedural part
 
 === 1.0.2 ===
 Shapes now use as much polygons as before 1.0.1
