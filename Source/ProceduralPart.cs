@@ -39,6 +39,13 @@ namespace ProceduralParts
             }
         }
 
+        [KSPField(isPersistant = true)]
+        private  Vector3 tempColliderCenter;
+
+        [KSPField(isPersistant = true)]
+        private Vector3 tempColliderSize;
+
+        private BoxCollider tempCollider;
         public override void OnLoad(ConfigNode node)
         {
             // Load stuff from config files
@@ -52,6 +59,20 @@ namespace ProceduralParts
                 Debug.LogError("OnLoad exception: " + ex);
                 throw;
             }
+
+            if (HighLogic.LoadedSceneIsFlight)
+            {     
+                // Create a temporary collider for KSP so that it can set the craft on the ground properly
+                tempCollider = gameObject.AddComponent<BoxCollider>();
+                tempCollider.center = tempColliderCenter;
+                
+                tempCollider.size = tempColliderSize;
+                tempCollider.enabled = true;
+                //Debug.Log("created temp collider with size: " + tempCollider.size);
+                //Debug.Log("bounds: " + tempCollider.bounds);
+            }
+            
+
         }
 
         public override void OnSave(ConfigNode node)
@@ -75,6 +96,14 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
+            if(tempCollider!=null)
+            {
+                // delete the temporary collider, if there is one
+                Component.Destroy(tempCollider);
+                tempCollider = null;
+                Debug.Log("destroyed temporary collider");
+            }
+
             // Update internal state
             try
             {
@@ -984,7 +1013,7 @@ namespace ProceduralParts
                 toAttach.Enqueue(() => PartChildAttached(child));
                 return;
             }
-            Debug.Log("PartChildAttached");
+            //Debug.Log("PartChildAttached");
             AttachNode node = child.findAttachNodeByPart(part);
             if (node == null)
             {
@@ -1087,7 +1116,7 @@ namespace ProceduralParts
                 toAttach.Enqueue(() => PartParentChanged(newParent));
                 return;
             }
-            Debug.Log("PartParentChanged");
+            //Debug.Log("PartParentChanged");
             if (parentAttachment != null)
             {
                 RemovePartAttachment(parentAttachment);
@@ -1203,6 +1232,11 @@ namespace ProceduralParts
         private ProceduralAbstractShape shape;
         private readonly Dictionary<string, ProceduralAbstractShape> availableShapes = new Dictionary<string, ProceduralAbstractShape>();
 
+        public ProceduralAbstractShape CurrentShape
+        {
+            get { return shape; }
+        }
+
         private void InitializeShapes()
         {
             List<string> shapeNames = new List<string>();
@@ -1305,6 +1339,13 @@ namespace ProceduralParts
 
         #region Cost
         [KSPField]
+        public bool costsIncludeResources = false; // set this true to define the costs KSP style including the containing resources WARNING: (May be 
+//            incompatible with RF/MFT)
+
+        [KSPField]
+        public float baseCost = 0;
+
+        [KSPField]
         public float costPerkL = 245f;
 
         [KSPField(isPersistant=true)]
@@ -1320,10 +1361,11 @@ namespace ProceduralParts
         {
             if (HighLogic.LoadedScene == GameScenes.EDITOR)
             {
-                float cost = 0f;
+                //Debug.Log("GetModuleCost");
+                float cost = baseCost;
                 if ((object)shape != null)
-                    cost = shape.GetCurrentCostMult() * shape.Volume * costPerkL;
-                
+                    cost += shape.GetCurrentCostMult() * shape.Volume * costPerkL;
+                //Debug.Log(cost);
                 foreach (PartModule pm in part.Modules)
                 {
                     if(pm is ICostMultiplier)
@@ -1340,8 +1382,16 @@ namespace ProceduralParts
                         PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
                         if ((object)d != null)
                         {
-                            cost += (float)(r.maxAmount * d.unitCost);
-                            actualCost += (float)(r.amount * d.unitCost);
+                            if (!costsIncludeResources)
+                            {
+                                cost += (float)(r.maxAmount * d.unitCost);
+                                actualCost += (float)(r.amount * d.unitCost);
+                            }
+                            else
+                            {
+                                dryCost -= (float)(r.maxAmount * d.unitCost);
+                                actualCost -= (float)((r.maxAmount - r.amount) * d.unitCost);
+                            }
                         }
                     }
                 }
@@ -1356,7 +1406,7 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartModelChanged), scenes: ~GameSceneFilter.Flight)]
         public void PartModelChanged()
         {
-            Debug.Log("Shape Changed");
+            //Debug.Log("Shape Changed");
             foreach (FreePartAttachment ca in childAttach)
             {
                 Vector3 newPosition = shape.FromCylindricCoordinates(ca.Coordinates);
@@ -1373,6 +1423,22 @@ namespace ProceduralParts
                 //Debug.Log("y: " + ca.y);
                 //Debug.Log("r: " + ca.r);
             }
+
+            
+            if(partCollider!=null)
+            {
+                tempColliderCenter = Vector3.zero;
+
+                Vector3 min = transform.InverseTransformPoint(partCollider.bounds.min);
+                Vector3 max = transform.InverseTransformPoint(partCollider.bounds.max);
+
+                tempColliderSize.x = max.x - min.x;
+                tempColliderSize.y = max.y - min.y;
+                tempColliderSize.z = max.z - min.z;
+
+                //Debug.Log(tempColliderSize);
+            }
+
 
         }
 
