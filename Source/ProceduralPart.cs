@@ -14,8 +14,13 @@ namespace ProceduralParts
     {
         #region Initialization
 
+        bool installedFAR = false;
+
         public override void OnAwake()
         {
+            // Check if FAR is installed
+            installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
+
             base.OnAwake();
             PartMessageService.Register(this);
             //this.RegisterOnUpdateEditor(OnUpdateEditor);
@@ -1479,11 +1484,14 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartColliderChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
         public void PartColliderChanged()
         {
-            DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
+            if (!installedFAR)
+            {
+                DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
 
-            base.part.DragCubes.ClearCubes();
-            base.part.DragCubes.Cubes.Add(dragCube);
-            base.part.DragCubes.ResetCubeWeights();
+                base.part.DragCubes.ClearCubes();
+                base.part.DragCubes.Cubes.Add(dragCube);
+                base.part.DragCubes.ResetCubeWeights();
+            }
 
         }
 
