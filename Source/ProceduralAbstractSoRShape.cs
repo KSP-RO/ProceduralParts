@@ -668,7 +668,13 @@ namespace ProceduralParts
             // set the texture scale.
             RaiseChangeTextureScale("sides", PPart.SidesMaterial, new Vector2(tankULength, tankVLength));
 
-            m.WriteTo(SidesMesh);
+            
+
+            if(HighLogic.LoadedScene == GameScenes.LOADING)
+                m.WriteTo(PPart.SidesIconMesh);
+            else
+                m.WriteTo(SidesMesh);
+
 
             // The endcaps.
             nVrt = first.circ.totVertexes + last.circ.totVertexes;
@@ -678,7 +684,12 @@ namespace ProceduralParts
             first.circ.WriteEndcap(first.dia, first.y, false, 0, 0, m, false);
             last.circ.WriteEndcap(last.dia, last.y, true, first.circ.totVertexes, (first.circ.totVertexes - 2) * 3, m, !odd);
 
-            m.WriteTo(EndsMesh);
+            
+
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
+                m.WriteTo(PPart.EndsIconMesh);
+            else
+                m.WriteTo(EndsMesh);
 
             // build the collider mesh at a lower resolution than the visual mesh.
             if (customCollider)

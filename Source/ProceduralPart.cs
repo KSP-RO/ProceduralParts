@@ -226,18 +226,37 @@ namespace ProceduralParts
         public Mesh SidesMesh { get; private set; }
         public Mesh EndsMesh { get; private set; }
 
+        public Material SidesIconMaterial { get; private set; }
+        public Material EndsIconMaterial { get; private set; }
+
+        public Mesh SidesIconMesh { get; private set; }
+        public Mesh EndsIconMesh { get; private set; }
+
         private Transform partModel;
 
         private void InitializeObjects()
         {
             partModel = part.FindModelTransform(partModelName);
-
-            Transform sides = part.FindModelTransform(sidesName);
-            Transform ends = part.FindModelTransform(endsName);
+            
+            Transform sides     = part.FindModelTransform(sidesName);
+            Transform ends      = part.FindModelTransform(endsName);
             Transform colliderTr = part.FindModelTransform(collisionName);
+
+            Transform iconModelTransform = part.partInfo.iconPrefab.transform.FindDecendant("model");
+
+            Transform iconSides = iconModelTransform.FindDecendant(sidesName);
+            Transform iconEnds = iconModelTransform.FindDecendant(endsName);
+
+            if(iconSides != null)
+                SidesIconMesh = iconSides.GetComponent<MeshFilter>().mesh;
+            if(iconEnds != null)
+                EndsIconMesh = iconEnds.GetComponent<MeshFilter>().mesh;
+
 
             SidesMaterial = sides.renderer.material;
             EndsMaterial = ends.renderer.material;
+            SidesIconMaterial = iconSides.renderer.material;
+            EndsIconMaterial = iconEnds.renderer.material;
 
             // Instantiate meshes. The mesh method unshares any shared meshes.
             SidesMesh = sides.GetComponent<MeshFilter>().mesh;
@@ -739,6 +758,21 @@ namespace ProceduralParts
         {
             if (textureSet == oldTextureSet)
                 return;
+
+            Material EndsMaterial;
+            Material SidesMaterial;
+
+            if(HighLogic.LoadedScene== GameScenes.LOADING)
+            {
+                // if we are in loading screen, all changes have to be made to the icon materials. Otherwise all icons will have the same texture 
+                EndsMaterial = this.EndsIconMaterial;
+                SidesMaterial = this.SidesIconMaterial;
+            }
+            else
+            {
+                EndsMaterial = this.EndsMaterial;
+                SidesMaterial = this.SidesMaterial;
+            }
 
             int newIdx = loadedTextureSets.FindIndex(set => set.name == textureSet);
             if (newIdx < 0)
