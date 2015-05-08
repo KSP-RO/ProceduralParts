@@ -1,5 +1,10 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.1.1 ===
+Part icons in editor show the correct mesh and texture
+Ore tank got an oreish grey texture
+Fixed the bug that crashes KSP when launching a craft consisting of exclusively PP parts
+
 === 1.1.0 ===
 KSP 1.0.2 compatible
 Tech-constraints apply after loading a craft
