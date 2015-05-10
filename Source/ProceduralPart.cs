@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -147,42 +148,12 @@ namespace ProceduralParts
             }
         }
 
-        public void OnEditorPartEvent(ConstructionEventType type, Part part)
+        public void OnDestroy()
         {
-            
-            switch(type)
-            {
-                case ConstructionEventType.PartOffset:
-                    foreach (FreePartAttachment ca in childAttach)
-                    {
-                        if (ca.Child == part || ca.Child.isSymmetryCounterPart(part))
-                        {
-                            Vector3 position = ca.Child.transform.TransformPoint(ca.AttachNode.position);
-                            //ca.node.nodeType
-                            //shape.GetCylindricCoordinates(part.transform.localPosition, out ca.u, out ca.y, out ca.r);
-                            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), ca.Coordinates);
-
-                            //Debug.Log("y: " + ca.y);
-                            //Debug.Log("u: " + ca.u);
-                            //Debug.Log("r: " + ca.r);
-                            //RemovePartAttachment(pa);
-                            //childAttachments.Remove(pa);
-                            //PartChildAttached(part);
-                            
-                            
-                            //break;
-                        }
-                    }
-                    break;
-
-
-                case ConstructionEventType.PartRootSelected:
-                    Debug.Log("Part Root selected " + part.name);
-
-                    break;
-            }
-             
+            if (GameSceneFilter.AnyEditor.IsLoaded())
+                GameEvents.onEditorPartEvent.Remove(OnEditorPartEvent);
         }
+
 
         public void OnUpdateEditor()
         {
@@ -1044,6 +1015,36 @@ namespace ProceduralParts
 
         private Queue<Action> toAttach = new Queue<Action>();
 
+
+        public void OnEditorPartEvent(ConstructionEventType type, Part part)
+        {        
+            switch (type)
+            {
+                case ConstructionEventType.PartRootSelected:
+
+                    //StartCoroutine(RebuildPartAttachments());
+                    Part[] children = childAttach.Select<FreePartAttachment, Part>(x => x.Child).ToArray();
+
+                foreach (Part attachment in children)
+                {
+                    PartChildDetached(attachment);
+                }
+
+                foreach (Transform t in transform)
+                {
+                    Part child = t.GetComponent<Part>();
+                    if(child != null)
+                        PartChildAttached(child);
+                }
+                if (transform.parent == null)
+                    PartParentChanged(null);
+                else
+                    PartParentChanged(transform.parent.GetComponent<Part>());
+
+                break;
+            }       
+        }
+
         [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildAttached(Part child)
         {
@@ -1127,6 +1128,7 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartChildDetached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildDetached(Part child)
         {
+            //Debug.Log("Child Detached");
             //for (var node = childAttachments.First; node != null; node = node.Next)
             //    if (node.Value.child == child)
             //    {
