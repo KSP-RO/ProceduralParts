@@ -1042,6 +1042,29 @@ namespace ProceduralParts
                     PartParentChanged(transform.parent.GetComponent<Part>());
 
                 break;
+
+                case ConstructionEventType.PartOffset:
+                    foreach (FreePartAttachment ca in childAttach)
+                    {
+                        if (ca.Child == part || ca.Child.isSymmetryCounterPart(part))
+                        {
+                            Vector3 position = ca.Child.transform.TransformPoint(ca.AttachNode.position);
+                            //ca.node.nodeType
+                            //shape.GetCylindricCoordinates(part.transform.localPosition, out ca.u, out ca.y, out ca.r);
+                            shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), ca.Coordinates);
+
+                            //Debug.Log("y: " + ca.y);
+                            //Debug.Log("u: " + ca.u);
+                            //Debug.Log("r: " + ca.r);
+                            //RemovePartAttachment(pa);
+                            //childAttachments.Remove(pa);
+                            //PartChildAttached(part);
+                            
+                            
+                            //break;
+                        }
+                    }
+                    break;
             }       
         }
 
