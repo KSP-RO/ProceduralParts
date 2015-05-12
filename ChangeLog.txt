@@ -7,7 +7,6 @@ Fixed the bug that crashes KSP when launching a craft consisting of exclusively 
 No procedural drag cube generation if FAR is installed
 ReRoot tool no longer breaks procedural parts
 Batteries now compatible to new tech-tree
-SRB fuel flow no longer changes while burning
 Loading an empty SRB no longer crashes the game
 
 === 1.1.0 ===
