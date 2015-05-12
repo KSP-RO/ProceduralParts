@@ -3,7 +3,7 @@
    "NAME" : "Procedural Parts",
    "VERSION" : {
       "BUILD" : 0,
-      "PATCH" : 0,
+      "PATCH" : 1,
       "MINOR" : 1,
       "MAJOR" : 1
    },

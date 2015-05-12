@@ -28,6 +28,7 @@ namespace ProceduralParts
 
         public override void OnLoad(ConfigNode node)
         {
+            Debug.Log("OnLoad");
             try
             {
                 if (GameSceneFilter.AnyInitializing.IsLoaded())
@@ -38,6 +39,7 @@ namespace ProceduralParts
                 print("OnLoad exception: " + ex);
                 throw;
             }
+            Debug.Log("OnLoad end");
         }
 
         public override string GetInfo()
@@ -54,6 +56,7 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
+            Debug.Log("OnStart");
             try
             {
                 InitializeBells();
@@ -64,11 +67,13 @@ namespace ProceduralParts
                 print("OnStart exception: " + ex);
                 throw;
             }
+            Debug.Log("OnStartEnd");
         }
 
         public override void OnUpdate()
         {
             AnimateHeat();
+            UpdateBurnTime();
         }
 
         public void OnUpdateEditor()
@@ -422,7 +427,10 @@ namespace ProceduralParts
         public float thrust = 250;
         private float oldThrust;
 
-        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Burn Time")]
+        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Thrust ASL")]
+        public string thrustASL;
+
+        [KSPField(isPersistant = false, guiActive = true, guiActiveEditor = true, guiName = "Burn Time")]
         public string burnTime;
 
         [KSPField(isPersistant = true, guiName = "Burn Time", guiActive = false, guiActiveEditor = false, guiFormat = "F0", guiUnits = "s"),
@@ -498,7 +506,19 @@ namespace ProceduralParts
         }
 
         [KSPField]
-        public double fuelRate = 0.0;
+        public float fuelRate = 0.0f;
+
+        private void UpdateBurnTime()
+        {
+            PartResource solidFuel = part.Resources["SolidFuel"];
+
+            if(solidFuel != null)
+            {
+                float _burnTime = (float)(solidFuel.amount / (fuelRate / solidFuel.info.density));
+                burnTime = string.Format("{0:F1}s", _burnTime);
+            }
+
+        }
 
         private void UpdateThrustDependentCalcs()
         {
@@ -514,10 +534,17 @@ namespace ProceduralParts
 
             if (!UsingME)
             {
-                float burnTime0 = burnTimeME = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
-                float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
-                burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
-                fuelRate = solidFuelMassG / burnTime0;
+                //float burnTime0 = burnTimeME = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
+                //float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
+                
+                fuelRate = thrust / (atmosphereCurve.Evaluate(0f) * Engine.g);
+                if (solidFuel != null)
+                {
+                    UpdateBurnTime();
+                    thrustASL = string.Format("{0:F1}", fuelRate * atmosphereCurve.Evaluate(1f) * Engine.g);
+                }
+                //burnTime = string.Format("{0:F1}s ({1:F1}s Vac)", burnTime1, burnTime0);
+                //fuelRate = solidFuelMassG / burnTime0;
             }
             else
             {
@@ -533,7 +560,7 @@ namespace ProceduralParts
 
                 thrustME = thrust0.ToStringSI(unit: "N", exponent: 3) + " Vac / " + thrust1.ToStringSI(unit: "N", exponent: 3) + " ASL";
                 srbISP = string.Format("{1:F0}s Vac / {0:F0}s ASL", atmosphereCurve.Evaluate(1), atmosphereCurve.Evaluate(0));
-                fuelRate = solidFuelMassG / burnTimeME;
+                //fuelRate = solidFuelMassG / burnTimeME;
             }
 
             // This equation is much easier. From StretchySRBs
@@ -555,8 +582,9 @@ namespace ProceduralParts
         {
             Engine.heatProduction = heatProduction;
             Engine.maxThrust = thrust;
-            part.GetComponent<ModuleEngines>().maxFuelFlow = (float)(0.1*fuelRate);
-
+            //part.GetComponent<ModuleEngines>().maxFuelFlow = (float)(0.1*fuelRate);
+            part.GetComponent<ModuleEngines>().maxFuelFlow = fuelRate;
+              
 
             selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
 
