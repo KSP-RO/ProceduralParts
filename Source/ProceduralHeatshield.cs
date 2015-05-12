@@ -84,6 +84,9 @@ namespace ProceduralParts
         [KSPField]
         public float multiplyCostByDiameter;
 
+        [KSPField(isPersistant=true)]
+        public string ablativeResource = "Ablator";
+
         [KSPField]
         public FloatCurve CoPoffset = new FloatCurve();
 
@@ -108,7 +111,7 @@ namespace ProceduralParts
             if(ppart != null)
             {
                 ProceduralShapeBezierCone shape = ppart.CurrentShape as ProceduralShapeBezierCone;
-
+                
                 if(null != shape)
                 {
                     float diameter = shape.topDiameter;
@@ -119,7 +122,7 @@ namespace ProceduralParts
                         
                         float surfaceArea = Mathf.PI * (diameter / 2) * (diameter / 2);
 
-                        PartResource pr = part.Resources["Ablator"];
+                        PartResource pr = part.Resources[ablativeResource];
 
                         if (null != pr)
                         {
