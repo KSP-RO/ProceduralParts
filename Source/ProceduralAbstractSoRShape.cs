@@ -692,19 +692,37 @@ namespace ProceduralParts
                 m.WriteTo(EndsMesh);
 
             // build the collider mesh at a lower resolution than the visual mesh.
-            if (customCollider)
+            if (true)//customCollider) // always build a custom collider because the sides mesh does not contain end caps. Which is bad.
             {
                 //Debug.LogWarning("Collider mesh vert=" + nColVrt + " tris=" + nColTri);
-                m = new UncheckedMesh(nColVrt, nColTri);
+                
+                // collider endcaps
+                ProfilePoint firstColPt, lastColPt;
+
+                firstColPt = pts.First(x => x.inCollider);
+                lastColPt = pts.Last(x => x.inCollider);
+
+                int nColEndVrt = firstColPt.colliderCirc.totVertexes + lastColPt.colliderCirc.totVertexes;
+                int nColEndTri = firstColPt.colliderCirc.totVertexes - 2 + lastColPt.colliderCirc.totVertexes - 2;
+
+                m = new UncheckedMesh(nColVrt+nColEndVrt, nColTri+nColEndTri);
                 odd = false;
                 {
                     ProfilePoint prev = null;
                     int off = 0, prevOff = 0;
                     int tOff = 0;
+                    
                     foreach (ProfilePoint pt in pts)
                     {
                         if (!pt.inCollider)
                             continue;
+                        
+                        if(prev == null)
+                        {
+                            pt.colliderCirc.WriteEndcap(pt.dia, pt.y, false, 0, 0, m, odd);
+                            off = firstColPt.colliderCirc.totVertexes;
+                            tOff = (firstColPt.colliderCirc.totVertexes - 2);
+                        }
                         //Debug.LogWarning("Collider circ (" + pt.dia + ", " + pt.y + ") verts=" + pt.colliderCirc.totVertexes);
                         pt.colliderCirc.WriteVertexes(diameter: pt.dia, y: pt.y, v: pt.v, norm: pt.norm, off: off, m: m, odd: odd);
                         if (prev != null)
@@ -718,12 +736,17 @@ namespace ProceduralParts
                         off += pt.colliderCirc.totVertexes + 1;
                         odd = !odd;
                     }
+
+                    prev.colliderCirc.WriteEndcap(prev.dia, prev.y, true, off, tOff*3, m, odd);
                 }
 
                 if (colliderMesh == null)
                     colliderMesh = new Mesh();
 
                 m.WriteTo(colliderMesh);
+                //m.WriteTo(SidesMesh);
+                if (colliderMesh.triangles.Length / 3 > 255)
+                    Debug.LogWarning("Collider mesh contains " + colliderMesh.triangles.Length / 3 + " triangles. Maximum allowed triangles: 255");
 
                 PPart.ColliderMesh = colliderMesh;
             }
