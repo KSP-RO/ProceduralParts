@@ -1,7 +1,9 @@
 ﻿using KSPAPIExtensions.PartMessage;
 using KSPAPIExtensions;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 namespace ProceduralParts
 {
@@ -47,6 +49,7 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
+            InitializeObjects();
             CopyNodeSizeAndStrength();
             //if (HighLogic.LoadedSceneIsFlight)
             //{
@@ -61,6 +64,32 @@ namespace ProceduralParts
             else
                 Debug.LogError("Procedural Part not found");
         }
+
+
+        private void InitializeObjects()
+        {
+            //Transform fairing = part.FindModelTransform("fairing");
+            Transform fairing = part.FindModelTransform("fairing");
+
+            try
+            {
+                foreach (MeshFilter mf in fairing.GetComponents<MeshFilter>())
+                    Debug.Log("MeshFilterFound: " + mf.name);
+                //fairingMesh = fairing.GetComponent<MeshFilter>().mesh;
+                fairingMesh = fairing.GetComponent<MeshFilter>().mesh;
+
+            }
+            catch(Exception e)
+            {
+                Debug.LogError("Could not find fairing mesh");
+                Debug.LogException(e);
+                useFairing = false;
+            }
+
+        }
+
+        [KSPField]
+        public bool useFairing = true;
 
 		[KSPField]
 		public float lossTweak = 1.0f;
@@ -93,7 +122,8 @@ namespace ProceduralParts
         private AttachNode bottomNode;
         private AttachNode topNode;
 
-        
+        private Mesh fairingMesh;
+        //private Mesh endsMesh;
         
         [PartMessageListener(typeof(PartAttachNodeSizeChanged))]
         public void PartAttachNodeSizeChanged(AttachNode node, float minDia, float area) 
@@ -106,7 +136,113 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartModelChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
         public void PartModelChanged()
         {
+
             ProceduralPart ppart = PPart;
+
+            if(useFairing && ppart != null)
+            {
+                ProceduralAbstractSoRShape shape = ppart.CurrentShape as ProceduralAbstractSoRShape;
+
+                if (shape != null)
+                {
+                    Vector3[] topInner = shape.GetEndcapVerticies(true);
+
+                    int vertCount = topInner.Length;
+
+                    //foreach (Vector3 v in topInner)
+                    //    Debug.Log(v);
+
+                    Vector3[] topOuter = (Vector3[])topInner.Clone();
+
+                    for (int i = 0; i < vertCount; ++i)
+                    {
+                        topOuter[i].x *= 1.25f;
+                        topOuter[i].z *= 1.25f;
+                    }
+
+                    Vector3[] sideTop = (Vector3[])topOuter.Clone();
+                    Vector3[] sideBottom = (Vector3[])sideTop.Clone();
+
+                    Vector3[] bottomInner = (Vector3[])topInner.Clone();
+                    Vector3[] bottomOuter = (Vector3[])topOuter.Clone();
+
+                    
+
+                    for (int i = 0; i < vertCount; ++i)
+                    {
+                        sideBottom[i].y -= 0.5f;
+                        bottomInner[i].y -= 0.5f;
+                        bottomOuter[i].y -= 0.5f;
+                    }
+
+                    Vector3[] innerSideTop = (Vector3[])topInner.Clone();
+                    Vector3[] innerSideBottom = (Vector3[])bottomInner.Clone();
+
+                    int topInnerStart = 0;
+                    int topOuterStart = topInnerStart + vertCount;
+                    int sideTopStart = topOuterStart + vertCount;
+                    int sideBottomStart = sideTopStart + vertCount;
+                    int bottomInnerStart = sideBottomStart + vertCount;
+                    int bottomOuterStart = bottomInnerStart + vertCount;
+                    int innerSideTopStart = bottomOuterStart + vertCount;
+                    int innerSideBottomStart = innerSideTopStart + vertCount;
+
+                    UncheckedMesh m = new UncheckedMesh(vertCount*8, vertCount * 8 * 6);
+                    //int tri = 0;
+                    for (int i = 0; i < vertCount; ++i)
+                    {
+                        m.verticies[topInnerStart + i] = topInner[i];
+                        m.verticies[topOuterStart + i] = topOuter[i];
+                        m.verticies[sideTopStart + i] = sideTop[i];
+                        m.verticies[sideBottomStart + i] = sideBottom[i];
+                        m.verticies[bottomInnerStart + i] = bottomInner[i];
+                        m.verticies[bottomOuterStart + i] = bottomOuter[i];
+                        m.verticies[innerSideTopStart + i] = innerSideTop[i];
+                        m.verticies[innerSideBottomStart + i] = innerSideBottom[i];
+
+                        m.normals[topInnerStart + i] = new Vector3(0.0f, 1.0f, 0.0f);
+                        m.normals[topOuterStart + i] = new Vector3(0.0f, 1.0f, 0.0f);
+                        
+                        m.normals[sideTopStart + i]    = m.verticies[sideTopStart + i].xz().normalized;
+                        m.normals[sideBottomStart + i] = m.verticies[sideBottomStart + i].xz().normalized;
+
+                        m.normals[bottomInnerStart + i] = new Vector3(0.0f, -1.0f, 0.0f);
+                        m.normals[bottomOuterStart + i] = new Vector3(0.0f, -1.0f, 0.0f);
+
+                        m.normals[innerSideTopStart + i] = -m.verticies[innerSideTopStart + i].xz().normalized;
+                        m.normals[innerSideBottomStart + i] = -m.verticies[innerSideBottomStart + i].xz().normalized;
+
+                        m.uv[topInnerStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 1.0f);
+                        m.uv[topOuterStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 0.0f);
+
+                        m.uv[sideTopStart + i]    = new Vector2(Mathf.InverseLerp(0, vertCount-1,i), 1.0f);
+                        m.uv[sideBottomStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 0.0f);
+
+                        m.uv[bottomInnerStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 0.0f);
+                        m.uv[bottomOuterStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 1.0f);
+
+                        m.uv[innerSideTopStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 1.0f);
+                        m.uv[innerSideBottomStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 0.0f);
+
+                    }
+
+                    int triangleOffset = 0;
+                    triangleOffset = ConnectRings(m, topInnerStart, topOuterStart, vertCount, 0);
+                    triangleOffset = ConnectRings(m, sideTopStart, sideBottomStart, vertCount, triangleOffset);
+                    triangleOffset = ConnectRings(m, bottomOuterStart, bottomInnerStart, vertCount, triangleOffset);
+                    triangleOffset = ConnectRings(m, innerSideBottomStart, innerSideTopStart, vertCount, triangleOffset);
+
+                    if (fairingMesh != null)
+                    {
+                        m.WriteTo(fairingMesh);
+                        fairingMesh.RecalculateNormals();
+                        
+                    }
+                    else
+                        Debug.Log("no fairing mesh");
+                   
+                }
+            }
 
             if(ppart != null)
             {
@@ -155,6 +291,37 @@ namespace ProceduralParts
                 }
             }
 
+
+        }
+
+        int ConnectRings(UncheckedMesh m, int ring1Offset, int ring2Offset, int vertCount, int triOffset, bool inverse = false)
+        {
+            int tri = triOffset;
+            for (int i = 0; i < vertCount; ++i)
+            {
+                //Debug.Log(i);
+                if (i < vertCount - 1)
+                {
+                    m.triangles[tri++] = ring1Offset + i;
+                    m.triangles[tri++] = ring1Offset + i + 1;
+                    m.triangles[tri++] = ring2Offset + i + 1;
+
+                    m.triangles[tri++] = ring1Offset + i;
+                    m.triangles[tri++] = ring2Offset + i + 1;
+                    m.triangles[tri++] = ring2Offset + i;
+                }
+                else
+                {
+                    m.triangles[tri++] = ring1Offset + i;
+                    m.triangles[tri++] = ring1Offset;
+                    m.triangles[tri++] = ring2Offset;
+
+                    m.triangles[tri++] = ring1Offset + i;
+                    m.triangles[tri++] = ring2Offset;
+                    m.triangles[tri++] = ring2Offset + i;
+                }
+            }
+            return tri;
 
         }
 

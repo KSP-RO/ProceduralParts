@@ -550,6 +550,29 @@ namespace ProceduralParts
 
         private LinkedList<ProfilePoint> lastProfile;
 
+
+        public Vector3[] GetEndcapVerticies(bool top)
+        {
+            if (lastProfile == null)
+                return new Vector3[0];
+
+            ProfilePoint profilePoint = top ? lastProfile.Last.Value : lastProfile.First.Value;
+            
+
+            Vector3[] verticies = new Vector3[profilePoint.circ.totVertexes];
+
+            bool odd = false;
+
+            
+            odd = lastProfile.Count % 2 == 0;
+
+            profilePoint.circ.WriteEndcapVerticies(profilePoint.dia, profilePoint.y, 0, verticies, odd);
+
+            return verticies;
+        }
+        
+
+
         protected void WriteMeshes(params ProfilePoint[] pts)
         {
             WriteMeshes(new LinkedList<ProfilePoint>(pts));
@@ -982,6 +1005,37 @@ namespace ProceduralParts
                     m.triangles[to++] = vOff + i + (up ? 0 : 1);
                 }
             }
+
+            public void WriteEndcapVerticies(float dia, float y, int vOff, Vector3[] verticies, bool odd)
+            {
+                Complete();
+
+                int o = odd ? 1 : 0;
+
+                for (int i = 0; i <= subdivCount; ++i)
+                {
+                    int o0 = vOff + i;
+                    
+                    verticies[o0] = new Vector3(xCoords[o][i] * dia * 0.5f, y, zCoords[o][i] * dia * 0.5f);
+
+                    int o1 = vOff + i + subdivCount + 1;
+                    
+                    verticies[o1] = new Vector3(-zCoords[o][i] * dia * 0.5f, y, xCoords[o][i] * dia * 0.5f);
+
+                    int o2 = vOff + i + 2 * (subdivCount + 1);
+                    
+                    verticies[o2] = new Vector3(-xCoords[o][i] * dia * 0.5f, y, -zCoords[o][i] * dia * 0.5f);
+
+                    int o3 = vOff + i + 3 * (subdivCount + 1);
+                    
+                    verticies[o3] = new Vector3(zCoords[o][i] * dia * 0.5f, y, -xCoords[o][i] * dia * 0.5f);
+
+                }
+
+                
+            }
+
+            
 
             /// <summary>
             /// Write vertexes for the circle.
