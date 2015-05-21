@@ -174,6 +174,11 @@ namespace ProceduralParts
 
             }
 
+            // sometimes, if the shapes radius is 0, r rersults in NaN
+            if (float.IsNaN(result.r))
+            {
+                result.r = 0;
+            }
         }
 
         private enum Location
