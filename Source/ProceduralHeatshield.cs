@@ -136,12 +136,13 @@ namespace ProceduralParts
 
 
                         }
-
-                        part.mass = massPerDiameter * diameter;
-                        MassChanged(part.mass);
+                        
                     }
-                    
-                   
+
+                    //Debug.Log(massPerDiameter + " * " + diameter);
+                    part.mass = massPerDiameter * diameter;
+                    MassChanged(part.mass);
+                                    
                     //Debug.Log("CoL offset " + -length);
                     
                     part.CoLOffset.y = -length;
