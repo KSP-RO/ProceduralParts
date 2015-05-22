@@ -783,6 +783,14 @@ namespace ProceduralParts
                 PPart.ColliderMesh = SidesMesh;
             }
 
+            // updatem all props
+            foreach(PartModule pm in GetComponents<PartModule>())
+            {
+                IProp prop = pm as IProp;
+                if(null != prop)
+                    prop.UpdateProp();
+            }
+
             RaiseModelAndColliderChanged();
         }
 

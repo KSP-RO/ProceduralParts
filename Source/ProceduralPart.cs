@@ -554,7 +554,7 @@ namespace ProceduralParts
         public string textureSet = "Original";
         private string oldTextureSet = "*****";
 
-        private class TextureSet
+        public class TextureSet
         {
             public string name;
 
@@ -575,6 +575,14 @@ namespace ProceduralParts
         }
         private static List<TextureSet> loadedTextureSets;
         private static string[] loadedTextureSetNames;
+
+        public TextureSet[] TextureSets
+        {
+            get
+            {
+                return loadedTextureSets.ToArray();
+            }
+        }
 
         public static void LoadTextureSets()
         {
