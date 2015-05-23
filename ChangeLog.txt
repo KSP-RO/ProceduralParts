@@ -1,5 +1,12 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.1.2 ===
+Collider meshes now include the parts end caps (needed for FAR support)
+Fixed weirdness caused by choosing a part diameter of 0
+Ore Tank can now jettison its content
+Fixed a bug that caused heat shields to have wrong mass in flight
+Procedural heat shields now automatically get a fairing when something gets attached to its bottom.
+
 === 1.1.1 ===
 Part icons in editor show the correct mesh and texture
 Ore tank got an oreish grey texture
