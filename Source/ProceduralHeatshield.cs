@@ -27,6 +27,9 @@ namespace ProceduralParts
         public event PartResourceInitialAmountChanged InitialAmountChanged;
 
         ProceduralPart _pPart = null;
+
+        [KSPField(isPersistant=true)]
+        public float mass = -1;
         
         public ProceduralPart PPart
         {
@@ -55,6 +58,21 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
+
+            if (HighLogic.LoadedSceneIsFlight)
+            {
+                if (mass <= 0)
+                    mass = 0.000001f;
+                part.mass = mass;
+                MassChanged(mass);
+                //Debug.Log("OnStart - mass: " + part.mass);
+
+                //double skinThermalMassModifier = part.thermalMassModifier;
+                //double skinThicknessFactor = 0.1;
+                //Debug.Log(skinThermalMassModifier);
+                //Debug.LogWarning((double)part.mass * PhysicsGlobals.StandardSpecificHeatCapacity * skinThermalMassModifier * skinThicknessFactor);
+            }
+
             InitializeObjects();
             CopyNodeSizeAndStrength();
             //if (HighLogic.LoadedSceneIsFlight)
@@ -256,6 +274,9 @@ namespace ProceduralParts
 
         [KSPField]
         public float massPerDiameter;
+
+        [KSPField]
+        public FloatCurve massFromDiameterCurve = new FloatCurve();
 
         [KSPField]
         public float multiplyCostByDiameter;
@@ -632,7 +653,8 @@ namespace ProceduralParts
                     }
 
                     //Debug.Log(massPerDiameter + " * " + diameter);
-                    part.mass = massPerDiameter * diameter;
+                    part.mass = mass = massPerDiameter * diameter + massFromDiameterCurve.Evaluate(diameter);
+                    //Debug.LogWarning("changed mass: " + mass);
                     MassChanged(part.mass);
 
                     //Debug.Log("CoL offset " + -length);

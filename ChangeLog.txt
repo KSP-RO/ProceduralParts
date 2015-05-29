@@ -1,5 +1,9 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.1.3 ===
+Heat shield mass now scales correctly
+Compatibility update for DRE 7.1.0
+
 === 1.1.2 ===
 Collider meshes now include the parts end caps (needed for FAR support)
 Fixed weirdness caused by choosing a part diameter of 0
