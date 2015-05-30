@@ -309,63 +309,6 @@ namespace ProceduralParts
             CopyNodeSizeAndStrength();
         }
 
-        [PartMessageListener(typeof(PartModelChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
-        public void PartModelChanged()
-        {
-
-            //ProceduralPart ppart = PPart;
-
-            //UpdateFairing();
-
-            //if(ppart != null)
-            //{
-            //    ProceduralShapeBezierCone shape = ppart.CurrentShape as ProceduralShapeBezierCone;
-                
-            //    if(null != shape)
-            //    {
-            //        float diameter = shape.topDiameter;
-            //        float length = shape.length;
-
-            //        if (HighLogic.LoadedSceneIsEditor)
-            //        {
-                        
-            //            float surfaceArea = Mathf.PI * (diameter / 2) * (diameter / 2);
-
-            //            PartResource pr = part.Resources[ablativeResource];
-
-            //            if (null != pr)
-            //            {
-            //                double ratio = pr.amount / pr.maxAmount;
-
-            //                pr.maxAmount = (double)(ablatorPerArea * surfaceArea);
-            //                pr.amount = Math.Max(ratio * pr.maxAmount, pr.maxAmount);
-            //                //ResourceListChanged();
-            //                MaxAmountChanged(pr, pr.maxAmount);
-            //                InitialAmountChanged(pr, pr.maxAmount);
-
-
-            //            }
-                        
-            //        }
-
-            //        //Debug.Log(massPerDiameter + " * " + diameter);
-            //        part.mass = massPerDiameter * diameter;
-            //        MassChanged(part.mass);
-                                    
-            //        //Debug.Log("CoL offset " + -length);
-                    
-            //        part.CoLOffset.y = -length;
-
-            //        part.CoPOffset.y = CoPoffset.Evaluate(diameter);
-            //        //Debug.Log("CoP offset: "+ part.CoPOffset.y);
-                   
-                   
-            //        if (HighLogic.LoadedSceneIsEditor)
-            //            GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
-            //    }
-            //}
-        }
-
         void UpdateFairing()
         {
 
@@ -640,9 +583,11 @@ namespace ProceduralParts
                         if (null != pr)
                         {
                             double ratio = pr.amount / pr.maxAmount;
-
+                            //Debug.LogWarning("ratio: " + ratio);
+                            //Debug.LogWarning("amount: " + pr.amount);
+                            //Debug.LogWarning("max amount: " + pr.maxAmount);
                             pr.maxAmount = (double)(ablatorPerArea * surfaceArea);
-                            pr.amount = Math.Max(ratio * pr.maxAmount, pr.maxAmount);
+                            pr.amount = Math.Min(ratio * pr.maxAmount, pr.maxAmount);
                             //ResourceListChanged();
                             MaxAmountChanged(pr, pr.maxAmount);
                             InitialAmountChanged(pr, pr.maxAmount);
