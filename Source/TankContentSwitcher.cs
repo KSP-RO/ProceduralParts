@@ -170,6 +170,8 @@ namespace ProceduralParts
             public bool isStructural = false;
             [Persistent]
             public float costMultiplier = 1.0f;
+            [Persistent]
+            public string techRequired;
             
             public List<TankResource> resources;
 
@@ -234,6 +236,11 @@ namespace ProceduralParts
             // Have to DIY to get the part options deserialized
             if (tankTypeOptionsSerialized != null)
                 ObjectSerializer.Deserialize(tankTypeOptionsSerialized, out tankTypeOptions);
+
+            if(HighLogic.CurrentGame.Mode == Game.Modes.CAREER || HighLogic.CurrentGame.Mode == Game.Modes.SCIENCE_SANDBOX)
+            {
+                tankTypeOptions = tankTypeOptions.Where(to => string.IsNullOrEmpty(to.techRequired) || ResearchAndDevelopment.GetTechnologyState(to.techRequired) == RDTech.State.Available).ToList();
+            }
 
             Fields["tankVolume"].guiActiveEditor = tankVolumeName != null; 
             Fields["massDisplay"].guiActiveEditor = tankVolumeName != null;
@@ -314,7 +321,12 @@ namespace ProceduralParts
 
             if (tankVolumeName != null)
             {
-                part.mass = mass = selectedTankType.dryDensity * tankVolume + selectedTankType.massConstant;
+                mass = selectedTankType.dryDensity * tankVolume + selectedTankType.massConstant;
+
+                if (PPart != null)
+                    mass *= PPart.CurrentShape.massMultiplier;
+
+                part.mass = mass;
                 MassChanged(mass);
             }
 
@@ -372,7 +384,8 @@ namespace ProceduralParts
                     return false;
                 }
 
-                double maxAmount = (float)Math.Round(tankRes.unitsConst + tankVolume * tankRes.unitsPerKL + mass * tankRes.unitsPerT, 2);
+                //double maxAmount = (float)Math.Round(tankRes.unitsConst + tankVolume * tankRes.unitsPerKL + mass * tankRes.unitsPerT, 2);
+                double maxAmount = CalculateMaxResourceAmount(tankRes);
 
                 // ReSharper disable CompareOfFloatsByEqualityOperator
                 if (partRes.maxAmount == maxAmount)
@@ -397,6 +410,17 @@ namespace ProceduralParts
             return true;
         }
 
+        private double CalculateMaxResourceAmount(TankResource res)
+        {
+            double shapeMultiplier = 0;
+
+            if (PPart != null)
+                if (PPart.CurrentShape != null)
+                    shapeMultiplier = PPart.CurrentShape.resourceMultiplier;
+
+            return Math.Round((res.unitsConst + tankVolume * res.unitsPerKL + part.mass * res.unitsPerT) * shapeMultiplier, 2);
+        }
+
         private void RebuildResources(bool keepAmount = false)
         {
             List<PartResource> partResources = new List<PartResource>();
@@ -404,7 +428,7 @@ namespace ProceduralParts
             // Purge the old resources
             foreach (PartResource res in part.Resources)
             {
-                if (keepAmount && selectedTankType.resources.FirstOrDefault(tr => tr.name == res.resourceName) != null)
+                if (keepAmount && selectedTankType.resources.Any(tr => tr.name == res.resourceName))
                     partResources.Add(res);
                 else
                     Destroy(res);
@@ -417,7 +441,8 @@ namespace ProceduralParts
             // the sliders that affect part contents properly cos they get recreated underneith you and the drag dies.
             foreach (TankResource res in selectedTankType.resources)
             {
-                double maxAmount = Math.Round(res.unitsConst + tankVolume * res.unitsPerKL + part.mass * res.unitsPerT, 2);
+                //double maxAmount = Math.Round(res.unitsConst + tankVolume * res.unitsPerKL + part.mass * res.unitsPerT, 2);
+                double maxAmount = CalculateMaxResourceAmount(res);
 
                 ConfigNode node = new ConfigNode("RESOURCE");
                 node.AddValue("name", res.name);
@@ -481,5 +506,11 @@ namespace ProceduralParts
 			return part.mass - defaultMass;
 		}
 		#endregion
+
+        public ProceduralPart PPart
+        {
+            get { return _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
+        }
+        private ProceduralPart _pPart;
     }
 }

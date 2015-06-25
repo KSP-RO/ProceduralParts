@@ -28,9 +28,23 @@ namespace ProceduralParts
         [KSPField]
         public string volumeName = PartVolumes.Tankage.ToString();
 
+
+        #endregion
+
+        #region balancing
+        // this are additional info fields that can be used by other modules for balancing purposes. shape classes should not use them themself
+
         [KSPField]
         public float costMultiplier = 1.0f;
 
+        [KSPField]
+        public float massMultiplier = 1.0f;
+
+        [KSPField]
+        public float resourceMultiplier = 1.0f;
+        
+        /////////////////////////////////////
+        
         #endregion
 
         #region Objects
