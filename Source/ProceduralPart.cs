@@ -1076,6 +1076,22 @@ namespace ProceduralParts
             }       
         }
 
+        [PartMessageListener(typeof(PartAttachNodePositionChanged), PartRelationship.Child, GameSceneFilter.AnyEditor)]
+        public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
+        {
+            Debug.LogWarning("PartNode position changed");
+            foreach(FreePartAttachment attachment in childAttach)
+            {
+                if(node == attachment.AttachNode)
+                {
+                    Vector3 position = node.owner.transform.TransformPoint(node.position);        
+                    shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), attachment.Coordinates);
+                }
+                    
+            }
+
+        }
+
         [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildAttached(Part child)
         {
@@ -1128,7 +1144,7 @@ namespace ProceduralParts
                         return;
                     }
                     
-                    Debug.Log("NodeID: " + ourNode.id);
+                    //Debug.Log("NodeID: " + ourNode.id);
 
                     if (ourNode.id == "top")
                         newAttachment.Coordinates.HeightMode = ProceduralAbstractShape.ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_TOP;

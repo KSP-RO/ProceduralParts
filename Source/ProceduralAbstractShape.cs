@@ -243,6 +243,11 @@ namespace ProceduralParts
             public float u;
             public float y;
             public float r;
+
+            public override string ToString()
+            {
+                return "(u: " + u + " y: " + y + " r: " + r + ") R: " +RadiusMode + "Y: " + HeightMode;
+            }
         }
 
         public abstract void GetCylindricCoordinates(Vector3 position, ShapeCoordinates coords);

@@ -142,15 +142,15 @@ namespace ProceduralParts
                 return;
             }
 
-            if (position.y < lastProfile.First.Value.y)
+            if (position.y <= lastProfile.First.Value.y)
                 result.r = result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ? 
                     direction.magnitude - lastProfile.First.Value.dia / 2.0f :
-                    direction.magnitude / lastProfile.First.Value.dia / 2.0f; // RELATIVE_TO_SHAPE_RADIUS
+                    direction.magnitude / (lastProfile.First.Value.dia / 2.0f); // RELATIVE_TO_SHAPE_RADIUS
 
-            else if (position.y > lastProfile.Last.Value.y)
+            else if (position.y >= lastProfile.Last.Value.y)
                 result.r = result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
                     direction.magnitude - lastProfile.Last.Value.dia / 2.0f :
-                    direction.magnitude / lastProfile.Last.Value.dia / 2.0f; // RELATIVE_TO_SHAPE_RADIUS
+                    direction.magnitude / (lastProfile.Last.Value.dia / 2.0f); // RELATIVE_TO_SHAPE_RADIUS
             else
             {
                 ProfilePoint pt = lastProfile.First.Value;
