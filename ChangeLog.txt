@@ -1,5 +1,26 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.1.4 ===
+KSP 1.0.4 compatible
+Updated to newest KSPAPIExtensions (1.7.5)
+heat shield ablative resource now persistent after loading and size change
+Moved Xenon and Ore tanks to the FuelTank category to match stock arrangements.
+Changed category of the Liquid and RCS tanks from Propulsion to FuelTank to match stock part categories. This doesn't change where they appear in the GUI.
+Added Resource nodes to each of the tanks so that they show up under the appropriate tags in the Resources tab of the editor.
+Like the stock parts heat shield now longer get transparent on mouse over
+Possibility to add a required tech to tank type options
+Liquid fuel cone tank is in the correct tech-node now
+Fixed an incompatibility with ProceduralFairings that caused gaps between parts after loading a craft
+Fixed a bug where offset parts, attached to the top or bottom node of a procedural part, changed their position ehwn the size of a PP gets changed.
+Changed heat shields max Temperature to 3000 (like stock)
+Changed decouplers crash tolerance to 7 (like stock)
+SRB tech-tree adjustments
+Nose cone tech-tree adjustments
+Stack decoupler tech-tree adjustments
+Liquid fuel tank tech-tree adjustments
+
+
+
 === 1.1.3 ===
 Heat shield mass now scales correctly
 Compatibility update for DRE 7.1.0
