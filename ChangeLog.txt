@@ -1,5 +1,9 @@
 ============= Changelog for ProceduralParts  =========
 
+
+=== 1.1.5 ===
+Like 1.1.4 but with updated version file
+
 === 1.1.4 ===
 KSP 1.0.4 compatible
 Updated to newest KSPAPIExtensions (1.7.5)

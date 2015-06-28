@@ -1,27 +1,21 @@
 {
-   "NAME"     : "Procedural Parts",
-   "URL"      : "https://raw.githubusercontent.com/Swamp-Ig/ProceduralParts/master/ProceduralParts.version",
-   "DOWNLOAD" : "https://github.com/Swamp-Ig/ProceduralParts/releases",
-   "GITHUB" :
-   {
-        "USERNAME" : "Swamp-Ig",
-        "REPOSITORY" : "ProceduralParts"
+   "URL" : "https://raw.githubusercontent.com/Swamp-Ig/ProceduralParts/master/ProceduralParts.version",
+   "NAME" : "Procedural Parts",
+   "GITHUB" : {
+      "REPOSITORY" : "ProceduralParts",
+      "USERNAME" : "Swamp-Ig"
    },
    "VERSION" : {
-      "MAJOR" : 1,
+      "BUILD" : 0,
+      "PATCH" : 5,
       "MINOR" : 1,
+      "MAJOR" : 1
+   },
+   "DOWNLOAD" : "https://github.com/Swamp-Ig/ProceduralParts/releases",
+   "KSP_VERSION" : {
       "PATCH" : 4,
-      "BUILD" : 0
-   },
-   "KSP_VERSION_MIN" : {
-      "MAJOR" : 1,
       "MINOR" : 0,
-      "PATCH" : 2
-   },
-   "KSP_VERSION_MAX" : {
-      "MAJOR" : 1,
-      "MINOR" : 0,
-      "PATCH" : 4
+      "MAJOR" : 1
    }
 }
 
