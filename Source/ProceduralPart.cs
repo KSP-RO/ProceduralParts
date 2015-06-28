@@ -1080,14 +1080,17 @@ namespace ProceduralParts
         public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
         {
             Debug.LogWarning("PartNode position changed");
-            foreach(FreePartAttachment attachment in childAttach)
+            if (node.owner.GetComponent<ProceduralPart>() == null)
             {
-                if(node == attachment.AttachNode)
+                foreach (FreePartAttachment attachment in childAttach)
                 {
-                    Vector3 position = node.owner.transform.TransformPoint(node.position);        
-                    shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), attachment.Coordinates);
+                    if (node == attachment.AttachNode)
+                    {
+                        Vector3 position = node.owner.transform.TransformPoint(node.position);
+                        shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), attachment.Coordinates);
+                    }
+
                 }
-                    
             }
 
         }

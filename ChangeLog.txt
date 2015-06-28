@@ -1,5 +1,8 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.1.6 ===
+Fixed a bug that caused the liquid fuel tank and liquid cone tank to contain resources they shouldn't contain after loading
+Fixed a bog that caused tanks to clip into each other after resizing a child part
 
 === 1.1.5 ===
 Like 1.1.4 but with updated version file
