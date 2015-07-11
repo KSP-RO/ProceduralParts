@@ -1079,7 +1079,20 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartAttachNodePositionChanged), PartRelationship.Child, GameSceneFilter.AnyEditor)]
         public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
         {
-            Debug.LogWarning("PartNode position changed");
+            //Debug.LogWarning("PartNode position changed");
+
+            if(node == null)
+            {
+                Debug.LogError("PartAttachNodePositionChanged message received, but node is null.");
+                return;
+            }
+
+            if(node.owner == null)
+            {
+                Debug.LogWarning("PartAttachNodePositionChanged message received, but node.owner is null. Message ignored");
+                return;
+            }
+
             if (node.owner.GetComponent<ProceduralPart>() == null)
             {
                 foreach (FreePartAttachment attachment in childAttach)
