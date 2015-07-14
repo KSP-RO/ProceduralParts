@@ -1,5 +1,8 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.1.7 ===
+Fixed the procedural decouplers not working correctly when connected to a procedural part
+
 === 1.1.6 ===
 Fixed a bug that caused the liquid fuel tank and liquid cone tank to contain resources they shouldn't contain after loading
 Fixed a bog that caused tanks to clip into each other after resizing a child part
