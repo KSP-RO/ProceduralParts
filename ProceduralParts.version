@@ -13,7 +13,7 @@
    },
    "DOWNLOAD" : "https://github.com/Swamp-Ig/ProceduralParts/releases",
    "KSP_VERSION" : {
-      "PATCH" : 4,
+      "PATCH" : 5,
       "MINOR" : 0,
       "MAJOR" : 1
    }
