@@ -1465,7 +1465,7 @@ namespace ProceduralParts
         {
             if (HighLogic.LoadedScene == GameScenes.EDITOR)
             {
-                //Debug.Log("GetModuleCost");
+                Debug.Log("stdCost: " + stdCost);
                 float cost = baseCost;
                 if ((object)shape != null)
                     cost += shape.GetCurrentCostMult() * shape.Volume * costPerkL;
@@ -1477,21 +1477,45 @@ namespace ProceduralParts
                        cost *= (pm as ICostMultiplier).GetCurrentCostMult();
                     }
                 }
-                float dryCost = cost;
-                float actualCost = cost;
+                float dryCost=0;
+                float actualCost=0;
+                
                 if (!part.Modules.Contains("ModuleFuelTanks") && (object)PartResourceLibrary.Instance != null)
                 {
-                    foreach (PartResource r in part.Resources)
+                    if (!costsIncludeResources)
                     {
-                        PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
-                        if ((object)d != null)
+                        dryCost = cost;
+                        actualCost = cost;
+                        foreach (PartResource r in part.Resources)
                         {
-                            if (!costsIncludeResources)
+                            PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
+                            if ((object)d != null)
                             {
                                 cost += (float)(r.maxAmount * d.unitCost);
-                                actualCost += (float)(r.amount * d.unitCost);
+                                actualCost += (float)(r.amount * d.unitCost);      
                             }
-                            else
+                        }
+                    }
+                    else
+                    {
+                        float minimumCosts = 0;
+
+                        foreach (PartResource r in part.Resources)
+                        {
+                            PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
+                            if ((object)d != null)
+                            {
+                                minimumCosts += (float)(r.maxAmount * d.unitCost);
+                            }
+                        }
+                        cost = Mathf.Max(minimumCosts, cost);
+                        dryCost = cost;
+                        actualCost = cost;
+
+                        foreach (PartResource r in part.Resources)
+                        {
+                            PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
+                            if ((object)d != null)
                             {
                                 dryCost -= (float)(r.maxAmount * d.unitCost);
                                 actualCost -= (float)((r.maxAmount - r.amount) * d.unitCost);
@@ -1500,6 +1524,7 @@ namespace ProceduralParts
                     }
                 }
                 moduleCost = cost;
+                
                 costDisplay = String.Format("Dry: {0:N0} Wet: {1:N0}", dryCost, actualCost);
             }
             return moduleCost;

@@ -582,7 +582,7 @@ namespace ProceduralParts
 
                         if (null != pr)
                         {
-                            double ratio = pr.amount / pr.maxAmount;
+                            double ratio = pr.maxAmount != 0 ? pr.amount / pr.maxAmount : 1.0;
                             //Debug.LogWarning("ratio: " + ratio);
                             //Debug.LogWarning("amount: " + pr.amount);
                             //Debug.LogWarning("max amount: " + pr.maxAmount);
