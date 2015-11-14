@@ -1,5 +1,13 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.1.8 ===
+Rebuilt for KSP 1.0.5
+Procedural Heat Shield:
+-ModuleAblator values now match with stock
+-No more 100 bucks extra cost
+-No more negative costs. They always, at least, cost their ablator resource costs
+
+
 === 1.1.7 ===
 Fixed the procedural decouplers not working correctly when connected to a procedural part
 
