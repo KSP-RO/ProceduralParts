@@ -560,7 +560,7 @@ namespace ProceduralParts
 
                 thrustME = thrust0.ToStringSI(unit: "N", exponent: 3) + " Vac / " + thrust1.ToStringSI(unit: "N", exponent: 3) + " ASL";
                 srbISP = string.Format("{1:F0}s Vac / {0:F0}s ASL", atmosphereCurve.Evaluate(1), atmosphereCurve.Evaluate(0));
-                //fuelRate = solidFuelMassG / burnTimeME;
+                fuelRate = (float)solidFuelMassG / ( burnTimeME * Engine.g );
             }
 
             // This equation is much easier. From StretchySRBs
@@ -588,8 +588,8 @@ namespace ProceduralParts
 
             selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
 
-            if (UsingME)
-                ModularEnginesChangeThrust(thrust);
+            //if (UsingME)
+            //    ModularEnginesChangeThrust(thrust);
             UpdateFAR();
         }
 
