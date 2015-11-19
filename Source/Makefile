@@ -34,6 +34,8 @@ API_FILES := \
 	TankContentSwitcher.cs \
 	TransformFollower.cs \
 	zzVersionChecker.cs \
+	ICostModifier.cs \
+	VectorUtils.cs \
 	$e
 
 RESGEN2	:= resgen2
