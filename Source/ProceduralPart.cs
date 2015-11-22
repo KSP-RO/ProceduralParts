@@ -1465,7 +1465,7 @@ namespace ProceduralParts
         {
             if (HighLogic.LoadedScene == GameScenes.EDITOR)
             {
-                Debug.Log("stdCost: " + stdCost);
+                //Debug.Log("stdCost: " + stdCost);
                 float cost = baseCost;
                 if ((object)shape != null)
                     cost += shape.GetCurrentCostMult() * shape.Volume * costPerkL;
