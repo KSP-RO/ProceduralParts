@@ -130,7 +130,11 @@ namespace ProceduralParts
 
                     UpdateTexture();
 
-                    isEnabled = enabled = false;
+                    if (vessel.rootPart == part) // drag cube re-rendering workaround. See FixedUpdate for more info
+                        dragCubeNeedsRerender = 1;
+                    else
+                        isEnabled = enabled = false; 
+
                 }
 
                 if (HighLogic.LoadedSceneIsEditor)
@@ -1582,9 +1586,33 @@ namespace ProceduralParts
                 base.part.DragCubes.Cubes.Add(dragCube);
                 base.part.DragCubes.ResetCubeWeights();
                 base.part.DragCubes.ForceUpdate(true, true, false);
-                part.DragCubes.Procedural = true;
+                //part.DragCubes.Procedural = true;
             }
 
+        }
+
+        int dragCubeNeedsRerender = 0;
+        public void FixedUpdate()
+        {
+            /* FlightIntegrator resets our dragcube after loading, so we need to rerender it. We cannot do it on the first frame because it would
+                be executed before the reset. Instead we must do it on the second frame.
+            */
+            if (GameSceneFilter.Flight.IsLoaded())
+            {
+                if (dragCubeNeedsRerender > 0)
+                {
+                    --dragCubeNeedsRerender;
+                }
+                else
+                {
+                    //Debug.Log("dragCube needs to re-render");
+                    PartColliderChanged();
+                    dragCubeNeedsRerender = 0;
+
+                    isEnabled = enabled = false; // normally this is done OnStart
+
+                }
+            }
         }
 
     }
