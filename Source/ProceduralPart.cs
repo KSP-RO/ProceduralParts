@@ -1581,6 +1581,8 @@ namespace ProceduralParts
                 base.part.DragCubes.ClearCubes();
                 base.part.DragCubes.Cubes.Add(dragCube);
                 base.part.DragCubes.ResetCubeWeights();
+                base.part.DragCubes.ForceUpdate(true, true, false);
+                part.DragCubes.Procedural = true;
             }
 
         }
