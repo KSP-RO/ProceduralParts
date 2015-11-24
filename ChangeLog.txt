@@ -1,5 +1,12 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.1.9 ===
+Fixed drag cube calculation when root part
+altered procedural liquid fuel tank tech restrictions slightly to assount for the new mk0 fuselage
+added bulkhead profiles to parts that needed them (thanks Kerbas-ad-Astra)
+fixed Solid Fuel Rocket when used with ModularEngineConfig (RealFuels) (thanks CorvusCorax)
+removed an annoying debug message I accidentally left in the code (stdCost:) (thanks ckwng)
+
 === 1.1.8 ===
 Rebuilt for KSP 1.0.5
 Procedural Heat Shield:
