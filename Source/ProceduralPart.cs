@@ -1575,10 +1575,13 @@ namespace ProceduralParts
 
         }
 
+        [KSPField]
+        bool updateDragCubesInEditor = false;
+
         [PartMessageListener(typeof(PartColliderChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
         public void PartColliderChanged()
         {
-            if (!installedFAR)
+            if (GameSceneFilter.Flight.IsLoaded() || (GameSceneFilter.AnyEditor.IsLoaded() && updateDragCubesInEditor))
             {
                 DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
 

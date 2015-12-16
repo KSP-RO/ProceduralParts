@@ -1,5 +1,9 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.1.11 ===
+Recalculate drag cubes even if FAR is installed. Fixes broken themal and buoyancy calculations
+No longer recalculates drag cubes while in editor (set ProceduralPart{updateDragCubesInEditor=true} to reenable)
+
 === 1.1.10 ===
 Added ModuleToggleCrossfeed to procedural decoupler
 tweaked monoprop tech constraints
