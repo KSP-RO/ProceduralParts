@@ -1582,10 +1582,12 @@ namespace ProceduralParts
             {
                 DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
 
-                base.part.DragCubes.ClearCubes();
-                base.part.DragCubes.Cubes.Add(dragCube);
-                base.part.DragCubes.ResetCubeWeights();
-                base.part.DragCubes.ForceUpdate(true, true, false);
+                part.DragCubes.ClearCubes();
+                part.DragCubes.Cubes.Add(dragCube);
+                part.DragCubes.ResetCubeWeights();
+                part.DragCubes.ForceUpdate(true, true, false);
+                //rebuilding the drag cube might mess up the thermal graph. Firing a vessel event should cause it to rebuild
+                GameEvents.onVesselWasModified.Fire(part.vessel);
                 //part.DragCubes.Procedural = true;
             }
 

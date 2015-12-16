@@ -1,5 +1,10 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 1.1.10 ===
+Added ModuleToggleCrossfeed to procedural decoupler
+tweaked monoprop tech constraints
+Fire onVesselModified event after recalculating drag cubes. This hopefully solves a bug where pparts don't properly get occluded by other parts
+
 === 1.1.9 ===
 Fixed drag cube calculation when root part
 altered procedural liquid fuel tank tech restrictions slightly to assount for the new mk0 fuselage
