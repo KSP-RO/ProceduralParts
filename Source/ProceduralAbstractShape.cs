@@ -148,23 +148,18 @@ namespace ProceduralParts
                 OnUpdateEditor();
         }
 
-        public void UpdateFAR()
+        public void UpdateInterops()
         {
-            /*if (HighLogic.LoadedSceneIsEditor)
-            {
-                if (part.Modules.Contains("FARBasicDragModel"))
-                {
-                    PartModule pModule = part.Modules["FARBasicDragModel"];
-                    pModule.GetType().GetMethod("UpdatePropertiesWithShapeChange").Invoke(pModule, null);
-                }
-            }*/
-
-  
             if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
             {
-                part.SendMessage("GeometryPartModuleRebuildMeshData");
+                if(ProceduralPart.installedFAR)
+                    part.SendMessage("GeometryPartModuleRebuildMeshData");
+
+                _pPart.UpdateTFInterops();
             }
         }
+
+        public abstract void UpdateTFInterops();
 
         public void OnUpdateEditor()
         {

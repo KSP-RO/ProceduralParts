@@ -229,7 +229,7 @@ namespace ProceduralParts
             oldLength = length;
             // ReSharper restore CompareOfFloatsByEqualityOperator
 
-            UpdateFAR();
+            UpdateInterops();
         }
         #endregion
 
@@ -291,6 +291,13 @@ namespace ProceduralParts
                 bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
             }
             
+        }
+
+        public override void UpdateTFInterops()
+        {
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", topDiameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam2", bottomDiameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
     }
 

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using KSPAPIExtensions;
+using System;
 
 namespace ProceduralParts
 {
@@ -59,7 +60,7 @@ namespace ProceduralParts
             oldLength = length;
             // ReSharper restore CompareOfFloatsByEqualityOperator
 
-            UpdateFAR();
+            UpdateInterops();
         }
 
         public override void UpdateTechConstraints()
@@ -92,6 +93,13 @@ namespace ProceduralParts
                 diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
             }
             // ReSharper restore CompareOfFloatsByEqualityOperator
+        }
+
+        public override void UpdateTFInterops()
+        {
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", diameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam2", diameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
     }
 }

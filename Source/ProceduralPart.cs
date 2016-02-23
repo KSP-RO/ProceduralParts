@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEngine;
 using KSPAPIExtensions;
 using KSPAPIExtensions.PartMessage;
+using System.Reflection;
 
 namespace ProceduralParts
 {
@@ -13,9 +14,39 @@ namespace ProceduralParts
 
     public class ProceduralPart : PartModule, IPartCostModifier
     {
+        #region TestFlight
+        protected static bool tfChecked = false;
+        protected static bool tfFound = false;
+        public static Type tfInterface = null;
+        public static BindingFlags tfBindingFlags = BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.Static;
+
+        public void UpdateTFInterops()
+        {
+            // Grab a pointer to the TestFlight interface if it's installed
+            if (!tfChecked)
+            {
+                tfInterface = Type.GetType("TestFlightCore.TestFlightInterface, TestFlightCore", false);
+                if (tfInterface != null)
+                    tfFound = true;
+            }
+            // update TestFlight if it's installed
+            if (tfFound)
+            {
+                try
+                {
+                    tfInterface.InvokeMember("AddInteropValue", tfBindingFlags, null, null, new System.Object[] { this.part, "shapeName", shapeName, "ProceduralParts" });
+                    if (shape != null)
+                        shape.UpdateTFInterops();
+                }
+                catch
+                {
+                }
+            }
+        }
+        #endregion
         #region Initialization
 
-        bool installedFAR = false;
+        public static bool installedFAR = false;
 
         public override void OnAwake()
         {
@@ -1448,6 +1479,8 @@ namespace ProceduralParts
 
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+
+            UpdateTFInterops();
         }
 
         #endregion

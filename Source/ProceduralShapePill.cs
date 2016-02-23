@@ -211,7 +211,7 @@ namespace ProceduralParts
             oldFillet = fillet;
             // ReSharper restore CompareOfFloatsByEqualityOperator
 
-            UpdateFAR();
+            UpdateInterops();
         }
 
         private float CalcVolume()
@@ -301,6 +301,13 @@ namespace ProceduralParts
                 fillet = Mathf.Clamp(fillet, filletEdit.minValue, filletEdit.maxValue);
             }
             // ReSharper restore CompareOfFloatsByEqualityOperator    
+        }
+
+        public override void UpdateTFInterops()
+        {
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", diameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam2", fillet, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
     }
 }
