@@ -125,15 +125,20 @@ namespace ProceduralParts
                 if (!HighLogic.LoadedSceneIsEditor)
                 {
                     // Force the first update, then disable.
-                    shape.ForceNextUpdate();
-                    shape.OnUpdateEditor();
+                    if (shape != null)
+                    {
+                        shape.ForceNextUpdate();
+                        shape.OnUpdateEditor();
+                    }
 
                     UpdateTexture();
-
-                    if (vessel.rootPart == part) // drag cube re-rendering workaround. See FixedUpdate for more info
-                        dragCubeNeedsRerender = 1;
-                    else
-                        isEnabled = enabled = false; 
+                    if (vessel != null)
+                    {
+                        if (vessel.rootPart == part) // drag cube re-rendering workaround. See FixedUpdate for more info
+                            dragCubeNeedsRerender = 1;
+                        else
+                            isEnabled = enabled = false;
+                    }
 
                 }
 
@@ -142,11 +147,13 @@ namespace ProceduralParts
 
                 if (GameSceneFilter.AnyEditor.IsLoaded())
                     GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
-
-                Fields["costDisplay"].guiActiveEditor = displayCost;
+                BaseField fld = Fields["costDisplay"];
+                if(fld != null)
+                    fld.guiActiveEditor = displayCost;
             }
             catch (Exception ex)
             {
+                Debug.LogError("[ProceduralParts]: OnStart: caught exception.");
                 Debug.LogException(ex);
                 isEnabled = enabled = false;
             }
