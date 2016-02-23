@@ -32,7 +32,7 @@
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
     <BaseIntermediateOutputPath>..\..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
-    <OutputPath>..\..\Build\ProceduralParts\Release\</OutputPath>
+    <OutputPath>..\Plugins\</OutputPath>
     <DefineConstants>
     </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -50,7 +50,9 @@
     <Reference Include="KSPAPIExtensions">
       <HintPath>..\..\KSPAPIExtensions\KSPAPIExtensions.dll</HintPath>
     </Reference>
-    <Reference Include="System" />
+    <Reference Include="System">
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\Games\KSP_090clean\KSP_Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
@@ -78,7 +80,9 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>rem copy /y "$(TargetPath)" "$(SolutionDir)..\Plugins\"
-rem if exist "$(SolutionDir)\KSPAPIExtensions.dll" move "$(SolutionDir)\KSPAPIExtensions.dll" "$(SolutionDir)..\Plugins\"</PostBuildEvent>
+rem if exist "$(SolutionDir)\KSPAPIExtensions.dll" move "$(SolutionDir)\KSPAPIExtensions.dll" "$(SolutionDir)..\Plugins\"
+cd "$(ProjectDir)"\..
+del "Plugins\System.Core.dll"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>cd "$(ProjectDir)"\..
