@@ -187,7 +187,7 @@ namespace ProceduralParts
 
             if ((incompatible.Length > 0) || (incompatibleUnity.Length > 0) || IsWin64())
             {
-                //PopupDialog.SpawnPopupDialog("Incompatible Mods Detected", message, "OK", true, HighLogic.Skin); //TODO fix that later
+				PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),"Incompatible Mods Detected", message, "OK", true, HighLogic.UISkin);
             }
         }
 
