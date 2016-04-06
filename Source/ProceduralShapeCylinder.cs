@@ -9,7 +9,7 @@ namespace ProceduralParts
     {
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "S4", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 2, unit="m")]
         public float diameter = 1.25f;
         private float oldDiameter;
 

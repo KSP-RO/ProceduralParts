@@ -781,9 +781,9 @@ namespace ProceduralParts
 		//public void ChangeTextureScale(string texName, Material material, Vector2 targetScale)
 		public void OnChangeTextureScale(BaseEventData data)
 		{
-			string texName = data.Get<string> ("texName");
+			string meshName = data.Get<string> ("meshName");
 			Vector2 targetScale = data.Get<Vector2> ("targetScale");
-            if (texName != "sides")
+            if (meshName != "sides")
                 return;
             sideTextureScale = targetScale;
             oldTextureSet = null;
