@@ -1,6 +1,4 @@
-﻿using KSPAPIExtensions;
-using KSPAPIExtensions.PartMessage;
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace ProceduralParts
@@ -17,7 +15,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageService.Register(this);
+            //PartMessageService.Register(this);
         }
 
         /// <summary>
@@ -112,9 +110,17 @@ namespace ProceduralParts
         }
 
         // Plugs into procedural parts.
-        [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes:GameSceneFilter.AnyEditor)]
-        public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+        //[PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes:GameSceneFilter.AnyEditor)]
+        //public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+		[KSPEvent(guiActive = false, active = true)]
+		public void OnPartAttachNodeSizeChanged(BaseEventData data)
         {
+			if (!HighLogic.LoadedSceneIsEditor)
+				return;
+
+			AttachNode node = data.Get<AttachNode>("node");
+			float minDia = data.Get<float>("minDia");
+
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (node.id != textureMessageName || maxImpulseDiameterRatio == 0)
                 return;
@@ -128,12 +134,19 @@ namespace ProceduralParts
             ejectionImpulse = Mathf.Round(maxImpulse * oldRatio / 0.1f) * 0.1f;
         }
 
-        [PartMessageListener(typeof(PartVolumeChanged), scenes: GameSceneFilter.AnyEditor)]
-        public void ChangeVolume(string volumeName, float volume)
+        //[PartMessageListener(typeof(PartVolumeChanged), scenes: GameSceneFilter.AnyEditor)]
+        //public void ChangeVolume(string volumeName, float volume)
+		[KSPEvent(guiActive = false, active = true)]
+		public void OnPartVolumeChanged(BaseEventData data)
         {
+			if (!HighLogic.LoadedSceneIsEditor)
+				return;
+
+			double volume = data.Get<double> ("newTotalVolume");
+
             if (density > 0)
             {
-                UpdateMass(density * volume);
+                UpdateMass((float)(density * volume));
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
             }
         }

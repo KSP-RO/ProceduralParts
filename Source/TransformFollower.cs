@@ -111,9 +111,9 @@ namespace ProceduralParts
             // What we want to apply is the change in rotation. This is equivalent to undoing (inverse) the old rotation, and applying the new one
             Quaternion rot;
             if (hasParent)
-                rot = transform.parent.rotation * (oldLocalRotation.Inverse() * transform.localRotation) * transform.parent.rotation.Inverse();
+				rot = transform.parent.rotation * (Quaternion.Inverse(oldLocalRotation) * transform.localRotation) * Quaternion.Inverse(transform.parent.rotation);
             else
-                rot = oldLocalRotation.Inverse() * transform.localRotation;
+				rot = Quaternion.Inverse(oldLocalRotation) * transform.localRotation;
 
             target.Rotate(rot);
             oldLocalRotation = transform.localRotation;

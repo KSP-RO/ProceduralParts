@@ -9,8 +9,8 @@ using System.Reflection;
 
 namespace ProceduralParts
 {
-    [PartMessageDelegate]
-    public delegate void ChangeTextureScaleDelegate(string name, [UseLatest] Material material, [UseLatest] Vector2 targetScale);
+    //[PartMessageDelegate]
+    //public delegate void ChangeTextureScaleDelegate(string name, [UseLatest] Material material, [UseLatest] Vector2 targetScale);
 
     public class ProceduralPart : PartModule, IPartCostModifier
     {
@@ -776,9 +776,13 @@ namespace ProceduralParts
         [SerializeField]
         private Vector2 sideTextureScale = Vector2.one;
 
-        [PartMessageListener(typeof(ChangeTextureScaleDelegate))]
-        public void ChangeTextureScale(string texName, Material material, Vector2 targetScale)
-        {
+        //[PartMessageListener(typeof(ChangeTextureScaleDelegate))]
+		[KSPEvent(guiActive = false, active = true)]
+		//public void ChangeTextureScale(string texName, Material material, Vector2 targetScale)
+		public void OnChangeTextureScale(BaseEventData data)
+		{
+			string texName = data.Get<string> ("texName");
+			Vector2 targetScale = data.Get<Vector2> ("targetScale");
             if (texName != "sides")
                 return;
             sideTextureScale = targetScale;
@@ -883,21 +887,31 @@ namespace ProceduralParts
         private readonly List<object> nodeAttachments = new List<object>(4);
         private readonly Dictionary<string, Func<Vector3>> nodeOffsets = new Dictionary<string, Func<Vector3>>();
 
-        private class NodeTransformable : TransformFollower.Transformable, IPartMessagePartProxy
+        private class NodeTransformable : TransformFollower.Transformable//, IPartMessagePartProxy
         {
             // leave as not serializable so will be null when deserialzied.
             private readonly Part part;
             private readonly AttachNode node;
 
             // ReSharper disable once EventNeverSubscribedTo.Local
-            [PartMessageEvent]
-            public event PartAttachNodePositionChanged NodePositionChanged;
+            //[PartMessageEvent]
+            //public event PartAttachNodePositionChanged NodePositionChanged;
+
+			public void NodePositionChanged(AttachNode node, Vector3 location, Vector3 orientation, Vector3 secondaryAxis)
+			{
+				var data = new BaseEventData (BaseEventData.Sender.USER);
+				data.Set<AttachNode> ("node", node);
+				data.Set("location", location);
+				data.Set("orientation", orientation);
+				data.Set("secondaryAxis", secondaryAxis);
+				part.SendEvent ("OnPartAttachNodePositionChanged", data, 0);
+			}
 
             public NodeTransformable(Part part, AttachNode node)
             {
                 this.part = part;
                 this.node = node;
-                PartMessageService.Register(this);
+                //PartMessageService.Register(this);
             }
 
             public override bool Destroyed
@@ -1061,7 +1075,7 @@ namespace ProceduralParts
             public override void Rotate(Quaternion rotate)
             {
                 // Apply the inverse rotation to the part itself. Don't involve the parent.
-                rotate = rotate.Inverse();
+                rotate = Quaternion.Inverse(rotate);
 
                 part.transform.Translate(childToParent.position);
                 part.transform.rotation = rotate * part.transform.rotation;
@@ -1124,10 +1138,16 @@ namespace ProceduralParts
             }       
         }
 
-        [PartMessageListener(typeof(PartAttachNodePositionChanged), PartRelationship.Child, GameSceneFilter.AnyEditor)]
-        public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
+        //[PartMessageListener(typeof(PartAttachNodePositionChanged), PartRelationship.Child, GameSceneFilter.AnyEditor)]
+        [KSPEvent(guiActive = false, active = true)]
+		//public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
+		public void OnPartAttachNodePositionChanged(BaseEventData data)
         {
-            //Debug.LogWarning("PartNode position changed");
+			AttachNode node = data.Get<AttachNode>("node");
+			//Vector3 location = data.Get("location");
+			//Vector3 orientation = data.Get("orientation");
+			//Vector3 secondaryAxis = data.Get("secondaryAxis");
+
 
             if(node == null)
             {
@@ -1621,8 +1641,9 @@ namespace ProceduralParts
         #endregion
 
        
-        [PartMessageListener(typeof(PartModelChanged), scenes: ~GameSceneFilter.Flight)]
-        public void PartModelChanged()
+        //[PartMessageListener(typeof(PartModelChanged), scenes: ~GameSceneFilter.Flight)]
+        [KSPEvent(guiActive = false, active = true)]
+		public void OnPartModelChanged()
         {
             //Debug.Log("Shape Changed");
             foreach (FreePartAttachment ca in childAttach)
@@ -1663,8 +1684,9 @@ namespace ProceduralParts
         [KSPField]
         bool updateDragCubesInEditor = false;
 
-        [PartMessageListener(typeof(PartColliderChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
-        public void PartColliderChanged()
+        //[PartMessageListener(typeof(PartColliderChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
+		[KSPEvent(guiActive = false, active = true)]
+        public void OnPartColliderChanged()
         {
             if (GameSceneFilter.Flight.IsLoaded() || (GameSceneFilter.AnyEditor.IsLoaded() && updateDragCubesInEditor))
             {
@@ -1696,7 +1718,7 @@ namespace ProceduralParts
                 else
                 {
                     //Debug.Log("dragCube needs to re-render");
-                    PartColliderChanged();
+                    OnPartColliderChanged();
                     dragCubeNeedsRerender = 0;
 
                     isEnabled = enabled = false; // normally this is done OnStart

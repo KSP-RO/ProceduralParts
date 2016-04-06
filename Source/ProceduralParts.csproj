@@ -17,7 +17,6 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>false</DebugSymbols>
     <DebugType>none</DebugType>
     <Optimize>false</Optimize>
     <BaseIntermediateOutputPath>..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
@@ -33,28 +32,27 @@
     <Optimize>true</Optimize>
     <BaseIntermediateOutputPath>..\..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
     <OutputPath>..\Plugins\</OutputPath>
-    <DefineConstants>
-    </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
   </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
-  </PropertyGroup>
   <ItemGroup>
+    <Reference Include="System" />
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\..\..\Games\KSP_090clean\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\Build\ProceduralParts\Release\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="KSPAPIExtensions">
-      <HintPath>..\..\KSPAPIExtensions\KSPAPIExtensions.dll</HintPath>
-    </Reference>
-    <Reference Include="System">
+    <Reference Include="KSPUtil">
+      <HintPath>..\..\Build\ProceduralParts\Release\KSPUtil.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\..\..\Games\KSP_090clean\KSP_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\Build\ProceduralParts\Release\UnityEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\..\Build\ProceduralParts\Release\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
@@ -76,6 +74,10 @@
     <Compile Include="TransformFollower.cs" />
     <Compile Include="VectorUtils.cs" />
     <Compile Include="zzVersionChecker.cs" />
+    <Compile Include="KSPUtils.cs" />
+    <Compile Include="UnityUtils.cs" />
+    <Compile Include="EngineWrapper.cs" />
+    <Compile Include="MathUtils.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

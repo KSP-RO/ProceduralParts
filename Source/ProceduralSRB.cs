@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using KSPAPIExtensions;
-using KSPAPIExtensions.PartMessage;
 using KSPAPIExtensions.Utils;
 
 namespace ProceduralParts
@@ -16,7 +15,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageService.Register(this);
+            //PartMessageService.Register(this);
             //this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
 
@@ -90,9 +89,13 @@ namespace ProceduralParts
             }
         }
 
-        [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
-        public void PartResourceChanged(PartResource resource, double amount)
+        //[PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
+        //public void PartResourceChanged(PartResource resource, double amount)
+		[KSPEvent(guiActive = false, active = true)]
+		public void OnPartResourceInitialAmountChanged(BaseEventData data)
         {
+			if (!HighLogic.LoadedSceneIsEditor)
+				return;
             if (selectedBell == null)
                 return;
 
@@ -102,9 +105,15 @@ namespace ProceduralParts
                 UpdateThrustDependentCalcs();
         }
 
-        [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
-        public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+        //[PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
+        //public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+		[KSPEvent(guiActive = false, active = true)]
+		public void ChangeAttachNodeSize(BaseEventData data)
         {
+			if (!HighLogic.LoadedSceneIsEditor)
+				return;
+			AttachNode node = data.Get<AttachNode> ("node");
+			float minDia = data.Get<float> ("minDia");
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (node.id != bottomAttachNodeName || minDia == attachedEndSize)
                 return;
@@ -276,8 +285,8 @@ namespace ProceduralParts
                 }
 
                 // Only enable the colider for flight mode. This prevents any surface attachments.
-                if (HighLogic.LoadedSceneIsEditor && conf.model.collider != null)
-                    Destroy(conf.model.collider);
+                if (HighLogic.LoadedSceneIsEditor && conf.model.GetComponent<Collider>() != null)
+					Destroy(conf.model.GetComponent<Collider>());
 
                 conf.model.gameObject.SetActive(false);
             }
@@ -449,8 +458,9 @@ namespace ProceduralParts
         private float attachedEndSize = float.PositiveInfinity;
 
         // Real fuels integration
-        [PartMessageListener(typeof(PartEngineConfigChanged))]
-        public void PartEngineConfigsChanged()
+        //[PartMessageListener(typeof(PartEngineConfigChanged))]
+		[KSPEvent(guiActive = false, active = true)]
+		public void OnPartEngineConfigsChanged()
         {
             UpdateMaxThrust();
         }
@@ -658,7 +668,7 @@ namespace ProceduralParts
             if (float.IsNaN(num))
                 num = 0f;
 
-            Material mat = selectedBell.model.renderer.sharedMaterial;
+            Material mat = selectedBell.model.GetComponent<Renderer>().sharedMaterial;
             mat.SetColor("_EmissiveColor", new Color(num*num, 0, 0));
         }
 

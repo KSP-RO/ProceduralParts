@@ -1,4 +1,4 @@
-﻿using KSPAPIExtensions.PartMessage;
+﻿//using KSPAPIExtensions.PartMessage;
 using KSPAPIExtensions;
 using System;
 using System.Collections.Generic;
@@ -18,13 +18,38 @@ namespace ProceduralParts
     /// </summary>
     public class ProceduralHeatshield : PartModule, ICostMultiplier, IPartMassModifier, IProp
     {
-        [PartMessageEvent]
-        public event PartMassChanged MassChanged;
-       
-        [PartMessageEvent]
-        public event PartResourceMaxAmountChanged MaxAmountChanged;
-        [PartMessageEvent]
-        public event PartResourceInitialAmountChanged InitialAmountChanged;
+        //[PartMessageEvent]
+        //public event PartMassChanged MassChanged;
+		public void MassChanged (float mass)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<float> ("mass", mass);
+
+			part.SendEvent ("OnPartMassChanged", data, 0);
+		}
+
+        //[PartMessageEvent]
+        //public event PartResourceMaxAmountChanged MaxAmountChanged;
+        //[PartMessageEvent]
+        //public event PartResourceInitialAmountChanged InitialAmountChanged;
+
+		public void MaxAmountChanged (Part part, PartResource resource, double amount)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<PartResource> ("resource", resource);
+			data.Set<double> ("amount", amount);
+			part.SendEvent ("OnResourceMaxChanged", data, 0);
+		}
+
+		//[PartMessageEvent]
+		//public event PartResourceInitialAmountChanged InitialAmountChanged;
+		public void InitialAmountChanged (Part part, PartResource resource, double amount)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<PartResource> ("resource", resource);
+			data.Set<double> ("amount", amount);
+			part.SendEvent ("OnResourceInitialChanged", data, 0);
+		}
 
         ProceduralPart _pPart = null;
 
@@ -53,7 +78,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageService.Register(this);
+            //PartMessageService.Register(this);
         }
 
         public override void OnStart(StartState state)
@@ -121,7 +146,7 @@ namespace ProceduralParts
                     Debug.Log("MeshFilterFound: " + mf.name);
                 //fairingMesh = fairing.GetComponent<MeshFilter>().mesh;
                 fairingMesh = fairing.GetComponent<MeshFilter>().mesh;
-                fairingMaterial = fairing.renderer.material;
+                fairingMaterial = fairing.GetComponent<Renderer>().material;
 
             }
             catch(Exception e)
@@ -301,9 +326,12 @@ namespace ProceduralParts
         //private Mesh endsMesh;
         private Material fairingMaterial;
         
-        [PartMessageListener(typeof(PartAttachNodeSizeChanged))]
-        public void PartAttachNodeSizeChanged(AttachNode node, float minDia, float area) 
+        //[PartMessageListener(typeof(PartAttachNodeSizeChanged))]
+        //public void PartAttachNodeSizeChanged(AttachNode node, float minDia, float area) 
+		[KSPEvent(guiActive = false, active = true)]
+		public void PartAttachNodeSizeChanged(BaseEventData data) 
         {
+			AttachNode node = data.Get<AttachNode> ("node");
             if (node.id != topNodeId)
                 return;
             CopyNodeSizeAndStrength();
@@ -589,8 +617,8 @@ namespace ProceduralParts
                             pr.maxAmount = (double)(ablatorPerArea * surfaceArea);
                             pr.amount = Math.Min(ratio * pr.maxAmount, pr.maxAmount);
                             //ResourceListChanged();
-                            MaxAmountChanged(pr, pr.maxAmount);
-                            InitialAmountChanged(pr, pr.maxAmount);
+                            MaxAmountChanged(part, pr, pr.maxAmount);
+                            InitialAmountChanged(part, pr, pr.maxAmount);
 
 
                         }
