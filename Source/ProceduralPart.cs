@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using KSPAPIExtensions;
-using KSPAPIExtensions.PartMessage;
+//using KSPAPIExtensions.PartMessage;
 using System.Reflection;
 
 namespace ProceduralParts
@@ -50,11 +50,14 @@ namespace ProceduralParts
 
         public override void OnAwake()
         {
+			GameEvents.onPartAttach.Add (OnPartAttach);
+			GameEvents.onPartRemove.Add (OnPartRemove);
+
             // Check if FAR is installed
             installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
 
             base.OnAwake();
-            PartMessageService.Register(this);
+            //PartMessageService.Register(this);
             //this.RegisterOnUpdateEditor(OnUpdateEditor);
 
             if (GameSceneFilter.AnyInitializing.IsLoaded())
@@ -194,6 +197,9 @@ namespace ProceduralParts
         {
             if (GameSceneFilter.AnyEditor.IsLoaded())
                 GameEvents.onEditorPartEvent.Remove(OnEditorPartEvent);
+
+			GameEvents.onPartAttach.Remove(OnPartAttach);
+			GameEvents.onPartRemove.Remove(OnPartRemove);
         }
 
 
@@ -271,10 +277,10 @@ namespace ProceduralParts
                 EndsIconMesh = iconEnds.GetComponent<MeshFilter>().mesh;
 
 
-            SidesMaterial = sides.renderer.material;
-            EndsMaterial = ends.renderer.material;
-            SidesIconMaterial = iconSides.renderer.material;
-            EndsIconMaterial = iconEnds.renderer.material;
+            SidesMaterial = sides.GetComponent<Renderer>().material;
+			EndsMaterial = ends.GetComponent<Renderer>().material;
+			SidesIconMaterial = iconSides.GetComponent<Renderer>().material;
+			EndsIconMaterial = iconEnds.GetComponent<Renderer>().material;
 
             // Instantiate meshes. The mesh method unshares any shared meshes.
             SidesMesh = sides.GetComponent<MeshFilter>().mesh;
@@ -1150,9 +1156,41 @@ namespace ProceduralParts
 
         }
 
-        [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
+		private void OnPartAttach(GameEvents.HostTargetAction<Part, Part> data)
+		{
+			// Target is the parent, host is the child part
+
+			if (data.target == part) 
+				PartChildAttached (data.host);
+			else if (data.host == part)
+				PartParentChanged (data.target);
+		}
+
+		private void OnPartRemove(GameEvents.HostTargetAction<Part, Part> data)
+		{
+			// host is null, target is the child part.
+
+			if (data.target == part)
+				PartParentChanged (null);
+			else if (data.target.parent == part) 
+			{
+				PartChildDetached (data.target);
+			}
+		
+			//SendAsyncProxy<PartParentChanged>(this, data.target, new object[] { null });
+			//SendAsyncProxy<PartChildDetached>(this, data.target.parent, data.target);
+			//
+			//if (data.target.attachMode == AttachModes.SRF_ATTACH)
+			//	data.target.srfAttachNode.attachedPart = null;
+
+		}
+
+        //[PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildAttached(Part child)
         {
+			if (HighLogic.LoadedScene != GameScenes.EDITOR)
+				return;
+
             if (shape == null) //OnUpdate hasn't fired yet
             {
                 toAttach.Enqueue(() => PartChildAttached(child));
@@ -1230,9 +1268,13 @@ namespace ProceduralParts
             //shape.ForceNextUpdate();
         }
 
-        [PartMessageListener(typeof(PartChildDetached), scenes: GameSceneFilter.AnyEditor)]
+        //[PartMessageListener(typeof(PartChildDetached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildDetached(Part child)
         {
+
+			if (HighLogic.LoadedScene != GameScenes.EDITOR)
+				return;
+
             //Debug.Log("Child Detached");
             //for (var node = childAttachments.First; node != null; node = node.Next)
             //    if (node.Value.child == child)
@@ -1254,9 +1296,12 @@ namespace ProceduralParts
             Debug.LogWarning("*ST* Message recieved removing child, but can't find child");
         }
 
-        [PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
+        //[PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
         public void PartParentChanged(Part newParent)
         {
+			if (HighLogic.LoadedScene != GameScenes.EDITOR)
+				return;
+
             if (shape == null) //OnUpdate hasn't fired yet
             {
                 toAttach.Enqueue(() => PartParentChanged(newParent));
