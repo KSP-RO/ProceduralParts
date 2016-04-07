@@ -1143,6 +1143,8 @@ namespace ProceduralParts
 		//public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
 		public void OnPartAttachNodePositionChanged(BaseEventData data)
         {
+			//TODO resrict to child
+			Debug.Log ("this should not happen");
 			AttachNode node = data.Get<AttachNode>("node");
 			//Vector3 location = data.Get("location");
 			//Vector3 orientation = data.Get("orientation");
@@ -1179,7 +1181,7 @@ namespace ProceduralParts
 		private void OnPartAttach(GameEvents.HostTargetAction<Part, Part> data)
 		{
 			// Target is the parent, host is the child part
-
+			//Debug.Log ("OnPartAttach: " + data.host.transform + " to " + data.target.transform);
 			if (data.target == part) 
 				PartChildAttached (data.host);
 			else if (data.host == part)
@@ -1189,7 +1191,7 @@ namespace ProceduralParts
 		private void OnPartRemove(GameEvents.HostTargetAction<Part, Part> data)
 		{
 			// host is null, target is the child part.
-
+			//Debug.Log ("OnPartRemove");
 			if (data.target == part)
 				PartParentChanged (null);
 			else if (data.target.parent == part) 
@@ -1211,18 +1213,26 @@ namespace ProceduralParts
 			if (HighLogic.LoadedScene != GameScenes.EDITOR)
 				return;
 
-            if (shape == null) //OnUpdate hasn't fired yet
+			Debug.Log ("PartAttached");
+
+			AttachNode node = child.findAttachNodeByPart(part);
+
+			if (shape == null || node == null) //OnUpdate hasn't fired or node not connected yet
             {
                 toAttach.Enqueue(() => PartChildAttached(child));
                 return;
             }
             //Debug.Log("PartChildAttached");
-            AttachNode node = child.findAttachNodeByPart(part);
-            if (node == null)
-            {
-                Debug.LogError("*ST* unable to find child node for child: " + child.transform);
-                return;
-            }
+            
+            //if (node == null)
+            //{
+            //    Debug.LogError("*ST* unable to find child node for child: " + child.transform);
+			//	//toAttach.Enqueue(() => PartChildAttached(child));
+            //    return;
+            //}
+			//else
+			//	Debug.LogError("*ST* found: " + child.transform);
+
             Vector3 position = child.transform.TransformPoint(node.position);
 
             // Handle node offsets
@@ -1322,7 +1332,13 @@ namespace ProceduralParts
 			if (HighLogic.LoadedScene != GameScenes.EDITOR)
 				return;
 
-            if (shape == null) //OnUpdate hasn't fired yet
+			AttachNode childToParent = null;
+			if (newParent != null) 
+			{
+				childToParent = part.findAttachNodeByPart(newParent);
+			}
+
+            if (shape == null || (newParent != null && childToParent == null)) //OnUpdate hasn't fired yet
             {
                 toAttach.Enqueue(() => PartParentChanged(newParent));
                 return;
@@ -1338,12 +1354,12 @@ namespace ProceduralParts
             if (newParent == null)
                 return;
 
-            AttachNode childToParent = part.findAttachNodeByPart(newParent);
-            if (childToParent == null)
-            {
-                Debug.LogError("*ST* unable to find parent node from child: " + part.transform);
-                return;
-            }
+            //AttachNode childToParent = part.findAttachNodeByPart(newParent);
+            //if (childToParent == null)
+            //{
+            //    Debug.LogError("*ST* unable to find parent node from child: " + part.transform);
+            //    return;
+            //}
             Vector3 position = transform.TransformPoint(childToParent.position);
             
             // ReSharper disable once InconsistentNaming
