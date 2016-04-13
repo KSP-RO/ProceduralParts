@@ -10,17 +10,17 @@ namespace ProceduralParts
         #region Config parameters
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "S4", guiUnits="m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
         public float topDiameter = 1.25f;
         protected float oldTopDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "S4", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
         public float bottomDiameter = 1.25f;
         protected float oldBottomDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "S4", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
         public float length = 1f;
         protected float oldLength;
 

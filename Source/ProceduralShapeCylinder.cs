@@ -9,12 +9,12 @@ namespace ProceduralParts
     {
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "S4", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 2, unit="m")]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
         public float diameter = 1.25f;
         private float oldDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "S4", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
         public float length = 1f;
         private float oldLength;
 
@@ -86,11 +86,14 @@ namespace ProceduralParts
             else
             {
                 UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
-                diameterEdit.maxValue = PPart.diameterMax;
-                diameterEdit.minValue = PPart.diameterMin;
-                diameterEdit.incrementLarge = PPart.diameterLargeStep;
-                diameterEdit.incrementSmall = PPart.diameterSmallStep;
-                diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
+				if (null != diameterEdit) {
+					diameterEdit.maxValue = PPart.diameterMax;
+					diameterEdit.minValue = PPart.diameterMin;
+					diameterEdit.incrementLarge = PPart.diameterLargeStep;
+					diameterEdit.incrementSmall = PPart.diameterSmallStep;
+					diameter = Mathf.Clamp (diameter, PPart.diameterMin, PPart.diameterMax);
+				} else
+					Debug.LogError ("*PP* could not find field 'diameter'");
             }
             // ReSharper restore CompareOfFloatsByEqualityOperator
         }
