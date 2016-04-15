@@ -183,7 +183,7 @@ namespace ProceduralParts
             }
 
             // sometimes, if the shapes radius is 0, r rersults in NaN
-            if (float.IsNaN(result.r))
+            if (float.IsNaN(result.r) || float.IsPositiveInfinity(result.r) || float.IsNegativeInfinity(result.r))
             {
                 result.r = 0;
             }
@@ -237,7 +237,7 @@ namespace ProceduralParts
             if (r > 0f)
             {
                 theta = Mathf.Atan2(-position.z, position.x);
-                phi = Mathf.Asin(position.y / r);
+                phi = Mathf.Asin(Mathf.Clamp(position.y / r, -1f, 1f));
             }
             else
             {
@@ -253,8 +253,8 @@ namespace ProceduralParts
             {
                 ProfilePoint topBot = (phi < 0) ? lastProfile.First.Value : lastProfile.Last.Value;
 
-                float tbR = Mathf.Sqrt(topBot.y * topBot.y + topBot.dia * topBot.dia * 0.25f);
-                float tbPhi = Mathf.Asin(topBot.y / tbR);
+                float tbR = Mathf.Sqrt(Mathf.Clamp(topBot.y * topBot.y + topBot.dia * topBot.dia * 0.25f, 0f, Mathf.Infinity));
+                float tbPhi = Mathf.Asin(Mathf.Clamp(topBot.y / tbR, -1f, 1f));
 
                 if (Mathf.Abs(phi) >= Mathf.Abs(tbPhi))
                 {
