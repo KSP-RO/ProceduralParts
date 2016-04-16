@@ -99,7 +99,6 @@ namespace ProceduralParts
                 trans = transform.position - oldOffset;
                 oldOffset = transform.position;
             }
-
             target.Translate(trans);
         }
 
