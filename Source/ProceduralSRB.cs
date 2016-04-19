@@ -125,10 +125,24 @@ namespace ProceduralParts
         [KSPField]
         public float costMultiplier = 1.0f;
 
-        public float GetModuleCost(float stdCost)
-        {
-            return thrust * 0.5f * costMultiplier;
-        }
+        //public float GetModuleCost(float stdCost)
+        //{
+        //    return thrust * 0.5f * costMultiplier;
+        //}
+
+		#region IPartCostModifier implementation
+
+		public float GetModuleCost (float defaultCost, ModifierStagingSituation sit)
+		{
+			return thrust * 0.5f * costMultiplier;
+		}
+
+		public ModifierChangeWhen GetModuleCostChangeWhen ()
+		{
+			return ModifierChangeWhen.CONSTANTLY;
+		}
+
+		#endregion
 
         #endregion
 

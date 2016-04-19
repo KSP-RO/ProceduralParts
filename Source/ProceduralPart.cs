@@ -1586,7 +1586,12 @@ namespace ProceduralParts
         [KSPField]
         public bool displayCost = true;
 
-        public float GetModuleCost(float stdCost)
+		public ModifierChangeWhen GetModuleCostChangeWhen ()
+		{
+			return ModifierChangeWhen.FIXED;
+		}
+
+		public float GetModuleCost(float stdCost, ModifierStagingSituation sit)
         {
             if (HighLogic.LoadedScene == GameScenes.EDITOR)
             {

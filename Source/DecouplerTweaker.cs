@@ -12,6 +12,23 @@ namespace ProceduralParts
     /// </summary>
     public class DecouplerTweaker : PartModule, IPartMassModifier
     {
+		#region IPartMassModifier implementation
+
+		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
+		{
+			if (density > 0)
+				return part.mass - defaultMass;
+			else
+				return 0.0f;
+		}
+
+		public ModifierChangeWhen GetModuleMassChangeWhen ()
+		{
+			return ModifierChangeWhen.FIXED;
+		}
+
+		#endregion
+
         public override void OnAwake()
         {
             base.OnAwake();
@@ -167,13 +184,13 @@ namespace ProceduralParts
             }
         }
 
-        public float GetModuleMass(float defaultMass)
-        {
-            if (density > 0)
-                return part.mass - defaultMass;
-            else
-                return 0.0f;
-        }
+        //public float GetModuleMass(float defaultMass)
+        //{
+        //    if (density > 0)
+        //        return part.mass - defaultMass;
+        //    else
+        //        return 0.0f;
+        //}
     }
 
 }

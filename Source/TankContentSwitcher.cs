@@ -23,6 +23,20 @@ namespace ProceduralParts
     /// </summary>
     public class TankContentSwitcher : PartModule, IPartMassModifier, ICostMultiplier
     {
+		#region IPartMassModifier implementation
+
+		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
+		{
+			return part.mass - defaultMass;
+		}
+
+		public ModifierChangeWhen GetModuleMassChangeWhen ()
+		{
+			return ModifierChangeWhen.FIXED;
+		}
+
+		#endregion
+
         #region Callbacks
         public override void OnAwake()
         {
@@ -545,12 +559,12 @@ namespace ProceduralParts
 
         #endregion
         */
-        #region Mass
-		public float GetModuleMass(float defaultMass)
-		{
-			return part.mass - defaultMass;
-		}
-		#endregion
+        //#region Mass
+		//public float GetModuleMass(float defaultMass)
+		//{
+		//	return part.mass - defaultMass;
+		//}
+		//#endregion
 
         public ProceduralPart PPart
         {

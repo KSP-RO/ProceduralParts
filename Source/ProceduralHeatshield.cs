@@ -18,6 +18,20 @@ namespace ProceduralParts
     /// </summary>
     public class ProceduralHeatshield : PartModule, ICostMultiplier, IPartMassModifier, IProp
     {
+		#region IPartMassModifier implementation
+
+		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
+		{
+			return part.mass - defaultMass;
+		}
+
+		public ModifierChangeWhen GetModuleMassChangeWhen ()
+		{
+			return ModifierChangeWhen.CONSTANTLY;
+		}
+
+		#endregion
+
         //[PartMessageEvent]
         //public event PartMassChanged MassChanged;
 		public void MassChanged (float mass)
@@ -581,10 +595,10 @@ namespace ProceduralParts
         }
 
 
-        public float GetModuleMass(float defaultMass)
-        {
-            return part.mass - defaultMass;
-        }
+        //public float GetModuleMass(float defaultMass)
+        //{
+        //    return part.mass - defaultMass;
+        //}
 
         public void UpdateProp()
         {
