@@ -79,6 +79,8 @@ namespace ProceduralParts
                         if (position.y >= Mathf.Min(pv.y, pt.y) && position.y < Mathf.Max(pv.y, pt.y))
                         {
                             float t = Mathf.InverseLerp(Mathf.Min(pv.y, pt.y), Mathf.Max(pv.y, pt.y), position.y);
+                            if (float.IsNaN(t))
+                                t = 0f;
                             float profileRadius = Mathf.Lerp(pv.dia, pt.dia, t) / 2.0f;
 
                             
@@ -110,6 +112,8 @@ namespace ProceduralParts
                 case ShapeCoordinates.YMode.RELATIVE_TO_SHAPE:
                     float halfLength = (lastProfile.Last.Value.y - lastProfile.First.Value.y) / 2.0f;
                     result.y = position.y / halfLength;
+                    if (float.IsNaN(result.y))
+                        result.y = 0f;
                     break;
                     
                 case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_CENTER:
@@ -135,6 +139,8 @@ namespace ProceduralParts
             float theta = Mathf.Atan2(-direction.y, direction.x);
            
             result.u = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
+            if (float.IsNaN(result.u))
+                result.u = 0f;
 
             if(result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_CENTER)
             {
@@ -164,6 +170,8 @@ namespace ProceduralParts
                     if(position.y >= Mathf.Min(pv.y, pt.y) && position.y < Mathf.Max(pv.y, pt.y))
                     {
                         float t = Mathf.InverseLerp(Mathf.Min(pv.y, pt.y), Mathf.Max(pv.y, pt.y), position.y);
+                        if (float.IsNaN(t))
+                            t = 0f;
                         float r = Mathf.Lerp(pv.dia, pt.dia, t) / 2.0f;
 
                         result.r = result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
@@ -175,7 +183,7 @@ namespace ProceduralParts
             }
 
             // sometimes, if the shapes radius is 0, r rersults in NaN
-            if (float.IsNaN(result.r))
+            if (float.IsNaN(result.r) || float.IsPositiveInfinity(result.r) || float.IsNegativeInfinity(result.r))
             {
                 result.r = 0;
             }
@@ -229,7 +237,7 @@ namespace ProceduralParts
             if (r > 0f)
             {
                 theta = Mathf.Atan2(-position.z, position.x);
-                phi = Mathf.Asin(position.y / r);
+                phi = Mathf.Asin(Mathf.Clamp(position.y / r, -1f, 1f));
             }
             else
             {
@@ -245,8 +253,8 @@ namespace ProceduralParts
             {
                 ProfilePoint topBot = (phi < 0) ? lastProfile.First.Value : lastProfile.Last.Value;
 
-                float tbR = Mathf.Sqrt(topBot.y * topBot.y + topBot.dia * topBot.dia * 0.25f);
-                float tbPhi = Mathf.Asin(topBot.y / tbR);
+                float tbR = Mathf.Sqrt(Mathf.Clamp(topBot.y * topBot.y + topBot.dia * topBot.dia * 0.25f, 0f, Mathf.Infinity));
+                float tbPhi = Mathf.Asin(Mathf.Clamp(topBot.y / tbR, -1f, 1f));
 
                 if (Mathf.Abs(phi) >= Mathf.Abs(tbPhi))
                 {
@@ -276,6 +284,8 @@ namespace ProceduralParts
 
             ret.location = Location.Side;
             ret.uv[0] = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
+            if (float.IsNaN(ret.uv[0]))
+                ret.uv[0] = 0f;
 
             ProfilePoint pt = lastProfile.First.Value;
             for (LinkedListNode<ProfilePoint> ptNode = lastProfile.First.Next; ptNode != null; ptNode = ptNode.Next)
@@ -363,6 +373,8 @@ namespace ProceduralParts
                 ret.location = Location.Side;
                 float theta = Mathf.Atan2(-position.z, position.x);
                 ret.uv[0] = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
+                if (float.IsNaN(ret.uv[0]))
+                    ret.uv[0] = 0f;
                 ret.uv[1] = 0.5f - position.y;
 
                 Vector3 normal = new Vector3(position.x * 2f, 0, position.z * 2f);
@@ -434,6 +446,8 @@ namespace ProceduralParts
                 }
 
                 float t = Mathf.InverseLerp(pv.v, pt.v, a.uv[1]);
+                if (float.IsNaN(t))
+                    t = 0f;
                 //Debug.LogWarning("pv.v=" + pv.v + " pt.v=" + pt.v + " att.v=" + a.uv[1] + " t=" + t);
 
                 // using cylindrical coords
