@@ -27,7 +27,7 @@ namespace ProceduralParts
 
 		public ModifierChangeWhen GetModuleMassChangeWhen ()
 		{
-			return ModifierChangeWhen.CONSTANTLY;
+			return ModifierChangeWhen.FIXED;
 		}
 
 		#endregion
@@ -281,8 +281,8 @@ namespace ProceduralParts
 
         }
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fairing", guiFormat = "S4", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.01f)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fairing"),
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.01f, useSI=true, unit = "m", sigFigs = 4)]
         public float fairingThickness = 0.05f;
         private float oldFairingThickness;
 

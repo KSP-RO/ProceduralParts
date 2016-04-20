@@ -1213,7 +1213,7 @@ namespace ProceduralParts
 			if (HighLogic.LoadedScene != GameScenes.EDITOR)
 				return;
 
-			Debug.Log ("PartAttached");
+			Debug.Log ("PartChildAttached");
 
 			AttachNode node = child.findAttachNodeByPart(part);
 
