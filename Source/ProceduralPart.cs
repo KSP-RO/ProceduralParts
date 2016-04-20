@@ -1144,7 +1144,7 @@ namespace ProceduralParts
 		public void OnPartAttachNodePositionChanged(BaseEventData data)
         {
 			//TODO resrict to child
-			Debug.Log ("this should not happen");
+
 			AttachNode node = data.Get<AttachNode>("node");
 			//Vector3 location = data.Get("location");
 			//Vector3 orientation = data.Get("orientation");

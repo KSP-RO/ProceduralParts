@@ -118,11 +118,14 @@ namespace ProceduralParts
         /// <summary>
         /// Volume of part in kilolitres. 
         /// </summary>
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Volume", guiFormat="S4+3", guiUnits="L")]
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false)]
         public float tankVolume;
 
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Mass")]
         public string massDisplay;
+
+		[KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Volume")]
+		public string volumeDisplay;
 
         [KSPField(isPersistant=true)]
         public float mass;
@@ -148,6 +151,8 @@ namespace ProceduralParts
                 throw new ArgumentOutOfRangeException("volume");
 
             tankVolume = (float)volume;
+			//Debug.Log ((float)volume);
+			volumeDisplay = volume.ToStringSI(4, 3, "L");
 
             UpdateMassAndResources(false);
             if (HighLogic.LoadedSceneIsEditor)
@@ -261,7 +266,7 @@ namespace ProceduralParts
                 tankTypeOptions = tankTypeOptions.Where(to => string.IsNullOrEmpty(to.techRequired) || ResearchAndDevelopment.GetTechnologyState(to.techRequired) == RDTech.State.Available).ToList();
             }
 
-            Fields["tankVolume"].guiActiveEditor = tankVolumeName != null; 
+            Fields["volumeDisplay"].guiActiveEditor = tankVolumeName != null; 
             Fields["massDisplay"].guiActiveEditor = tankVolumeName != null;
 
             if (tankTypeOptions == null || tankTypeOptions.Count == 0)
@@ -310,9 +315,9 @@ namespace ProceduralParts
             }
 
             if (selectedTankType.isStructural)
-                Fields["tankVolume"].guiActiveEditor = false;
+                Fields["volumeDisplay"].guiActiveEditor = false;
             else
-                Fields["tankVolume"].guiActiveEditor = tankVolumeName != null;
+				Fields["volumeDisplay"].guiActiveEditor = tankVolumeName != null;
 
             UpdateMassAndResources(true, init);
             if (HighLogic.LoadedSceneIsEditor)
