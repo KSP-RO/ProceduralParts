@@ -1,5 +1,11 @@
 ============= Changelog for ProceduralParts  =========
 
+===  1.2  ===
+KSP 1.1 ready (RadarManFromTheMoon)
+Fixed NullReferenceExceptions during loading (NathanKell)
+Now compatible with the TestFlight mod (NathanKell)
+Fixed some issues with zero diameter parts (NathanKell & ferram4)
+
 === 1.1.11 ===
 Recalculate drag cubes even if FAR is installed. Fixes broken themal and buoyancy calculations
 No longer recalculates drag cubes while in editor (set ProceduralPart{updateDragCubesInEditor=true} to reenable)
