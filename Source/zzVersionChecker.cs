@@ -161,10 +161,10 @@ namespace ProceduralParts
 
             String message = String.Empty;
 
-            if (IsWin64())
-            {
-                message += "WARNING: You are using 64-bit KSP on Windows. This version of KSP is known to cause crashes. It's highly recommended that you use either 32-bit KSP on Windows or switch to Linux.";
-            }
+            //if (IsWin64())
+            //{
+            //    message += "WARNING: You are using 64-bit KSP on Windows. This version of KSP is known to cause crashes. It's highly recommended that you use either 32-bit KSP on Windows or switch to Linux.";
+            //}
 
             if ((incompatible.Length > 0) || (incompatibleUnity.Length > 0))
             {
