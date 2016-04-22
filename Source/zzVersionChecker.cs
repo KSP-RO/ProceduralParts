@@ -185,7 +185,7 @@ namespace ProceduralParts
                 }
             }
 
-            if ((incompatible.Length > 0) || (incompatibleUnity.Length > 0) || IsWin64())
+            if ((incompatible.Length > 0) || (incompatibleUnity.Length > 0))
             {
 				PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),"Incompatible Mods Detected", message, "OK", true, HighLogic.UISkin);
             }
@@ -198,7 +198,7 @@ namespace ProceduralParts
 
         public static bool IsAllCompatible()
         {
-            return IsCompatible() && IsUnityCompatible() && !IsWin64();
+            return IsCompatible() && IsUnityCompatible();
         }
 
         private static IEnumerable<Type> getAllTypes()
