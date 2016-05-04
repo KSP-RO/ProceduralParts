@@ -132,7 +132,7 @@ namespace ProceduralParts
 
 		private void ModelChanged()
 		{
-			part.SendEvent ("OnPartModelChanged");
+			part.SendEvent ("OnPartModelChanged", null, 0);
 		}
 
         //[PartMessageEvent]
@@ -140,7 +140,7 @@ namespace ProceduralParts
 
 		private void ColliderChanged()
 		{
-			part.SendEvent ("OnPartColliderChanged");
+			part.SendEvent ("OnPartColliderChanged", null, 0);
 		}
 		
         protected void RaiseChangeTextureScale(string meshName, Material material, Vector2 targetScale)
