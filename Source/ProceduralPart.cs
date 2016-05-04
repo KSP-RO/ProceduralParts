@@ -959,17 +959,8 @@ namespace ProceduralParts
                 InitializeNode(part.srfAttachNode);
 
             // Update the shape to put the nodes into their positions.
-            if (!symmetryClone)
-            {
-                shape.ForceNextUpdate();
-                shape.OnUpdateEditor();
-            }
-            else
-            {
-                shape.OnUpdateEditor();
-                if (HighLogic.LoadedSceneIsEditor)
-                    GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
-            }
+            shape.ForceNextUpdate();
+            shape.OnUpdateEditor();
 
             // In flight mode, discard all the transform followers because the are not required
             if (HighLogic.LoadedSceneIsFlight)
@@ -1720,7 +1711,6 @@ namespace ProceduralParts
         {
             if (GameSceneFilter.Flight.IsLoaded() || (GameSceneFilter.AnyEditor.IsLoaded() && updateDragCubesInEditor))
             {
-                Debug.Log("*PP* Rendering proc cube for " + part.name);
                 DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
 
                 part.DragCubes.ClearCubes();
