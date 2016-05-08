@@ -8,17 +8,17 @@ namespace ProceduralParts
     public class ProceduralShapePill
         : ProceduralAbstractSoRShape
     {
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "S4", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
 		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
         public float diameter = 1.25f;
         private float oldDiameter;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "S4", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
 		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
         public float length = 1f;
         private float oldLength;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fillet", guiFormat = "S4", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fillet", guiFormat = "F3", guiUnits = "m"),
 		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
         public float fillet = 1f;
         private float oldFillet;

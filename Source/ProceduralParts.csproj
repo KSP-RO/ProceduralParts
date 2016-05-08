@@ -28,16 +28,19 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x86</PlatformTarget>
-    <DebugType>none</DebugType>
+    <DebugType>full</DebugType>
     <Optimize>true</Optimize>
     <BaseIntermediateOutputPath>..\..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
     <OutputPath>..\Plugins\</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" />
+    <Reference Include="System">
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\Build\ProceduralParts\Release\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
@@ -50,7 +53,9 @@
       <HintPath>..\..\Build\ProceduralParts\Release\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="System.Core" />
+    <Reference Include="System.Core">
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>..\..\Build\ProceduralParts\Release\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
@@ -81,14 +86,11 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>rem copy /y "$(TargetPath)" "$(SolutionDir)..\Plugins\"
-rem if exist "$(SolutionDir)\KSPAPIExtensions.dll" move "$(SolutionDir)\KSPAPIExtensions.dll" "$(SolutionDir)..\Plugins\"
-cd "$(ProjectDir)"\..
-del "Plugins\System.Core.dll"</PostBuildEvent>
+    <PostBuildEvent>C:\utils\pdb2mdb\pdb2mdb.exe ProceduralParts.dll</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
-    <PreBuildEvent>cd "$(ProjectDir)"\..
-perl version-gen</PreBuildEvent>
+    <PreBuildEvent>
+    </PreBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

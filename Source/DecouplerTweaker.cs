@@ -73,7 +73,7 @@ namespace ProceduralParts
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.1f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall=0, incrementSlide = 0.1f)]
         public float ejectionImpulse;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="S3")]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="F3")]
         public float mass = 0;
 
         private ModuleDecouple decouple;
@@ -175,12 +175,12 @@ namespace ProceduralParts
             if (updateMass < 0.1)
             {
                 fld.guiUnits = "g";
-                fld.guiFormat = "S3+6";
+                fld.guiFormat = "F2";
             }
             else
             {
                 fld.guiUnits = "T";
-                fld.guiFormat = "S3";
+                fld.guiFormat = "F3";
             }
         }
 
