@@ -17,7 +17,7 @@ namespace ProceduralParts
 		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
 		{
 			if (density > 0)
-				return part.mass - defaultMass;
+				return mass - defaultMass;
 			else
 				return 0.0f;
 		}
@@ -108,8 +108,6 @@ namespace ProceduralParts
             else if (HighLogic.LoadedSceneIsFlight)
             {
                 decouple.isOmniDecoupler = isOmniDecoupler;
-                if(!float.IsNaN(mass))
-                    part.mass = mass;
             }
         }
 
@@ -170,7 +168,7 @@ namespace ProceduralParts
 
         private void UpdateMass(float updateMass)
         {
-            part.mass = mass = updateMass;
+            mass = updateMass;
             BaseField fld = Fields["mass"];
             if (updateMass < 0.1)
             {
@@ -183,14 +181,6 @@ namespace ProceduralParts
                 fld.guiFormat = "F3";
             }
         }
-
-        //public float GetModuleMass(float defaultMass)
-        //{
-        //    if (density > 0)
-        //        return part.mass - defaultMass;
-        //    else
-        //        return 0.0f;
-        //}
     }
 
 }

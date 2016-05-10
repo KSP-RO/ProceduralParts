@@ -22,7 +22,7 @@ namespace ProceduralParts
 
 		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
 		{
-			return part.mass - defaultMass;
+			return mass - defaultMass;
 		}
 
 		public ModifierChangeWhen GetModuleMassChangeWhen ()
@@ -102,9 +102,8 @@ namespace ProceduralParts
             {
                 if (mass <= 0)
                     mass = 0.000001f;
-                part.mass = mass;
+
                 MassChanged(mass);
-                //Debug.Log("OnStart - mass: " + part.mass);
 
                 //double skinThermalMassModifier = part.thermalMassModifier;
                 //double skinThicknessFactor = 0.1;
@@ -594,12 +593,6 @@ namespace ProceduralParts
             return 1;
         }
 
-
-        //public float GetModuleMass(float defaultMass)
-        //{
-        //    return part.mass - defaultMass;
-        //}
-
         public void UpdateProp()
         {
             ProceduralPart ppart = PPart;
@@ -640,9 +633,9 @@ namespace ProceduralParts
                     }
 
                     //Debug.Log(massPerDiameter + " * " + diameter);
-                    part.mass = mass = massPerDiameter * diameter + massFromDiameterCurve.Evaluate(diameter);
+                    mass = massPerDiameter * diameter + massFromDiameterCurve.Evaluate(diameter);
                     //Debug.LogWarning("changed mass: " + mass);
-                    MassChanged(part.mass);
+                    MassChanged(mass);
 
                     //Debug.Log("CoL offset " + -length);
 

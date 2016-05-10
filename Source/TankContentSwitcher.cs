@@ -27,7 +27,7 @@ namespace ProceduralParts
 
 		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
 		{
-			return part.mass - defaultMass;
+			return mass - defaultMass;
 		}
 
 		public ModifierChangeWhen GetModuleMassChangeWhen ()
@@ -92,7 +92,6 @@ namespace ProceduralParts
             {
                 if (tankVolumeName != null)
                 {
-                    part.mass = mass;
                     MassChanged(mass);
                 }
                 isEnabled = enabled = false;
@@ -379,7 +378,6 @@ namespace ProceduralParts
                 if (PPart != null)
                     mass *= PPart.CurrentShape.massMultiplier;
 
-                part.mass = mass;
                 MassChanged(mass);
             }
 
@@ -564,12 +562,6 @@ namespace ProceduralParts
 
         #endregion
         */
-        //#region Mass
-		//public float GetModuleMass(float defaultMass)
-		//{
-		//	return part.mass - defaultMass;
-		//}
-		//#endregion
 
         public ProceduralPart PPart
         {
