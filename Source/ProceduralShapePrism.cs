@@ -136,15 +136,19 @@ namespace ProceduralParts
             float theta = (Mathf.PI * 2f) / (float)sides;
             float radius = realDiam / 2;
             var bOffset = sides + 1;
+            var alignOffset = theta / 2f;//angle offset so that the prism side face the camera
+
             //vertices/normals/tangents/uvs
             for (int s = 0; s <= sides; s++)
             {
-                float posX = Mathf.Cos(theta * s - (theta/2f));
-                float posZ = -Mathf.Sin(theta * s - (theta / 2f));
+                float posX = Mathf.Cos(theta * s - alignOffset);
+                float posZ = -Mathf.Sin(theta * s - alignOffset);
+                float tanX = Mathf.Cos(theta * s - alignOffset + Mathf.PI / 2f);
+                float tanZ = -Mathf.Sin(theta * s - alignOffset + Mathf.PI / 2f);
                 //top
                 mesh.verticies[s] = new Vector3(posX * radius, -0.5f * length, posZ * radius);
-                mesh.normals[s] = new Vector3(posX, 0, posZ).normalized;
-                mesh.tangents[s] = new Vector4(-posZ, 0, posX, -1).normalized;
+                mesh.normals[s] = new Vector3(posX, 0, posZ);
+                mesh.tangents[s] = new Vector4(tanX, 0, tanZ, -1);
                 mesh.uv[s] = new Vector2((1f / (float)sides) * s, 0f);
                 //botom
                 mesh.verticies[s + bOffset] = new Vector3(posX * radius, 0.5f * length, posZ * radius);
