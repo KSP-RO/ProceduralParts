@@ -103,16 +103,17 @@ namespace ProceduralParts
 
             Volume = CalcVolume();
 
-            Vector2 norm = new Vector2(1, 0);
-            var realDiam = GetRealOuterDiam(isInscribed, diameter, (int)sides);
-
             var sideLen = GetSideLength(isInscribed, diameter, (int)sides);
-            
             RaiseChangeTextureScale("sides", PPart.SidesMaterial, new Vector2(sideLen * sides * 2f, length));
 
+            var outerDiam = GetRealOuterDiam(isInscribed, diameter, (int)sides);
+            var innerDiam = GetRealInnerDiam(isInscribed, diameter, (int)sides);
+            var avgDiam = (innerDiam + outerDiam) / 2f;
+
+            Vector2 norm = new Vector2(1, 0);
             UpdateMeshNodesSizes(
-                new ProfilePoint(realDiam, -0.5f * length, 0f, norm),
-                new ProfilePoint(realDiam, 0.5f * length, 1f, norm)
+                new ProfilePoint(avgDiam, -0.5f * length, 0f, norm),
+                new ProfilePoint(avgDiam, 0.5f * length, 1f, norm)
                 );
 
             var sideMesh = CreatePrismMesh((int)sides, diameter, length, isInscribed);
@@ -230,7 +231,6 @@ namespace ProceduralParts
                 tList.Add(vPerSide + 2 + s);
             }
 
-            Debug.Log(string.Format("{0} sided prism cap info: vertices={1} indices={2}, triangles={3}", sides, vertices.Count, tList.Count, tList.Count / 3));
             var mesh = new UncheckedMesh(vertices.Count, tList.Count / 3);
 
             for (int i = 0; i < vertices.Count; i++)
