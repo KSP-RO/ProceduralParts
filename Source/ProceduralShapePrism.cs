@@ -57,8 +57,11 @@ namespace ProceduralParts
         private static float GetSideLength(bool inscribed, float diam, int sides)
         {
             float theta = (Mathf.PI * 2f) / (float)sides;
-            var rad = GetRealInnerDiam(inscribed, diam, sides) / 2f;
-            return 2f * rad * Mathf.Tan(theta / 2f);
+            float radius = diam / 2f;
+
+            float tHeight = inscribed ? radius : radius * Mathf.Cos(theta / 2f);
+            float tBase = 2f * tHeight * Mathf.Tan(theta / 2f);
+            return tBase;
         }
 
         private float CalcVolume()
@@ -106,19 +109,20 @@ namespace ProceduralParts
             var sideLen = GetSideLength(isInscribed, diameter, (int)sides);
             RaiseChangeTextureScale("sides", PPart.SidesMaterial, new Vector2(sideLen * sides * 2f, length));
 
-            var outerDiam = GetRealOuterDiam(isInscribed, diameter, (int)sides);
+            //var outerDiam = GetRealOuterDiam(isInscribed, diameter, (int)sides);
             var innerDiam = GetRealInnerDiam(isInscribed, diameter, (int)sides);
-            var avgDiam = (innerDiam + outerDiam) / 2f;
+            //var avgDiam = (innerDiam + outerDiam) / 2f;
 
             Vector2 norm = new Vector2(1, 0);
             UpdateMeshNodesSizes(
-                new ProfilePoint(avgDiam, -0.5f * length, 0f, norm),
-                new ProfilePoint(avgDiam, 0.5f * length, 1f, norm)
+                new ProfilePoint(innerDiam, -0.5f * length, 0f, norm),
+                new ProfilePoint(innerDiam, 0.5f * length, 1f, norm)
                 );
 
-            var sideMesh = CreatePrismMesh((int)sides, diameter, length, isInscribed);
-            var endsMesh = CreatePismEnds((int)sides, diameter, length, isInscribed);
-            WriteMeshes(sideMesh, endsMesh, null);
+            WriteMeshes(
+                CreatePrismMesh((int)sides, diameter, length, isInscribed),
+                CreatePrismEnds((int)sides, diameter, length, isInscribed),
+                CreatePrismCollider((int)sides, diameter, length, isInscribed));
 
             oldDiameter = diameter;
             oldLength = length;
@@ -150,12 +154,12 @@ namespace ProceduralParts
                 mesh.verticies[s] = new Vector3(posX * radius, -0.5f * length, posZ * radius);
                 mesh.normals[s] = new Vector3(posX, 0, posZ);
                 mesh.tangents[s] = new Vector4(tanX, 0, tanZ, -1);
-                mesh.uv[s] = new Vector2((1f / (float)sides) * s, 0f);
+                mesh.uv[s] = new Vector2((1f / (float)sides) * s, 1f);
                 //botom
                 mesh.verticies[s + bOffset] = new Vector3(posX * radius, 0.5f * length, posZ * radius);
                 mesh.normals[s + bOffset] = mesh.normals[s];
                 mesh.tangents[s + bOffset] = mesh.tangents[s];
-                mesh.uv[s + bOffset] = new Vector2((1f / (float)sides) * s, 1f);
+                mesh.uv[s + bOffset] = new Vector2((1f / (float)sides) * s, 0f);
             }
             //triangles
             var tList = new List<int>();
@@ -174,7 +178,7 @@ namespace ProceduralParts
             return mesh;
         }
 
-        private static UncheckedMesh CreatePismEnds(int sides, float diameter, float length, bool inscribed)
+        private static UncheckedMesh CreatePrismEnds(int sides, float diameter, float length, bool inscribed)
         {
             var outerDiam = GetRealOuterDiam(inscribed, diameter, sides);
             var innerDiam = GetRealInnerDiam(inscribed, diameter, sides);
@@ -229,6 +233,86 @@ namespace ProceduralParts
                 tList.Add(vPerSide);
                 tList.Add(vPerSide + 1 + s);
                 tList.Add(vPerSide + 2 + s);
+            }
+
+            var mesh = new UncheckedMesh(vertices.Count, tList.Count / 3);
+
+            for (int i = 0; i < vertices.Count; i++)
+            {
+                mesh.verticies[i] = vertices[i].Pos;
+                mesh.normals[i] = vertices[i].Norm;
+                mesh.tangents[i] = vertices[i].Tan;
+                mesh.uv[i] = vertices[i].Uv;
+            }
+
+            for (int i = 0; i < tList.Count; i++)
+                mesh.triangles[i] = tList[i];
+
+            return mesh;
+        }
+
+        private static UncheckedMesh CreatePrismCollider(int sides, float diameter, float length, bool inscribed)
+        {
+            var outerDiam = GetRealOuterDiam(inscribed, diameter, sides);
+            var radius = outerDiam / 2f;
+            float theta = (Mathf.PI * 2f) / (float)sides;
+            var alignOffset = theta / 2f;//angle offset so that the prism side face the camera
+
+
+            var vertices = new List<Vertex>();
+
+            vertices.Add(new Vertex(new Vector3(0, -0.5f * length, 0), new Vector3(0, -1, 0), new Vector4(-1, 0, 0, 1), new Vector2(0.5f, 0.5f)));//top center
+
+            for (int s = 0; s < sides; s++)
+            {
+                float posX = Mathf.Cos(theta * s - alignOffset);
+                float posZ = -Mathf.Sin(theta * s - alignOffset);
+                vertices.Add(new Vertex(
+                    new Vector3(posX * radius, -0.5f * length, posZ * radius),
+                    new Vector3(posX, 0, posZ),
+                    Vector4.zero,
+                    new Vector2(0f, 0f)));
+            }
+
+            int vPerSide = vertices.Count;
+
+            vertices.Add(new Vertex(new Vector3(0, 0.5f * length, 0), new Vector3(0, 1, 0), new Vector4(-1, 0, 0, -1), new Vector2(0.5f, 0.5f)));//bottom center
+
+            for (int s = 0; s < sides; s++)
+            {
+                float posX = Mathf.Cos(theta * s - alignOffset);
+                float posZ = -Mathf.Sin(theta * s - alignOffset);
+                vertices.Add(new Vertex(
+                    new Vector3(posX * radius, 0.5f * length, posZ * radius),
+                    new Vector3(posX, 0, posZ),
+                    Vector4.zero,
+                    new Vector2(1f, 1f)));
+            }
+            var tList = new List<int>();
+
+            int last = vertices.Count - 1;
+
+            for (int s = 0; s < sides; s++)
+            {
+                //top cap
+                tList.Add(0);
+                tList.Add((s + 1) % sides + 1);
+                tList.Add(s + 1);
+
+                //side 1
+                tList.Add(s + 1);
+                tList.Add((s + 1) % sides + 1);
+                tList.Add(vPerSide + s + 1);
+                //side 2
+                tList.Add(vPerSide + s + 1);
+                tList.Add((s + 1) % sides + 1);
+                tList.Add(vPerSide + (s + 1) % sides + 1);
+
+                //bottom cap
+                tList.Add(last);
+                tList.Add(vPerSide + s + 1);
+                tList.Add(vPerSide + (s + 1) % sides + 1);
+                
             }
 
             var mesh = new UncheckedMesh(vertices.Count, tList.Count / 3);
