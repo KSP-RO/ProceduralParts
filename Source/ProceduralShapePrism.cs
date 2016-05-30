@@ -137,11 +137,7 @@ namespace ProceduralParts
         private static UncheckedMesh CreatePrismMesh(int sides, float diameter, float length, bool inscribed)
         {
             var realDiam = GetRealOuterDiam(inscribed, diameter, sides);
-            //var mesh = new UncheckedMesh(sides * 2 + 2, sides * 2);
             float theta = (Mathf.PI * 2f) / (float)sides;
-            //float radius = realDiam / 2;
-            //var bOffset = sides + 1;
-            //var alignOffset = theta / 2f;//angle offset so that the prism side face the camera
 
             var vertices = new List<Vertex>();
             var triangles = new List<int>();
@@ -150,7 +146,7 @@ namespace ProceduralParts
             for (int s = 0; s < sides; s++)
             {
                 float posX = Mathf.Cos(theta * s);
-                float posZ = Mathf.Sin(theta * s);
+                float posZ = -Mathf.Sin(theta * s);
                 var norm = new Vector3(posX, 0, posZ);
                 var curIndex = vertices.Count;
                 var t1 = GetPrismVertex(theta * s - theta / 2f, realDiam, length, true, norm, new Vector2((float)s / (float)sides, 1f));
@@ -178,44 +174,13 @@ namespace ProceduralParts
             for (int i = 0; i < triangles.Count; i++)
                 mesh.triangles[i] = triangles[i];
 
-            //for (int s = 0; s <= sides; s++)
-            //{
-            //    float posX = Mathf.Cos(theta * s - alignOffset);
-            //    float posZ = -Mathf.Sin(theta * s - alignOffset);
-            //    float tanX = Mathf.Cos(theta * s - alignOffset + Mathf.PI / 2f);
-            //    float tanZ = -Mathf.Sin(theta * s - alignOffset + Mathf.PI / 2f);
-            //    //top
-            //    mesh.verticies[s] = new Vector3(posX * radius, -0.5f * length, posZ * radius);
-            //    mesh.normals[s] = new Vector3(posX, 0, posZ);
-            //    mesh.tangents[s] = new Vector4(tanX, 0, tanZ, -1);
-            //    mesh.uv[s] = new Vector2((1f / (float)sides) * s, 1f);
-            //    //botom
-            //    mesh.verticies[s + bOffset] = new Vector3(posX * radius, 0.5f * length, posZ * radius);
-            //    mesh.normals[s + bOffset] = mesh.normals[s];
-            //    mesh.tangents[s + bOffset] = mesh.tangents[s];
-            //    mesh.uv[s + bOffset] = new Vector2((1f / (float)sides) * s, 0f);
-            //}
-            ////triangles
-            //var tList = new List<int>();
-            //for (int s = 0; s < sides; s++)
-            //{
-            //    tList.Add(s);
-            //    tList.Add(s + 1);
-            //    tList.Add(s + bOffset);
-
-            //    tList.Add(s + bOffset);
-            //    tList.Add(s + 1);
-            //    tList.Add(s + bOffset + 1);
-            //}
-            //for (int i = 0; i < tList.Count; i++)
-            //    mesh.triangles[i] = tList[i];
             return mesh;
         }
 
         private static Vertex GetPrismVertex(float theta, float diameter, float length, bool top, Vector3 normal, Vector2 uv)
         {
             float posX = Mathf.Cos(theta);
-            float posZ = Mathf.Sin(theta);
+            float posZ = -Mathf.Sin(theta);
             return new Vertex(
                 new Vector3(posX * (diameter / 2f), (top ? -0.5f : 0.5f) * length, posZ * (diameter / 2f)),
                 normal,
@@ -247,7 +212,7 @@ namespace ProceduralParts
             for (int s = 0; s <= sides * 2; s++)
             {
                 float posX = Mathf.Cos(theta * s - theta);
-                float posZ = Mathf.Sin(theta * s - theta);
+                float posZ = -Mathf.Sin(theta * s - theta);
                 var radius = s % 2 == 0 ? oRad : iRad;
 
                 vertices.Add(new Vertex(
@@ -264,7 +229,7 @@ namespace ProceduralParts
             for (int s = 0; s <= sides * 2; s++)
             {
                 float posX = Mathf.Cos(theta * s - theta);
-                float posZ = Mathf.Sin(theta * s - theta);
+                float posZ = -Mathf.Sin(theta * s - theta);
                 var radius = s % 2 == 0 ? oRad : iRad;
 
                 vertices.Add(new Vertex(
@@ -318,7 +283,7 @@ namespace ProceduralParts
             for (int s = 0; s < sides; s++)
             {
                 float posX = Mathf.Cos(theta * s - alignOffset);
-                float posZ = Mathf.Sin(theta * s - alignOffset);
+                float posZ = -Mathf.Sin(theta * s - alignOffset);
                 vertices.Add(new Vertex(
                     new Vector3(posX * radius, -0.5f * length, posZ * radius),
                     new Vector3(posX, 0, posZ),
@@ -333,7 +298,7 @@ namespace ProceduralParts
             for (int s = 0; s < sides; s++)
             {
                 float posX = Mathf.Cos(theta * s - alignOffset);
-                float posZ = Mathf.Sin(theta * s - alignOffset);
+                float posZ = -Mathf.Sin(theta * s - alignOffset);
                 vertices.Add(new Vertex(
                     new Vector3(posX * radius, 0.5f * length, posZ * radius),
                     new Vector3(posX, 0, posZ),
