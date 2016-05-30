@@ -389,7 +389,7 @@ namespace ProceduralParts
             {
                 double resourceMass = part.Resources.Cast<PartResource>().Sum(r => r.maxAmount*r.info.density);
 
-                float totalMass = part.mass + (float)resourceMass;
+                float totalMass = mass + (float)resourceMass;
                 if (selectedTankType.isStructural)
                     massDisplay = MathUtils.FormatMass(totalMass);
                 else
@@ -478,7 +478,7 @@ namespace ProceduralParts
                 if (PPart.CurrentShape != null)
                     shapeMultiplier = PPart.CurrentShape.resourceMultiplier;
 
-            return Math.Round((res.unitsConst + tankVolume * res.unitsPerKL + part.mass * res.unitsPerT) * shapeMultiplier, 2);
+            return Math.Round((res.unitsConst + tankVolume * res.unitsPerKL + mass * res.unitsPerT) * shapeMultiplier, 2);
         }
 
         private void RebuildResources(bool keepAmount = false)
