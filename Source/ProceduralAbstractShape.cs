@@ -1,17 +1,28 @@
 ﻿using System;
-using KSPAPIExtensions;
 using UnityEngine;
-using KSPAPIExtensions.PartMessage;
 using System.Reflection;
 
 namespace ProceduralParts
 {
+	public enum PartVolumes
+	{
+		/// <summary>
+		/// Tankage - the volume devoted to storage of fuel, life support resources, ect
+		/// </summary>
+		Tankage,
+		/// <summary>
+		/// The volume devoted to habitable space.
+		/// </summary>
+		Habitable,
+	}
+
+
     public abstract class ProceduralAbstractShape : PartModule
     {
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageService.Register(this);
+            //PartMessageService.Register(this);
             //this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
 
@@ -90,24 +101,58 @@ namespace ProceduralParts
 
         // Events. These will get bound up automatically
 
-        [PartMessageEvent]
-        public event PartVolumeChanged ChangeVolume;
+        //[PartMessageEvent]
+        //public event PartVolumeChanged ChangeVolume;
 
-        [PartMessageEvent]
-        public event ChangeTextureScaleDelegate ChangeTextureScale;
+		public void ChangeVolume(string volName, double newVolume)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<string> ("volName", volName);
+			data.Set<double> ("newTotalVolume", newVolume);
+			part.SendEvent ("OnPartVolumeChanged", data, 0);
+		}
 
-        [PartMessageEvent]
-        public event PartAttachNodeSizeChanged ChangeAttachNodeSize;
+        //[PartMessageEvent]
+        //public event ChangeTextureScaleDelegate ChangeTextureScale;
 
-        [PartMessageEvent]
-        public event PartModelChanged ModelChanged;
+        //[PartMessageEvent]
+        //public event PartAttachNodeSizeChanged ChangeAttachNodeSize;
 
-        [PartMessageEvent]
-        public event PartColliderChanged ColliderChanged;
+		public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<AttachNode> ("node", node);
+			data.Set<float> ("minDia", minDia);
+			data.Set<float> ("area", area);
+			part.SendEvent ("OnPartAttachNodeSizeChanged", data, 0);
+		}
 
+        //[PartMessageEvent]
+        //public event PartModelChanged ModelChanged;
+
+		private void ModelChanged()
+		{
+			part.SendEvent ("OnPartModelChanged", null, 0);
+		}
+
+        //[PartMessageEvent]
+        //public event PartColliderChanged ColliderChanged;
+
+		private void ColliderChanged()
+		{
+			part.SendEvent ("OnPartColliderChanged", null, 0);
+		}
+		
         protected void RaiseChangeTextureScale(string meshName, Material material, Vector2 targetScale)
         {
-            ChangeTextureScale(meshName, material, targetScale);
+            //ChangeTextureScale(meshName, material, targetScale);
+
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<string> ("meshName", meshName);
+			data.Set<Material> ("material", material);
+			data.Set<Vector2> ("targetScale", targetScale);
+			part.SendEvent ("OnChangeTextureScale", data, 0);
+
         }
         
         protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area)
@@ -148,30 +193,25 @@ namespace ProceduralParts
                 OnUpdateEditor();
         }
 
-        public void UpdateFAR()
+        public void UpdateInterops()
         {
-            /*if (HighLogic.LoadedSceneIsEditor)
-            {
-                if (part.Modules.Contains("FARBasicDragModel"))
-                {
-                    PartModule pModule = part.Modules["FARBasicDragModel"];
-                    pModule.GetType().GetMethod("UpdatePropertiesWithShapeChange").Invoke(pModule, null);
-                }
-            }*/
-
-  
             if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
             {
-                part.SendMessage("GeometryPartModuleRebuildMeshData");
+                if(ProceduralPart.installedFAR)
+                    part.SendMessage("GeometryPartModuleRebuildMeshData");
+
+                _pPart.UpdateTFInterops();
             }
         }
+
+        public abstract void UpdateTFInterops();
 
         public void OnUpdateEditor()
         {
             try
             {
-                using (PartMessageService.Instance.Consolidate(this))
-                {
+                //using (PartMessageService.Instance.Consolidate(this))
+                //{
                     bool wasForce = forceNextUpdate;
                     forceNextUpdate = false;
 
@@ -183,7 +223,7 @@ namespace ProceduralParts
                         if (HighLogic.LoadedSceneIsEditor)
                             GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                     }
-                }
+                //}
             }
             catch (Exception ex)
             {

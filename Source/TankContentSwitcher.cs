@@ -1,5 +1,5 @@
 ﻿using KSPAPIExtensions;
-using KSPAPIExtensions.PartMessage;
+//using KSPAPIExtensions.PartMessage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,11 +23,25 @@ namespace ProceduralParts
     /// </summary>
     public class TankContentSwitcher : PartModule, IPartMassModifier, ICostMultiplier
     {
+		#region IPartMassModifier implementation
+
+		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
+		{
+			return mass - defaultMass;
+		}
+
+		public ModifierChangeWhen GetModuleMassChangeWhen ()
+		{
+			return ModifierChangeWhen.FIXED;
+		}
+
+		#endregion
+
         #region Callbacks
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageService.Register(this);
+            //PartMessageService.Register(this);
             //this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
 
@@ -78,7 +92,6 @@ namespace ProceduralParts
             {
                 if (tankVolumeName != null)
                 {
-                    part.mass = mass;
                     MassChanged(mass);
                 }
                 isEnabled = enabled = false;
@@ -104,11 +117,14 @@ namespace ProceduralParts
         /// <summary>
         /// Volume of part in kilolitres. 
         /// </summary>
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Volume", guiFormat="S4+3", guiUnits="L")]
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false)]
         public float tankVolume;
 
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Mass")]
         public string massDisplay;
+
+		[KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Volume")]
+		public string volumeDisplay;
 
         [KSPField(isPersistant=true)]
         public float mass;
@@ -119,16 +135,23 @@ namespace ProceduralParts
         /// <summary>
         /// Message sent from ProceduralAbstractShape when it updates.
         /// </summary>
-        [PartMessageListener(typeof(PartVolumeChanged), scenes:~GameSceneFilter.Flight)]
-        public void ChangeVolume(string volumeName, float volume)
+        //[PartMessageListener(typeof(PartVolumeChanged), scenes:~GameSceneFilter.Flight)]
+        //public void ChangeVolume(string volumeName, float volume)
+		[KSPEvent(guiActive = false, active = true)]
+		public void OnPartVolumeChanged(BaseEventData data)
         {
+			string volumeName = data.Get<string> ("volName");
+			double volume = data.Get<double> ("newTotalVolume");
+
             if (volumeName != tankVolumeName)
                 return;
 
             if (volume <= 0f)
                 throw new ArgumentOutOfRangeException("volume");
 
-            tankVolume = volume;
+            tankVolume = (float)volume;
+			//Debug.Log ((float)volume);
+			volumeDisplay = volume.ToStringSI(4, 3, "L");
 
             UpdateMassAndResources(false);
             if (HighLogic.LoadedSceneIsEditor)
@@ -242,7 +265,7 @@ namespace ProceduralParts
                 tankTypeOptions = tankTypeOptions.Where(to => string.IsNullOrEmpty(to.techRequired) || ResearchAndDevelopment.GetTechnologyState(to.techRequired) == RDTech.State.Available).ToList();
             }
 
-            Fields["tankVolume"].guiActiveEditor = tankVolumeName != null; 
+            Fields["volumeDisplay"].guiActiveEditor = tankVolumeName != null; 
             Fields["massDisplay"].guiActiveEditor = tankVolumeName != null;
 
             if (tankTypeOptions == null || tankTypeOptions.Count == 0)
@@ -291,9 +314,9 @@ namespace ProceduralParts
             }
 
             if (selectedTankType.isStructural)
-                Fields["tankVolume"].guiActiveEditor = false;
+                Fields["volumeDisplay"].guiActiveEditor = false;
             else
-                Fields["tankVolume"].guiActiveEditor = tankVolumeName != null;
+				Fields["volumeDisplay"].guiActiveEditor = tankVolumeName != null;
 
             UpdateMassAndResources(true, init);
             if (HighLogic.LoadedSceneIsEditor)
@@ -304,14 +327,43 @@ namespace ProceduralParts
 
         #region Resources
 
-        [PartMessageEvent]
-        public event PartMassChanged MassChanged;
-        [PartMessageEvent]
-        public event PartResourceListChanged ResourceListChanged;
-        [PartMessageEvent]
-        public event PartResourceMaxAmountChanged MaxAmountChanged;
-        [PartMessageEvent]
-        public event PartResourceInitialAmountChanged InitialAmountChanged;
+        //[PartMessageEvent]
+        //public event PartMassChanged MassChanged;
+		public void MassChanged (float mass)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<float> ("mass", mass);
+
+			part.SendEvent ("OnPartMassChanged", data, 0);
+		}
+
+		//[PartMessageEvent]
+        //public event PartResourceListChanged ResourceListChanged;
+        
+		public void ResourceListChanged (Part part)
+		{
+			part.SendEvent("OnResourceListChanged", null, 0);
+		}
+
+		//[PartMessageEvent]
+        //public event PartResourceMaxAmountChanged MaxAmountChanged;
+		public void MaxAmountChanged (Part part, PartResource resource, double amount)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<PartResource> ("resource", resource);
+			data.Set<double> ("amount", amount);
+			part.SendEvent ("OnResourceMaxChanged", data, 0);
+		}
+
+        //[PartMessageEvent]
+        //public event PartResourceInitialAmountChanged InitialAmountChanged;
+		public void InitialAmountChanged (Part part, PartResource resource, double amount)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<PartResource> ("resource", resource);
+			data.Set<double> ("amount", amount);
+			part.SendEvent ("OnResourceInitialChanged", data, 0);
+		}
 
         private void UpdateMassAndResources(bool typeChanged, bool keepAmount = false) // keep amount when rebuild (for saved part loading)
         {
@@ -326,7 +378,6 @@ namespace ProceduralParts
                 if (PPart != null)
                     mass *= PPart.CurrentShape.massMultiplier;
 
-                part.mass = mass;
                 MassChanged(mass);
             }
 
@@ -338,7 +389,7 @@ namespace ProceduralParts
             {
                 double resourceMass = part.Resources.Cast<PartResource>().Sum(r => r.maxAmount*r.info.density);
 
-                float totalMass = part.mass + (float)resourceMass;
+                float totalMass = mass + (float)resourceMass;
                 if (selectedTankType.isStructural)
                     massDisplay = MathUtils.FormatMass(totalMass);
                 else
@@ -346,11 +397,20 @@ namespace ProceduralParts
             }
         }
 
-        [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
-        public void ResourceChanged(PartResource resource, double amount)
+        //[PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
+        //public void ResourceChanged(PartResource resource, double amount)
+		[KSPEvent(guiActive = false, active = true)]
+		public void OnPartResourceInitialAmountChanged(BaseEventData data)
         {
+
+
+			if (!GameSceneFilter.AnyEditor.IsLoaded ())
+				return;
+
             if(selectedTankType == null)
                 return;
+
+			PartResource resource = data.Get<PartResource> ("resource");
 
             TankResource tankResource = selectedTankType.resources.Find(r => r.name == name);
             if (tankResource == null || !tankResource.forceEmpty)
@@ -359,7 +419,7 @@ namespace ProceduralParts
             if(resource != null && resource.amount > 0)
             {
                 resource.amount = 0;
-                InitialAmountChanged(resource, resource.amount);
+                InitialAmountChanged(part, resource, resource.amount);
             }
         }
 
@@ -403,8 +463,8 @@ namespace ProceduralParts
                 partRes.maxAmount = maxAmount;
                 // ReSharper restore CompareOfFloatsByEqualityOperator
 
-                MaxAmountChanged(partRes, partRes.maxAmount);
-                InitialAmountChanged(partRes, partRes.amount);
+                MaxAmountChanged(part, partRes, partRes.maxAmount);
+                InitialAmountChanged(part, partRes, partRes.amount);
             }
 
             return true;
@@ -418,7 +478,7 @@ namespace ProceduralParts
                 if (PPart.CurrentShape != null)
                     shapeMultiplier = PPart.CurrentShape.resourceMultiplier;
 
-            return Math.Round((res.unitsConst + tankVolume * res.unitsPerKL + part.mass * res.unitsPerT) * shapeMultiplier, 2);
+            return Math.Round((res.unitsConst + tankVolume * res.unitsPerKL + mass * res.unitsPerT) * shapeMultiplier, 2);
         }
 
         private void RebuildResources(bool keepAmount = false)
@@ -467,11 +527,13 @@ namespace ProceduralParts
             if (window != null)
                 window.displayDirty = true;
 
-            ResourceListChanged();
+            ResourceListChanged(part);
         }
 
         #endregion
 
+		// TODO EPL
+		/*
         #region Message passing for EPL
 
         // Extraplanetary launchpads needs these messages sent.
@@ -488,7 +550,7 @@ namespace ProceduralParts
         private float oldmass;
 
         [PartMessageListener(typeof(PartMassChanged))]
-        public void MassModified(float paramMass)
+        public void MassModified(BaseEventData data)
         {
             BaseEventData data = new BaseEventData(BaseEventData.Sender.USER);
             data.Set("part", part);
@@ -499,13 +561,7 @@ namespace ProceduralParts
         }
 
         #endregion
-        
-        #region Mass
-		public float GetModuleMass(float defaultMass)
-		{
-			return part.mass - defaultMass;
-		}
-		#endregion
+        */
 
         public ProceduralPart PPart
         {

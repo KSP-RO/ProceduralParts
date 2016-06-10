@@ -17,7 +17,6 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>false</DebugSymbols>
     <DebugType>none</DebugType>
     <Optimize>false</Optimize>
     <BaseIntermediateOutputPath>..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
@@ -29,30 +28,36 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x86</PlatformTarget>
-    <DebugType>none</DebugType>
+    <DebugType>full</DebugType>
     <Optimize>true</Optimize>
     <BaseIntermediateOutputPath>..\..\..\Build\ProceduralParts\obj\</BaseIntermediateOutputPath>
-    <OutputPath>..\..\Build\ProceduralParts\Release\</OutputPath>
-    <DefineConstants>
-    </DefineConstants>
+    <OutputPath>..\Plugins\</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
-  </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
+    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\..\..\Games\KSP_090clean\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+    <Reference Include="System">
       <Private>False</Private>
     </Reference>
-    <Reference Include="KSPAPIExtensions">
-      <HintPath>..\..\KSPAPIExtensions\KSPAPIExtensions.dll</HintPath>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\..\Build\ProceduralParts\Release\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
     </Reference>
-    <Reference Include="System" />
+    <Reference Include="KSPUtil">
+      <HintPath>..\..\Build\ProceduralParts\Release\KSPUtil.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\..\..\Games\KSP_090clean\KSP_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\Build\ProceduralParts\Release\UnityEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Core">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\..\Build\ProceduralParts\Release\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
@@ -74,15 +79,18 @@
     <Compile Include="TransformFollower.cs" />
     <Compile Include="VectorUtils.cs" />
     <Compile Include="zzVersionChecker.cs" />
+    <Compile Include="KSPUtils.cs" />
+    <Compile Include="UnityUtils.cs" />
+    <Compile Include="EngineWrapper.cs" />
+    <Compile Include="MathUtils.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>rem copy /y "$(TargetPath)" "$(SolutionDir)..\Plugins\"
-rem if exist "$(SolutionDir)\KSPAPIExtensions.dll" move "$(SolutionDir)\KSPAPIExtensions.dll" "$(SolutionDir)..\Plugins\"</PostBuildEvent>
+    <PostBuildEvent>C:\utils\pdb2mdb\pdb2mdb.exe ProceduralParts.dll</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
-    <PreBuildEvent>cd "$(ProjectDir)"\..
-perl version-gen</PreBuildEvent>
+    <PreBuildEvent>
+    </PreBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

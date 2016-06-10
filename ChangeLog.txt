@@ -1,5 +1,35 @@
 ============= Changelog for ProceduralParts  =========
 
+===  1.2  ===
+KSP 1.1 ready (RadarManFromTheMoon)
+Fixed NullReferenceExceptions during loading (NathanKell)
+Now compatible with the TestFlight mod (NathanKell)
+Fixed some issues with zero diameter parts (NathanKell & ferram4)
+
+=== 1.1.11 ===
+Recalculate drag cubes even if FAR is installed. Fixes broken themal and buoyancy calculations
+No longer recalculates drag cubes while in editor (set ProceduralPart{updateDragCubesInEditor=true} to reenable)
+
+=== 1.1.10 ===
+Added ModuleToggleCrossfeed to procedural decoupler
+tweaked monoprop tech constraints
+Fire onVesselModified event after recalculating drag cubes. This hopefully solves a bug where pparts don't properly get occluded by other parts
+
+=== 1.1.9 ===
+Fixed drag cube calculation when root part
+altered procedural liquid fuel tank tech restrictions slightly to assount for the new mk0 fuselage
+added bulkhead profiles to parts that needed them (thanks Kerbas-ad-Astra)
+fixed Solid Fuel Rocket when used with ModularEngineConfig (RealFuels) (thanks CorvusCorax)
+removed an annoying debug message I accidentally left in the code (stdCost:) (thanks ckwng)
+
+=== 1.1.8 ===
+Rebuilt for KSP 1.0.5
+Procedural Heat Shield:
+-ModuleAblator values now match with stock
+-No more 100 bucks extra cost
+-No more negative costs. They always, at least, cost their ablator resource costs
+
+
 === 1.1.7 ===
 Fixed the procedural decouplers not working correctly when connected to a procedural part
 

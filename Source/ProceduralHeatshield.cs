@@ -1,4 +1,4 @@
-﻿using KSPAPIExtensions.PartMessage;
+﻿//using KSPAPIExtensions.PartMessage;
 using KSPAPIExtensions;
 using System;
 using System.Collections.Generic;
@@ -18,13 +18,52 @@ namespace ProceduralParts
     /// </summary>
     public class ProceduralHeatshield : PartModule, ICostMultiplier, IPartMassModifier, IProp
     {
-        [PartMessageEvent]
-        public event PartMassChanged MassChanged;
-       
-        [PartMessageEvent]
-        public event PartResourceMaxAmountChanged MaxAmountChanged;
-        [PartMessageEvent]
-        public event PartResourceInitialAmountChanged InitialAmountChanged;
+		#region IPartMassModifier implementation
+
+		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
+		{
+			return mass - defaultMass;
+		}
+
+		public ModifierChangeWhen GetModuleMassChangeWhen ()
+		{
+			return ModifierChangeWhen.FIXED;
+		}
+
+		#endregion
+
+        //[PartMessageEvent]
+        //public event PartMassChanged MassChanged;
+		public void MassChanged (float mass)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<float> ("mass", mass);
+
+			part.SendEvent ("OnPartMassChanged", data, 0);
+		}
+
+        //[PartMessageEvent]
+        //public event PartResourceMaxAmountChanged MaxAmountChanged;
+        //[PartMessageEvent]
+        //public event PartResourceInitialAmountChanged InitialAmountChanged;
+
+		public void MaxAmountChanged (Part part, PartResource resource, double amount)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<PartResource> ("resource", resource);
+			data.Set<double> ("amount", amount);
+			part.SendEvent ("OnResourceMaxChanged", data, 0);
+		}
+
+		//[PartMessageEvent]
+		//public event PartResourceInitialAmountChanged InitialAmountChanged;
+		public void InitialAmountChanged (Part part, PartResource resource, double amount)
+		{
+			var data = new BaseEventData (BaseEventData.Sender.USER);
+			data.Set<PartResource> ("resource", resource);
+			data.Set<double> ("amount", amount);
+			part.SendEvent ("OnResourceInitialChanged", data, 0);
+		}
 
         ProceduralPart _pPart = null;
 
@@ -53,7 +92,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageService.Register(this);
+            //PartMessageService.Register(this);
         }
 
         public override void OnStart(StartState state)
@@ -63,9 +102,8 @@ namespace ProceduralParts
             {
                 if (mass <= 0)
                     mass = 0.000001f;
-                part.mass = mass;
+
                 MassChanged(mass);
-                //Debug.Log("OnStart - mass: " + part.mass);
 
                 //double skinThermalMassModifier = part.thermalMassModifier;
                 //double skinThicknessFactor = 0.1;
@@ -121,7 +159,7 @@ namespace ProceduralParts
                     Debug.Log("MeshFilterFound: " + mf.name);
                 //fairingMesh = fairing.GetComponent<MeshFilter>().mesh;
                 fairingMesh = fairing.GetComponent<MeshFilter>().mesh;
-                fairingMaterial = fairing.renderer.material;
+                fairingMaterial = fairing.GetComponent<Renderer>().material;
 
             }
             catch(Exception e)
@@ -242,8 +280,8 @@ namespace ProceduralParts
 
         }
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fairing", guiFormat = "S4", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.01f)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fairing"),
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.01f, useSI=true, unit = "m", sigFigs = 4)]
         public float fairingThickness = 0.05f;
         private float oldFairingThickness;
 
@@ -301,9 +339,12 @@ namespace ProceduralParts
         //private Mesh endsMesh;
         private Material fairingMaterial;
         
-        [PartMessageListener(typeof(PartAttachNodeSizeChanged))]
-        public void PartAttachNodeSizeChanged(AttachNode node, float minDia, float area) 
+        //[PartMessageListener(typeof(PartAttachNodeSizeChanged))]
+        //public void PartAttachNodeSizeChanged(AttachNode node, float minDia, float area) 
+		[KSPEvent(guiActive = false, active = true)]
+		public void PartAttachNodeSizeChanged(BaseEventData data) 
         {
+			AttachNode node = data.Get<AttachNode> ("node");
             if (node.id != topNodeId)
                 return;
             CopyNodeSizeAndStrength();
@@ -552,12 +593,6 @@ namespace ProceduralParts
             return 1;
         }
 
-
-        public float GetModuleMass(float defaultMass)
-        {
-            return part.mass - defaultMass;
-        }
-
         public void UpdateProp()
         {
             ProceduralPart ppart = PPart;
@@ -582,15 +617,15 @@ namespace ProceduralParts
 
                         if (null != pr)
                         {
-                            double ratio = pr.amount / pr.maxAmount;
+                            double ratio = pr.maxAmount != 0 ? pr.amount / pr.maxAmount : 1.0;
                             //Debug.LogWarning("ratio: " + ratio);
                             //Debug.LogWarning("amount: " + pr.amount);
                             //Debug.LogWarning("max amount: " + pr.maxAmount);
                             pr.maxAmount = (double)(ablatorPerArea * surfaceArea);
                             pr.amount = Math.Min(ratio * pr.maxAmount, pr.maxAmount);
                             //ResourceListChanged();
-                            MaxAmountChanged(pr, pr.maxAmount);
-                            InitialAmountChanged(pr, pr.maxAmount);
+                            MaxAmountChanged(part, pr, pr.maxAmount);
+                            InitialAmountChanged(part, pr, pr.maxAmount);
 
 
                         }
@@ -598,9 +633,9 @@ namespace ProceduralParts
                     }
 
                     //Debug.Log(massPerDiameter + " * " + diameter);
-                    part.mass = mass = massPerDiameter * diameter + massFromDiameterCurve.Evaluate(diameter);
+                    mass = massPerDiameter * diameter + massFromDiameterCurve.Evaluate(diameter);
                     //Debug.LogWarning("changed mass: " + mass);
-                    MassChanged(part.mass);
+                    MassChanged(mass);
 
                     //Debug.Log("CoL offset " + -length);
 

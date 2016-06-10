@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using KSPAPIExtensions;
+using System;
 
 namespace ProceduralParts
 {
@@ -7,13 +8,13 @@ namespace ProceduralParts
     public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
     {
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "S4", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
         public float diameter = 1.25f;
         private float oldDiameter;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "S4", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
         public float length = 1f;
         private float oldLength;
 
@@ -59,7 +60,7 @@ namespace ProceduralParts
             oldLength = length;
             // ReSharper restore CompareOfFloatsByEqualityOperator
 
-            UpdateFAR();
+            UpdateInterops();
         }
 
         public override void UpdateTechConstraints()
@@ -85,13 +86,23 @@ namespace ProceduralParts
             else
             {
                 UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
-                diameterEdit.maxValue = PPart.diameterMax;
-                diameterEdit.minValue = PPart.diameterMin;
-                diameterEdit.incrementLarge = PPart.diameterLargeStep;
-                diameterEdit.incrementSmall = PPart.diameterSmallStep;
-                diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
+				if (null != diameterEdit) {
+					diameterEdit.maxValue = PPart.diameterMax;
+					diameterEdit.minValue = PPart.diameterMin;
+					diameterEdit.incrementLarge = PPart.diameterLargeStep;
+					diameterEdit.incrementSmall = PPart.diameterSmallStep;
+					diameter = Mathf.Clamp (diameter, PPart.diameterMin, PPart.diameterMax);
+				} else
+					Debug.LogError ("*PP* could not find field 'diameter'");
             }
             // ReSharper restore CompareOfFloatsByEqualityOperator
+        }
+
+        public override void UpdateTFInterops()
+        {
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", diameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam2", diameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
     }
 }

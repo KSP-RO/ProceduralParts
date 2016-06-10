@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using KSPAPIExtensions;
-using KSPAPIExtensions.PartMessage;
 using KSPAPIExtensions.Utils;
 
 namespace ProceduralParts
@@ -16,7 +15,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageService.Register(this);
+            //PartMessageService.Register(this);
             //this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
 
@@ -90,9 +89,13 @@ namespace ProceduralParts
             }
         }
 
-        [PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
-        public void PartResourceChanged(PartResource resource, double amount)
+        //[PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
+        //public void PartResourceChanged(PartResource resource, double amount)
+		[KSPEvent(guiActive = false, active = true)]
+		public void OnPartResourceInitialAmountChanged(BaseEventData data)
         {
+			if (!HighLogic.LoadedSceneIsEditor)
+				return;
             if (selectedBell == null)
                 return;
 
@@ -102,9 +105,15 @@ namespace ProceduralParts
                 UpdateThrustDependentCalcs();
         }
 
-        [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
-        public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+        //[PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
+        //public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+		[KSPEvent(guiActive = false, active = true)]
+		public void ChangeAttachNodeSize(BaseEventData data)
         {
+			if (!HighLogic.LoadedSceneIsEditor)
+				return;
+			AttachNode node = data.Get<AttachNode> ("node");
+			float minDia = data.Get<float> ("minDia");
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (node.id != bottomAttachNodeName || minDia == attachedEndSize)
                 return;
@@ -116,10 +125,24 @@ namespace ProceduralParts
         [KSPField]
         public float costMultiplier = 1.0f;
 
-        public float GetModuleCost(float stdCost)
-        {
-            return thrust * 0.5f * costMultiplier;
-        }
+        //public float GetModuleCost(float stdCost)
+        //{
+        //    return thrust * 0.5f * costMultiplier;
+        //}
+
+		#region IPartCostModifier implementation
+
+		public float GetModuleCost (float defaultCost, ModifierStagingSituation sit)
+		{
+			return thrust * 0.5f * costMultiplier;
+		}
+
+		public ModifierChangeWhen GetModuleCostChangeWhen ()
+		{
+			return ModifierChangeWhen.CONSTANTLY;
+		}
+
+		#endregion
 
         #endregion
 
@@ -276,8 +299,8 @@ namespace ProceduralParts
                 }
 
                 // Only enable the colider for flight mode. This prevents any surface attachments.
-                if (HighLogic.LoadedSceneIsEditor && conf.model.collider != null)
-                    Destroy(conf.model.collider);
+                if (HighLogic.LoadedSceneIsEditor && conf.model.GetComponent<Collider>() != null)
+					Destroy(conf.model.GetComponent<Collider>());
 
                 conf.model.gameObject.SetActive(false);
             }
@@ -422,8 +445,8 @@ namespace ProceduralParts
         // ReSharper disable once InconsistentNaming
         private Action<string> ModularEnginesChangeEngineType;
 
-        [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "S4+3", guiUnits = "N"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = float.PositiveInfinity, incrementLarge = 100f, incrementSmall = 10, incrementSlide = 1f)]
+        [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "F3", guiUnits = "N"),
+		 UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = float.PositiveInfinity, incrementLarge = 100f, incrementSmall = 10, incrementSlide = 1f, sigFigs = 3, unit="kN", useSI = true )]
         public float thrust = 250;
         private float oldThrust;
 
@@ -449,8 +472,9 @@ namespace ProceduralParts
         private float attachedEndSize = float.PositiveInfinity;
 
         // Real fuels integration
-        [PartMessageListener(typeof(PartEngineConfigChanged))]
-        public void PartEngineConfigsChanged()
+        //[PartMessageListener(typeof(PartEngineConfigChanged))]
+		[KSPEvent(guiActive = false, active = true)]
+		public void OnPartEngineConfigsChanged()
         {
             UpdateMaxThrust();
         }
@@ -560,7 +584,7 @@ namespace ProceduralParts
 
                 thrustME = thrust0.ToStringSI(unit: "N", exponent: 3) + " Vac / " + thrust1.ToStringSI(unit: "N", exponent: 3) + " ASL";
                 srbISP = string.Format("{1:F0}s Vac / {0:F0}s ASL", atmosphereCurve.Evaluate(1), atmosphereCurve.Evaluate(0));
-                //fuelRate = solidFuelMassG / burnTimeME;
+                fuelRate = (float)solidFuelMassG / ( burnTimeME * Engine.g );
             }
 
             // This equation is much easier. From StretchySRBs
@@ -588,8 +612,8 @@ namespace ProceduralParts
 
             selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
 
-            if (UsingME)
-                ModularEnginesChangeThrust(thrust);
+            //if (UsingME)
+            //    ModularEnginesChangeThrust(thrust);
             UpdateFAR();
         }
 
@@ -639,7 +663,7 @@ namespace ProceduralParts
 
         #region Heat
 
-        [KSPField(isPersistant = true, guiName = "Heat", guiActive = false, guiActiveEditor = true, guiFormat = "S3", guiUnits = "K/s")]
+        [KSPField(isPersistant = true, guiName = "Heat", guiActive = false, guiActiveEditor = true, guiFormat = "F3", guiUnits = "K/s")]
         public float heatProduction;
 
         [KSPField]
@@ -658,7 +682,7 @@ namespace ProceduralParts
             if (float.IsNaN(num))
                 num = 0f;
 
-            Material mat = selectedBell.model.renderer.sharedMaterial;
+            Material mat = selectedBell.model.GetComponent<Renderer>().sharedMaterial;
             mat.SetColor("_EmissiveColor", new Color(num*num, 0, 0));
         }
 

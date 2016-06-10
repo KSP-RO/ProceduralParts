@@ -1,6 +1,4 @@
-﻿using KSPAPIExtensions;
-using KSPAPIExtensions.PartMessage;
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace ProceduralParts
@@ -14,10 +12,27 @@ namespace ProceduralParts
     /// </summary>
     public class DecouplerTweaker : PartModule, IPartMassModifier
     {
+		#region IPartMassModifier implementation
+
+		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
+		{
+			if (density > 0)
+				return mass - defaultMass;
+			else
+				return 0.0f;
+		}
+
+		public ModifierChangeWhen GetModuleMassChangeWhen ()
+		{
+			return ModifierChangeWhen.FIXED;
+		}
+
+		#endregion
+
         public override void OnAwake()
         {
             base.OnAwake();
-            PartMessageService.Register(this);
+            //PartMessageService.Register(this);
         }
 
         /// <summary>
@@ -58,7 +73,7 @@ namespace ProceduralParts
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.1f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall=0, incrementSlide = 0.1f)]
         public float ejectionImpulse;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="S3")]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="F3")]
         public float mass = 0;
 
         private ModuleDecouple decouple;
@@ -93,8 +108,6 @@ namespace ProceduralParts
             else if (HighLogic.LoadedSceneIsFlight)
             {
                 decouple.isOmniDecoupler = isOmniDecoupler;
-                if(!float.IsNaN(mass))
-                    part.mass = mass;
             }
         }
 
@@ -112,9 +125,17 @@ namespace ProceduralParts
         }
 
         // Plugs into procedural parts.
-        [PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes:GameSceneFilter.AnyEditor)]
-        public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+        //[PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes:GameSceneFilter.AnyEditor)]
+        //public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+		[KSPEvent(guiActive = false, active = true)]
+		public void OnPartAttachNodeSizeChanged(BaseEventData data)
         {
+			if (!HighLogic.LoadedSceneIsEditor)
+				return;
+
+			AttachNode node = data.Get<AttachNode>("node");
+			float minDia = data.Get<float>("minDia");
+
             // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (node.id != textureMessageName || maxImpulseDiameterRatio == 0)
                 return;
@@ -128,38 +149,37 @@ namespace ProceduralParts
             ejectionImpulse = Mathf.Round(maxImpulse * oldRatio / 0.1f) * 0.1f;
         }
 
-        [PartMessageListener(typeof(PartVolumeChanged), scenes: GameSceneFilter.AnyEditor)]
-        public void ChangeVolume(string volumeName, float volume)
+        //[PartMessageListener(typeof(PartVolumeChanged), scenes: GameSceneFilter.AnyEditor)]
+        //public void ChangeVolume(string volumeName, float volume)
+		[KSPEvent(guiActive = false, active = true)]
+		public void OnPartVolumeChanged(BaseEventData data)
         {
+			if (!HighLogic.LoadedSceneIsEditor)
+				return;
+
+			double volume = data.Get<double> ("newTotalVolume");
+
             if (density > 0)
             {
-                UpdateMass(density * volume);
+                UpdateMass((float)(density * volume));
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
             }
         }
 
         private void UpdateMass(float updateMass)
         {
-            part.mass = mass = updateMass;
+            mass = updateMass;
             BaseField fld = Fields["mass"];
             if (updateMass < 0.1)
             {
                 fld.guiUnits = "g";
-                fld.guiFormat = "S3+6";
+                fld.guiFormat = "F2";
             }
             else
             {
                 fld.guiUnits = "T";
-                fld.guiFormat = "S3";
+                fld.guiFormat = "F3";
             }
-        }
-
-        public float GetModuleMass(float defaultMass)
-        {
-            if (density > 0)
-                return part.mass - defaultMass;
-            else
-                return 0.0f;
         }
     }
 

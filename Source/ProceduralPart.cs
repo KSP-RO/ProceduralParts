@@ -4,26 +4,60 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using KSPAPIExtensions;
-using KSPAPIExtensions.PartMessage;
+//using KSPAPIExtensions.PartMessage;
+using System.Reflection;
 
 namespace ProceduralParts
 {
-    [PartMessageDelegate]
-    public delegate void ChangeTextureScaleDelegate(string name, [UseLatest] Material material, [UseLatest] Vector2 targetScale);
+    //[PartMessageDelegate]
+    //public delegate void ChangeTextureScaleDelegate(string name, [UseLatest] Material material, [UseLatest] Vector2 targetScale);
 
     public class ProceduralPart : PartModule, IPartCostModifier
     {
+        #region TestFlight
+        protected static bool tfChecked = false;
+        protected static bool tfFound = false;
+        public static Type tfInterface = null;
+        public static BindingFlags tfBindingFlags = BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.Static;
+
+        public void UpdateTFInterops()
+        {
+            // Grab a pointer to the TestFlight interface if it's installed
+            if (!tfChecked)
+            {
+                tfInterface = Type.GetType("TestFlightCore.TestFlightInterface, TestFlightCore", false);
+                if (tfInterface != null)
+                    tfFound = true;
+            }
+            // update TestFlight if it's installed
+            if (tfFound)
+            {
+                try
+                {
+                    tfInterface.InvokeMember("AddInteropValue", tfBindingFlags, null, null, new System.Object[] { this.part, "shapeName", shapeName, "ProceduralParts" });
+                    if (shape != null)
+                        shape.UpdateTFInterops();
+                }
+                catch
+                {
+                }
+            }
+        }
+        #endregion
         #region Initialization
 
-        bool installedFAR = false;
+        public static bool installedFAR = false;
 
         public override void OnAwake()
         {
+			GameEvents.onPartAttach.Add (OnPartAttach);
+			GameEvents.onPartRemove.Add (OnPartRemove);
+
             // Check if FAR is installed
             installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
 
             base.OnAwake();
-            PartMessageService.Register(this);
+            //PartMessageService.Register(this);
             //this.RegisterOnUpdateEditor(OnUpdateEditor);
 
             if (GameSceneFilter.AnyInitializing.IsLoaded())
@@ -125,12 +159,21 @@ namespace ProceduralParts
                 if (!HighLogic.LoadedSceneIsEditor)
                 {
                     // Force the first update, then disable.
-                    shape.ForceNextUpdate();
-                    shape.OnUpdateEditor();
+                    if (shape != null && !HighLogic.LoadedSceneIsFlight) // we just did this above so let's not do it again.
+                    {
+                        shape.ForceNextUpdate();
+                        shape.OnUpdateEditor();
+                    }
 
                     UpdateTexture();
+                    if (vessel != null)
+                    {
+                        if (vessel.rootPart == part) // drag cube re-rendering workaround. See FixedUpdate for more info
+                            dragCubeNeedsRerender = 1;
+                        else
+                            isEnabled = enabled = false;
+                    }
 
-                    isEnabled = enabled = false;
                 }
 
                 if (HighLogic.LoadedSceneIsEditor)
@@ -138,11 +181,13 @@ namespace ProceduralParts
 
                 if (GameSceneFilter.AnyEditor.IsLoaded())
                     GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
-
-                Fields["costDisplay"].guiActiveEditor = displayCost;
+                BaseField fld = Fields["costDisplay"];
+                if(fld != null)
+                    fld.guiActiveEditor = displayCost;
             }
             catch (Exception ex)
             {
+                Debug.LogError("[ProceduralParts]: OnStart: caught exception.");
                 Debug.LogException(ex);
                 isEnabled = enabled = false;
             }
@@ -152,6 +197,9 @@ namespace ProceduralParts
         {
             if (GameSceneFilter.AnyEditor.IsLoaded())
                 GameEvents.onEditorPartEvent.Remove(OnEditorPartEvent);
+
+			GameEvents.onPartAttach.Remove(OnPartAttach);
+			GameEvents.onPartRemove.Remove(OnPartRemove);
         }
 
 
@@ -229,10 +277,10 @@ namespace ProceduralParts
                 EndsIconMesh = iconEnds.GetComponent<MeshFilter>().mesh;
 
 
-            SidesMaterial = sides.renderer.material;
-            EndsMaterial = ends.renderer.material;
-            SidesIconMaterial = iconSides.renderer.material;
-            EndsIconMaterial = iconEnds.renderer.material;
+            SidesMaterial = sides.GetComponent<Renderer>().material;
+			EndsMaterial = ends.GetComponent<Renderer>().material;
+			SidesIconMaterial = iconSides.GetComponent<Renderer>().material;
+			EndsIconMaterial = iconEnds.GetComponent<Renderer>().material;
 
             // Instantiate meshes. The mesh method unshares any shared meshes.
             SidesMesh = sides.GetComponent<MeshFilter>().mesh;
@@ -728,10 +776,14 @@ namespace ProceduralParts
         [SerializeField]
         private Vector2 sideTextureScale = Vector2.one;
 
-        [PartMessageListener(typeof(ChangeTextureScaleDelegate))]
-        public void ChangeTextureScale(string texName, Material material, Vector2 targetScale)
-        {
-            if (texName != "sides")
+        //[PartMessageListener(typeof(ChangeTextureScaleDelegate))]
+		[KSPEvent(guiActive = false, active = true)]
+		//public void ChangeTextureScale(string texName, Material material, Vector2 targetScale)
+		public void OnChangeTextureScale(BaseEventData data)
+		{
+			string meshName = data.Get<string> ("meshName");
+			Vector2 targetScale = data.Get<Vector2> ("targetScale");
+            if (meshName != "sides")
                 return;
             sideTextureScale = targetScale;
             oldTextureSet = null;
@@ -835,21 +887,31 @@ namespace ProceduralParts
         private readonly List<object> nodeAttachments = new List<object>(4);
         private readonly Dictionary<string, Func<Vector3>> nodeOffsets = new Dictionary<string, Func<Vector3>>();
 
-        private class NodeTransformable : TransformFollower.Transformable, IPartMessagePartProxy
+        private class NodeTransformable : TransformFollower.Transformable//, IPartMessagePartProxy
         {
             // leave as not serializable so will be null when deserialzied.
             private readonly Part part;
             private readonly AttachNode node;
 
             // ReSharper disable once EventNeverSubscribedTo.Local
-            [PartMessageEvent]
-            public event PartAttachNodePositionChanged NodePositionChanged;
+            //[PartMessageEvent]
+            //public event PartAttachNodePositionChanged NodePositionChanged;
+
+			public void NodePositionChanged(AttachNode node, Vector3 location, Vector3 orientation, Vector3 secondaryAxis)
+			{
+				var data = new BaseEventData (BaseEventData.Sender.USER);
+				data.Set<AttachNode> ("node", node);
+				data.Set("location", location);
+				data.Set("orientation", orientation);
+				data.Set("secondaryAxis", secondaryAxis);
+				part.SendEvent ("OnPartAttachNodePositionChanged", data, 0);
+			}
 
             public NodeTransformable(Part part, AttachNode node)
             {
                 this.part = part;
                 this.node = node;
-                PartMessageService.Register(this);
+                //PartMessageService.Register(this);
             }
 
             public override bool Destroyed
@@ -1013,7 +1075,7 @@ namespace ProceduralParts
             public override void Rotate(Quaternion rotate)
             {
                 // Apply the inverse rotation to the part itself. Don't involve the parent.
-                rotate = rotate.Inverse();
+                rotate = Quaternion.Inverse(rotate);
 
                 part.transform.Translate(childToParent.position);
                 part.transform.rotation = rotate * part.transform.rotation;
@@ -1076,10 +1138,18 @@ namespace ProceduralParts
             }       
         }
 
-        [PartMessageListener(typeof(PartAttachNodePositionChanged), PartRelationship.Child, GameSceneFilter.AnyEditor)]
-        public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
+        //[PartMessageListener(typeof(PartAttachNodePositionChanged), PartRelationship.Child, GameSceneFilter.AnyEditor)]
+        [KSPEvent(guiActive = false, active = true)]
+		//public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
+		public void OnPartAttachNodePositionChanged(BaseEventData data)
         {
-            //Debug.LogWarning("PartNode position changed");
+			//TODO resrict to child
+
+			AttachNode node = data.Get<AttachNode>("node");
+			//Vector3 location = data.Get("location");
+			//Vector3 orientation = data.Get("orientation");
+			//Vector3 secondaryAxis = data.Get("secondaryAxis");
+
 
             if(node == null)
             {
@@ -1108,21 +1178,61 @@ namespace ProceduralParts
 
         }
 
-        [PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
+		private void OnPartAttach(GameEvents.HostTargetAction<Part, Part> data)
+		{
+			// Target is the parent, host is the child part
+			//Debug.Log ("OnPartAttach: " + data.host.transform + " to " + data.target.transform);
+			if (data.target == part) 
+				PartChildAttached (data.host);
+			else if (data.host == part)
+				PartParentChanged (data.target);
+		}
+
+		private void OnPartRemove(GameEvents.HostTargetAction<Part, Part> data)
+		{
+			// host is null, target is the child part.
+			//Debug.Log ("OnPartRemove");
+			if (data.target == part)
+				PartParentChanged (null);
+			else if (data.target.parent == part) 
+			{
+				PartChildDetached (data.target);
+			}
+		
+			//SendAsyncProxy<PartParentChanged>(this, data.target, new object[] { null });
+			//SendAsyncProxy<PartChildDetached>(this, data.target.parent, data.target);
+			//
+			//if (data.target.attachMode == AttachModes.SRF_ATTACH)
+			//	data.target.srfAttachNode.attachedPart = null;
+
+		}
+
+        //[PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildAttached(Part child)
         {
-            if (shape == null) //OnUpdate hasn't fired yet
+			if (HighLogic.LoadedScene != GameScenes.EDITOR)
+				return;
+
+			Debug.Log ("PartChildAttached");
+
+			AttachNode node = child.findAttachNodeByPart(part);
+
+			if (shape == null || node == null) //OnUpdate hasn't fired or node not connected yet
             {
                 toAttach.Enqueue(() => PartChildAttached(child));
                 return;
             }
             //Debug.Log("PartChildAttached");
-            AttachNode node = child.findAttachNodeByPart(part);
-            if (node == null)
-            {
-                Debug.LogError("*ST* unable to find child node for child: " + child.transform);
-                return;
-            }
+            
+            //if (node == null)
+            //{
+            //    Debug.LogError("*ST* unable to find child node for child: " + child.transform);
+			//	//toAttach.Enqueue(() => PartChildAttached(child));
+            //    return;
+            //}
+			//else
+			//	Debug.LogError("*ST* found: " + child.transform);
+
             Vector3 position = child.transform.TransformPoint(node.position);
 
             // Handle node offsets
@@ -1188,9 +1298,13 @@ namespace ProceduralParts
             //shape.ForceNextUpdate();
         }
 
-        [PartMessageListener(typeof(PartChildDetached), scenes: GameSceneFilter.AnyEditor)]
+        //[PartMessageListener(typeof(PartChildDetached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildDetached(Part child)
         {
+
+			if (HighLogic.LoadedScene != GameScenes.EDITOR)
+				return;
+
             //Debug.Log("Child Detached");
             //for (var node = childAttachments.First; node != null; node = node.Next)
             //    if (node.Value.child == child)
@@ -1212,10 +1326,19 @@ namespace ProceduralParts
             Debug.LogWarning("*ST* Message recieved removing child, but can't find child");
         }
 
-        [PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
+        //[PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
         public void PartParentChanged(Part newParent)
         {
-            if (shape == null) //OnUpdate hasn't fired yet
+			if (HighLogic.LoadedScene != GameScenes.EDITOR)
+				return;
+
+			AttachNode childToParent = null;
+			if (newParent != null) 
+			{
+				childToParent = part.findAttachNodeByPart(newParent);
+			}
+
+            if (shape == null || (newParent != null && childToParent == null)) //OnUpdate hasn't fired yet
             {
                 toAttach.Enqueue(() => PartParentChanged(newParent));
                 return;
@@ -1231,12 +1354,12 @@ namespace ProceduralParts
             if (newParent == null)
                 return;
 
-            AttachNode childToParent = part.findAttachNodeByPart(newParent);
-            if (childToParent == null)
-            {
-                Debug.LogError("*ST* unable to find parent node from child: " + part.transform);
-                return;
-            }
+            //AttachNode childToParent = part.findAttachNodeByPart(newParent);
+            //if (childToParent == null)
+            //{
+            //    Debug.LogError("*ST* unable to find parent node from child: " + part.transform);
+            //    return;
+            //}
             Vector3 position = transform.TransformPoint(childToParent.position);
             
             // ReSharper disable once InconsistentNaming
@@ -1437,6 +1560,8 @@ namespace ProceduralParts
 
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+
+            UpdateTFInterops();
         }
 
         #endregion
@@ -1461,11 +1586,16 @@ namespace ProceduralParts
         [KSPField]
         public bool displayCost = true;
 
-        public float GetModuleCost(float stdCost)
+		public ModifierChangeWhen GetModuleCostChangeWhen ()
+		{
+			return ModifierChangeWhen.FIXED;
+		}
+
+		public float GetModuleCost(float stdCost, ModifierStagingSituation sit)
         {
             if (HighLogic.LoadedScene == GameScenes.EDITOR)
             {
-                //Debug.Log("GetModuleCost");
+                //Debug.Log("stdCost: " + stdCost);
                 float cost = baseCost;
                 if ((object)shape != null)
                     cost += shape.GetCurrentCostMult() * shape.Volume * costPerkL;
@@ -1477,21 +1607,45 @@ namespace ProceduralParts
                        cost *= (pm as ICostMultiplier).GetCurrentCostMult();
                     }
                 }
-                float dryCost = cost;
-                float actualCost = cost;
+                float dryCost=0;
+                float actualCost=0;
+                
                 if (!part.Modules.Contains("ModuleFuelTanks") && (object)PartResourceLibrary.Instance != null)
                 {
-                    foreach (PartResource r in part.Resources)
+                    if (!costsIncludeResources)
                     {
-                        PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
-                        if ((object)d != null)
+                        dryCost = cost;
+                        actualCost = cost;
+                        foreach (PartResource r in part.Resources)
                         {
-                            if (!costsIncludeResources)
+                            PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
+                            if ((object)d != null)
                             {
                                 cost += (float)(r.maxAmount * d.unitCost);
-                                actualCost += (float)(r.amount * d.unitCost);
+                                actualCost += (float)(r.amount * d.unitCost);      
                             }
-                            else
+                        }
+                    }
+                    else
+                    {
+                        float minimumCosts = 0;
+
+                        foreach (PartResource r in part.Resources)
+                        {
+                            PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
+                            if ((object)d != null)
+                            {
+                                minimumCosts += (float)(r.maxAmount * d.unitCost);
+                            }
+                        }
+                        cost = Mathf.Max(minimumCosts, cost);
+                        dryCost = cost;
+                        actualCost = cost;
+
+                        foreach (PartResource r in part.Resources)
+                        {
+                            PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
+                            if ((object)d != null)
                             {
                                 dryCost -= (float)(r.maxAmount * d.unitCost);
                                 actualCost -= (float)((r.maxAmount - r.amount) * d.unitCost);
@@ -1500,6 +1654,7 @@ namespace ProceduralParts
                     }
                 }
                 moduleCost = cost;
+                
                 costDisplay = String.Format("Dry: {0:N0} Wet: {1:N0}", dryCost, actualCost);
             }
             return moduleCost;
@@ -1507,8 +1662,9 @@ namespace ProceduralParts
         #endregion
 
        
-        [PartMessageListener(typeof(PartModelChanged), scenes: ~GameSceneFilter.Flight)]
-        public void PartModelChanged()
+        //[PartMessageListener(typeof(PartModelChanged), scenes: ~GameSceneFilter.Flight)]
+        [KSPEvent(guiActive = false, active = true)]
+		public void OnPartModelChanged()
         {
             //Debug.Log("Shape Changed");
             foreach (FreePartAttachment ca in childAttach)
@@ -1546,18 +1702,50 @@ namespace ProceduralParts
 
         }
 
-        [PartMessageListener(typeof(PartColliderChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
-        public void PartColliderChanged()
+        [KSPField]
+        bool updateDragCubesInEditor = false;
+
+        //[PartMessageListener(typeof(PartColliderChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
+		[KSPEvent(guiActive = false, active = true)]
+        public void OnPartColliderChanged()
         {
-            if (!installedFAR)
+            if (GameSceneFilter.Flight.IsLoaded() || (GameSceneFilter.AnyEditor.IsLoaded() && updateDragCubesInEditor))
             {
                 DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
 
-                base.part.DragCubes.ClearCubes();
-                base.part.DragCubes.Cubes.Add(dragCube);
-                base.part.DragCubes.ResetCubeWeights();
+                part.DragCubes.ClearCubes();
+                part.DragCubes.Cubes.Add(dragCube);
+                part.DragCubes.ResetCubeWeights();
+                part.DragCubes.ForceUpdate(true, true, false);
+                //rebuilding the drag cube might mess up the thermal graph. Firing a vessel event should cause it to rebuild
+                GameEvents.onVesselWasModified.Fire(part.vessel);
+                //part.DragCubes.Procedural = true;
             }
 
+        }
+
+        int dragCubeNeedsRerender = 0;
+        public void FixedUpdate()
+        {
+            /* FlightIntegrator resets our dragcube after loading, so we need to rerender it. We cannot do it on the first frame because it would
+                be executed before the reset. Instead we must do it on the second frame.
+            */
+            if (GameSceneFilter.Flight.IsLoaded())
+            {
+                if (dragCubeNeedsRerender > 0)
+                {
+                    --dragCubeNeedsRerender;
+                }
+                else
+                {
+                    //Debug.Log("dragCube needs to re-render");
+                    OnPartColliderChanged();
+                    dragCubeNeedsRerender = 0;
+
+                    isEnabled = enabled = false; // normally this is done OnStart
+
+                }
+            }
         }
 
     }
