@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -709,7 +710,6 @@ namespace ProceduralParts
 
             // set the texture scale.
             RaiseChangeTextureScale("sides", PPart.SidesMaterial, new Vector2(tankULength, tankVLength));
-
             
 
             if(HighLogic.LoadedScene == GameScenes.LOADING)
@@ -801,6 +801,41 @@ namespace ProceduralParts
             RaiseModelAndColliderChanged();
         }
 
+        protected void WriteMeshes(UncheckedMesh sideMesh, UncheckedMesh endsMesh, UncheckedMesh collider)
+        {
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
+                sideMesh.WriteTo(PPart.SidesIconMesh);
+            else
+                sideMesh.WriteTo(SidesMesh);
+
+            if (endsMesh != null)
+            {
+                if (HighLogic.LoadedScene == GameScenes.LOADING)
+                    endsMesh.WriteTo(PPart.EndsIconMesh);
+                else
+                    endsMesh.WriteTo(EndsMesh);
+            }
+            else
+                EndsMesh.Clear();
+
+            if (collider != null)
+            {
+                if (colliderMesh == null)
+                    colliderMesh = new Mesh();
+                collider.WriteTo(colliderMesh);
+                PPart.ColliderMesh = colliderMesh;
+            }
+
+            foreach (PartModule pm in GetComponents<PartModule>())
+            {
+                IProp prop = pm as IProp;
+                if (null != prop)
+                    prop.UpdateProp();
+            }
+
+            RaiseModelAndColliderChanged();
+        }
+
         private Mesh colliderMesh;
 
         /// <summary>
@@ -851,7 +886,7 @@ namespace ProceduralParts
             }
         }
 
-        private void UpdateNodeSize(ProfilePoint pt, string nodeName)
+        protected void UpdateNodeSize(ProfilePoint pt, string nodeName)
         {
             AttachNode node = part.attachNodes.Find(n => n.id == nodeName);
             if (node == null)
@@ -866,6 +901,27 @@ namespace ProceduralParts
 
             // TODO: separate out the meshes for each end so we can use the scale for texturing.
             RaiseChangeTextureScale(nodeName, PPart.EndsMaterial, new Vector2(pt.dia, pt.dia));
+        }
+
+        protected void UpdateMeshNodesSizes(ProfilePoint bottom, ProfilePoint top)
+        {
+            UpdateMeshNodesSizes(new LinkedList<ProfilePoint>(new ProfilePoint[] { bottom, top }));
+        }
+
+        private void UpdateMeshNodesSizes(LinkedList<ProfilePoint> pts)
+        {
+            if (pts == null || pts.Count < 2)
+                return;
+
+            // update nodes
+            UpdateNodeSize(pts.First(), bottomNodeName);
+            UpdateNodeSize(pts.Last(), topNodeName);
+
+            // Move attachments first, before subdividing
+            MoveAttachments(pts);
+
+            // Horizontal profile point subdivision
+            SubdivHorizontal(pts);
         }
 
         #endregion
