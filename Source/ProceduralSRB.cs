@@ -10,6 +10,7 @@ namespace ProceduralParts
 
     public class ProceduralSRB : PartModule, IPartCostModifier
     {
+
         #region callbacks
 
         public override void OnAwake()
@@ -27,7 +28,7 @@ namespace ProceduralParts
 
         public override void OnLoad(ConfigNode node)
         {
-            Debug.Log("OnLoad");
+            //Debug.Log("OnLoad");
             try
             {
                 if (GameSceneFilter.AnyInitializing.IsLoaded())
@@ -38,7 +39,7 @@ namespace ProceduralParts
                 print("OnLoad exception: " + ex);
                 throw;
             }
-            Debug.Log("OnLoad end");
+            //Debug.Log("OnLoad end");
         }
 
         public override string GetInfo()
@@ -55,18 +56,26 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            Debug.Log("OnStart");
+            //Debug.Log("OnStart");
             try
             {
                 InitializeBells();
                 UpdateMaxThrust();
+                if (GameSceneFilter.AnyEditor.IsLoaded())
+                    GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
             }
             catch (Exception ex)
             {
                 print("OnStart exception: " + ex);
                 throw;
             }
-            Debug.Log("OnStartEnd");
+            //Debug.Log("OnStartEnd");
+        }
+
+        public void OnDestroy()
+        {
+            if (GameSceneFilter.AnyEditor.IsLoaded())
+                GameEvents.onEditorPartEvent.Remove(OnEditorPartEvent);
         }
 
         public override void OnUpdate()
@@ -81,11 +90,42 @@ namespace ProceduralParts
             {
                 UpdateBell();
                 UpdateThrust();
+                thrustDeflection = Mathf.Clamp(thrustDeflection, -25f, 25f);
             }
             catch (Exception ex)
             {
                 Debug.LogException(ex);
                 enabled = false;
+            }
+        }
+
+        public void OnEditorPartEvent(ConstructionEventType type, Part part)
+        {
+            if (!HighLogic.LoadedSceneIsEditor)
+                return;
+
+            if (part != this.part)
+                return;
+
+            if (part != null && type != ConstructionEventType.PartDeleted)
+            {
+                if (type == ConstructionEventType.PartCopied ||
+                    type == ConstructionEventType.PartCreated ||
+                    type == ConstructionEventType.PartAttached)
+                {
+                    isSymmetryOriginal = true;
+                    foreach (var counterPart in part.symmetryCounterparts)
+                        counterPart.GetComponent<ProceduralSRB>().isSymmetryOriginal = false;
+                }
+
+                if (type == ConstructionEventType.PartCreated ||
+                    type == ConstructionEventType.PartCopied ||
+                    type == ConstructionEventType.PartAttached)
+                {
+                    SetBellRotation();
+                    foreach (var counterPart in part.symmetryCounterparts)
+                        counterPart.GetComponent<ProceduralSRB>().SetBellRotation();
+                }
             }
         }
 
@@ -147,6 +187,9 @@ namespace ProceduralParts
         #endregion
 
         #region Objects
+
+        [KSPField(isPersistant = true)]
+        public bool isSymmetryOriginal = false;
 
         [KSPField]
         public string srbBellName;
@@ -279,8 +322,6 @@ namespace ProceduralParts
 
             bellTransform = part.FindModelTransform(srbBellName);
             thrustTransform = bellTransform.Find(thrustVectorTransformName);
-            //startDirection = thrustTransform.localEulerAngles.z;
-            startDirection = bellTransform.localEulerAngles.z;
 
 
             foreach (SRBBellConfig conf in srbConfigs.Values)
@@ -379,9 +420,7 @@ namespace ProceduralParts
                 print("*PP* Setting bell position: " + pPart.transform.TransformPoint(0, -0.5f, 0));
                 bellTransform.position = pPart.transform.TransformPoint(0, -0.5f, 0);
 
-                var bellRotation = bellTransform.eulerAngles;
-                bellRotation.z = startDirection - bellDirection;
-                bellTransform.localEulerAngles = bellRotation;
+                SetBellRotation();
 
                 pPart.AddAttachment(bellTransform, true);
 
@@ -405,9 +444,8 @@ namespace ProceduralParts
 
         private void UpdateBell()
         {
-            if (selectedBell == null || (selectedBellName == selectedBell.name && oldBellDirection == bellDirection))
+            if (selectedBell == null || (selectedBellName == selectedBell.name && oldThrustDeflection == thrustDeflection && oldInvertDeflection == invertDeflection))
                 return;
-
 
             SRBBellConfig oldSelectedBell = selectedBell;
 
@@ -421,10 +459,7 @@ namespace ProceduralParts
 
             oldSelectedBell.model.gameObject.SetActive(false);
 
-            var bellRotation = bellTransform.localEulerAngles;
-            bellRotation.z = startDirection - bellDirection;
-            bellTransform.localEulerAngles = bellRotation;
-
+            SetBellRotation();
 
             MoveBottomAttachmentAndNode(selectedBell.srbAttach.position - oldSelectedBell.srbAttach.position);
 
@@ -432,7 +467,37 @@ namespace ProceduralParts
 
             UpdateMaxThrust();
 
-            oldBellDirection = bellDirection;
+            oldThrustDeflection = thrustDeflection;
+            oldInvertDeflection = invertDeflection;
+        }
+
+        private void SetBellRotation()
+        {
+            try
+            {
+                if (bellTransform == null)
+                    return;
+
+                bellTransform.localEulerAngles = Vector3.zero;
+                var rotAxis = Vector3.Cross(part.partTransform.right, part.partTransform.up);
+
+                var adjustedDir = invertDeflection ? thrustDeflection : -thrustDeflection;
+
+                if (part.symMethod == SymmetryMethod.Mirror && !part.IsSurfaceAttached())
+                {
+                    if (!isSymmetryOriginal)
+                        adjustedDir *= -1;
+                }
+
+                bellTransform.Rotate(rotAxis, adjustedDir, Space.World);
+
+
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("PP** Exception within SetBellRotation:");
+                Debug.LogException(ex);
+            }
         }
 
         private void InitModulesFromBell()
@@ -482,12 +547,15 @@ namespace ProceduralParts
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = false, guiName = "Thrust")]
         public string thrustME;
 
-        [KSPField(isPersistant = true, guiName = "Direction", guiActive = false, guiActiveEditor = true, guiFormat = "F3", guiUnits = "°"),
+        [KSPField(isPersistant = true, guiName = "Deflection angle", guiActive = false, guiActiveEditor = true, guiFormat = "F3", guiUnits = "°"),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = -25f, maxValue = 25f, incrementLarge = 5f, incrementSmall = 1f, incrementSlide = 0.1f, sigFigs = 2, unit = "°")]
-        public float bellDirection = 0;
-        private float oldBellDirection;
+        public float thrustDeflection = 0;
+        private float oldThrustDeflection;
 
-        private float startDirection = 0f;
+        [KSPField(isPersistant = true, guiName = "Inverted", guiActive = false, guiActiveEditor = true),
+         UI_Toggle(affectSymCounterparts = UI_Scene.None, enabledText = "Yes", disabledText = "No", scene = UI_Scene.Editor)]
+        public bool invertDeflection = false;
+        private bool oldInvertDeflection;
 
         // ReSharper disable once InconsistentNaming
         [KSPField]
@@ -540,7 +608,7 @@ namespace ProceduralParts
         private void UpdateThrust(bool force = false)
         {
             // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (!force && oldThrust == thrust && burnTimeME == oldBurnTimeME && oldBellDirection == bellDirection)
+            if (!force && oldThrust == thrust && burnTimeME == oldBurnTimeME && oldThrustDeflection == thrustDeflection)
                 return;
             // ReSharper restore CompareOfFloatsByEqualityOperator
 
