@@ -33,6 +33,7 @@ namespace ProceduralParts
             {
                 if (GameSceneFilter.AnyInitializing.IsLoaded())
                     LoadBells(node);
+
             }
             catch (Exception ex)
             {
@@ -61,6 +62,7 @@ namespace ProceduralParts
             {
                 InitializeBells();
                 UpdateMaxThrust();
+
                 if (GameSceneFilter.AnyEditor.IsLoaded())
                     GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
             }
@@ -74,8 +76,7 @@ namespace ProceduralParts
 
         public void OnDestroy()
         {
-            if (GameSceneFilter.AnyEditor.IsLoaded())
-                GameEvents.onEditorPartEvent.Remove(OnEditorPartEvent);
+            GameEvents.onEditorPartEvent.Remove(OnEditorPartEvent);
         }
 
         public override void OnUpdate()
@@ -99,15 +100,21 @@ namespace ProceduralParts
             }
         }
 
-        public void OnEditorPartEvent(ConstructionEventType type, Part part)
+        public void OnEditorPartEvent(ConstructionEventType type, Part ePart)
         {
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
 
-            if (part != this.part)
+            if (!(ePart == part || ePart.FindChildPart(part.name, true) != null))
                 return;
 
-            if (part != null && type != ConstructionEventType.PartDeleted)
+            //if (type != ConstructionEventType.PartDragging)
+                Debug.Log(string.Format("Editor event '{0}' for part {1} ({2})", type, ePart.name, ePart.GetInstanceID()));
+                
+
+            Debug.Log("isSymmetryOriginal (before) = " + isSymmetryOriginal);
+
+            if (ePart != null && type != ConstructionEventType.PartDeleted)
             {
                 if (type == ConstructionEventType.PartCopied ||
                     type == ConstructionEventType.PartCreated ||
@@ -127,6 +134,8 @@ namespace ProceduralParts
                         counterPart.GetComponent<ProceduralSRB>().SetBellRotation();
                 }
             }
+
+            Debug.Log("isSymmetryOriginal (after) = " + isSymmetryOriginal);
         }
 
         //[PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
@@ -477,6 +486,9 @@ namespace ProceduralParts
             {
                 if (bellTransform == null)
                     return;
+                Debug.Log("PP** SetBellRotation for part " + part.name);
+                Debug.Log("isSymmetryOriginal = " + isSymmetryOriginal);
+                Debug.Log("invertDeflection = " + invertDeflection);
 
                 bellTransform.localEulerAngles = Vector3.zero;
                 var rotAxis = Vector3.Cross(part.partTransform.right, part.partTransform.up);
@@ -547,7 +559,7 @@ namespace ProceduralParts
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = false, guiName = "Thrust")]
         public string thrustME;
 
-        [KSPField(isPersistant = true, guiName = "Deflection angle", guiActive = false, guiActiveEditor = true, guiFormat = "F3", guiUnits = "°"),
+        [KSPField(isPersistant = true, guiName = "Deflection", guiActive = false, guiActiveEditor = true, guiFormat = "F3", guiUnits = "°"),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = -25f, maxValue = 25f, incrementLarge = 5f, incrementSmall = 1f, incrementSlide = 0.1f, sigFigs = 2, unit = "°")]
         public float thrustDeflection = 0;
         private float oldThrustDeflection;
