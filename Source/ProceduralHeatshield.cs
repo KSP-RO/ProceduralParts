@@ -536,9 +536,9 @@ namespace ProceduralParts
         private void CopyNodeSizeAndStrength()
         {
             if (bottomNode == null)
-                bottomNode = part.findAttachNode(bottomNodeId);
+                bottomNode = part.FindAttachNode(bottomNodeId);
             if (topNode == null)
-                topNode = part.findAttachNode(topNodeId);
+                topNode = part.FindAttachNode(topNodeId);
             bottomNode.size = topNode.size;
             bottomNode.breakingForce = topNode.breakingForce;
             bottomNode.breakingTorque = topNode.breakingTorque;
