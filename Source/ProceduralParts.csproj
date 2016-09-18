@@ -62,10 +62,6 @@
       <HintPath>..\..\Build\ProceduralParts\Release\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="KSPUtil">
-      <HintPath>..\..\Build\ProceduralParts\Release\KSPUtil.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\Build\ProceduralParts\Release\UnityEngine.dll</HintPath>
       <Private>False</Private>

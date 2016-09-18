@@ -1,5 +1,8 @@
 ============= Changelog for ProceduralParts  =========
 
+===  1.2.6  ===
+KSP 1.2 ready (Polymaker)
+
 ===  1.2  ===
 KSP 1.1 ready (RadarManFromTheMoon)
 Fixed NullReferenceExceptions during loading (NathanKell)
