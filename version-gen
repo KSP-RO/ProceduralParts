@@ -45,7 +45,8 @@ if ($version !~ m{
     ^v
     (?<major>\d+)\.
     (?<minor>\d+)\.
-    (?<patch>\d+)-
+    (?<patch>\d+)
+	(-pre)?-
     (?<build>\d+)
 }x) {
     die "Cannot parse $version as a version!";
