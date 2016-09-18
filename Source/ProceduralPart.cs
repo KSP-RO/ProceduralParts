@@ -984,7 +984,7 @@ namespace ProceduralParts
         // ReSharper disable once InconsistentNaming
         public void AddNodeOffset(string nodeId, Func<Vector3> GetOffset)
         {
-            AttachNode node = part.findAttachNode(nodeId);
+            AttachNode node = part.FindAttachNode(nodeId);
             if (node == null)
                 throw new ArgumentException("Node " + nodeId + " is not the ID of an attachment node");
 
@@ -1215,7 +1215,7 @@ namespace ProceduralParts
 
 			Debug.Log ("PartChildAttached");
 
-			AttachNode node = child.findAttachNodeByPart(part);
+			AttachNode node = child.FindAttachNodeByPart(part);
 
 			if (shape == null || node == null) //OnUpdate hasn't fired or node not connected yet
             {
@@ -1263,7 +1263,7 @@ namespace ProceduralParts
                 case AttachModes.STACK:
                     newAttachment.Coordinates.RadiusMode = ProceduralAbstractShape.ShapeCoordinates.RMode.RELATIVE_TO_SHAPE_RADIUS;
 
-                    AttachNode ourNode = part.findAttachNodeByPart(child);
+                    AttachNode ourNode = part.FindAttachNodeByPart(child);
                     if (ourNode == null)
                     {
                         Debug.LogError("*ST* unable to find our node for child: " + child.transform);
@@ -1335,7 +1335,7 @@ namespace ProceduralParts
 			AttachNode childToParent = null;
 			if (newParent != null) 
 			{
-				childToParent = part.findAttachNodeByPart(newParent);
+				childToParent = part.FindAttachNodeByPart(newParent);
 			}
 
             if (shape == null || (newParent != null && childToParent == null)) //OnUpdate hasn't fired yet
