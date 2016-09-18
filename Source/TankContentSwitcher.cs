@@ -38,6 +38,9 @@ namespace ProceduralParts
 		#endregion
 
         #region Callbacks
+
+        private bool isInitialized;
+        
         public override void OnAwake()
         {
             base.OnAwake();
@@ -86,8 +89,21 @@ namespace ProceduralParts
             node.SetValue("isEnabled", "True");
         }
 
+        public override void OnInitialize()
+        {
+            if (!isInitialized)
+                DoInitialize();
+        }
+
         public override void OnStart(StartState state)
         {
+            if (!isInitialized)
+                DoInitialize();
+        }
+
+        private void DoInitialize()
+        {
+            isInitialized = true;
             if (HighLogic.LoadedSceneIsFlight)
             {
                 if (tankVolumeName != null)
@@ -107,6 +123,9 @@ namespace ProceduralParts
 
         public void OnUpdateEditor()
         {
+            if (!isInitialized)
+                return;
+
             UpdateTankType();
         }
 

@@ -44,6 +44,7 @@ namespace ProceduralParts
             }
         }
         #endregion
+
         #region Initialization
 
         public static bool installedFAR = false;
@@ -134,9 +135,25 @@ namespace ProceduralParts
         [SerializeField]
         private bool symmetryClone;
 
+        private bool isInitialized;
+
+        public override void OnInitialize()
+        {
+            if (!isInitialized)
+                DoInitialize();
+        }
+
         public override void OnStart(StartState state)
         {
-            if(tempCollider!=null)
+            if (!isInitialized)
+                DoInitialize();
+        }
+
+        private void DoInitialize()
+        {
+            isInitialized = true;
+
+            if (tempCollider != null)
             {
                 // delete the temporary collider, if there is one
                 Component.Destroy(tempCollider);
@@ -153,7 +170,7 @@ namespace ProceduralParts
                     InitializeTechLimits();
 
                 InitializeShapes();
-                if(GameSceneFilter.AnyEditorOrFlight.IsLoaded())
+                if (GameSceneFilter.AnyEditorOrFlight.IsLoaded())
                     InitializeNodes();
 
                 if (!HighLogic.LoadedSceneIsEditor)
@@ -182,7 +199,7 @@ namespace ProceduralParts
                 if (GameSceneFilter.AnyEditor.IsLoaded())
                     GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
                 BaseField fld = Fields["costDisplay"];
-                if(fld != null)
+                if (fld != null)
                     fld.guiActiveEditor = displayCost;
             }
             catch (Exception ex)
@@ -205,6 +222,9 @@ namespace ProceduralParts
 
         public void OnUpdateEditor()
         {
+            if (!isInitialized)
+                return;
+
             if (skipNextUpdate)
             {
                 skipNextUpdate = false;
