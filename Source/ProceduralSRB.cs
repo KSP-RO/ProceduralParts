@@ -108,11 +108,6 @@ namespace ProceduralParts
             if (!(ePart == part || ePart.FindChildPart(part.name, true) != null))
                 return;
 
-            //if (type != ConstructionEventType.PartDragging)
-                Debug.Log(string.Format("Editor event '{0}' for part {1} ({2})", type, ePart.name, ePart.GetInstanceID()));
-                
-
-            Debug.Log("isSymmetryOriginal (before) = " + isSymmetryOriginal);
 
             if (ePart != null && type != ConstructionEventType.PartDeleted)
             {
@@ -135,7 +130,6 @@ namespace ProceduralParts
                 }
             }
 
-            Debug.Log("isSymmetryOriginal (after) = " + isSymmetryOriginal);
         }
 
         //[PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
@@ -307,7 +301,7 @@ namespace ProceduralParts
 
         private void InitializeBells()
         {
-            print("*PP* InitializeBells");
+            //print("*PP* InitializeBells");
             // Initialize the configs.
             if (srbConfigs == null)
                 LoadSRBConfigs();
@@ -426,10 +420,8 @@ namespace ProceduralParts
             if (pPart != null)
             {
                 // Attach the bell. In the config file this isn't in normalized position, move it into normalized position first.
-                print("*PP* Setting bell position: " + pPart.transform.TransformPoint(0, -0.5f, 0));
+                //print("*PP* Setting bell position: " + pPart.transform.TransformPoint(0, -0.5f, 0));
                 bellTransform.position = pPart.transform.TransformPoint(0, -0.5f, 0);
-
-                SetBellRotation();
 
                 pPart.AddAttachment(bellTransform, true);
 
@@ -440,6 +432,8 @@ namespace ProceduralParts
                 bottomAttachNode.originalPosition = bottomAttachNode.position += part.transform.InverseTransformDirection(delta);
 
                 pPart.AddNodeOffset(bottomAttachNodeName, GetOffset);
+
+                SetBellRotation();
             }
 
             // Move thrust transform to the end of the bell
@@ -468,9 +462,9 @@ namespace ProceduralParts
 
             oldSelectedBell.model.gameObject.SetActive(false);
 
-            SetBellRotation();
-
             MoveBottomAttachmentAndNode(selectedBell.srbAttach.position - oldSelectedBell.srbAttach.position);
+
+            SetBellRotation();
 
             InitModulesFromBell();
 
@@ -484,11 +478,10 @@ namespace ProceduralParts
         {
             try
             {
-                if (bellTransform == null)
+                if (bellTransform == null || selectedBell == null)
                     return;
-                Debug.Log("PP** SetBellRotation for part " + part.name);
-                Debug.Log("isSymmetryOriginal = " + isSymmetryOriginal);
-                Debug.Log("invertDeflection = " + invertDeflection);
+
+                var botNodePos = selectedBell.srbAttach.position;
 
                 bellTransform.localEulerAngles = Vector3.zero;
                 var rotAxis = Vector3.Cross(part.partTransform.right, part.partTransform.up);
@@ -503,6 +496,7 @@ namespace ProceduralParts
 
                 bellTransform.Rotate(rotAxis, adjustedDir, Space.World);
 
+                selectedBell.srbAttach.position = botNodePos;
 
             }
             catch (Exception ex)
@@ -753,7 +747,7 @@ namespace ProceduralParts
             if (bottomAttachNode.attachedPart.transform == part.transform.parent)
             {
                 part.transform.Translate(-delta, Space.World);
-                Part root = KSPAPIExtensions.GameSceneFilter.AnyEditor.IsLoaded() ? EditorLogic.RootPart : part.vessel.rootPart;
+                Part root = GameSceneFilter.AnyEditor.IsLoaded() ? EditorLogic.RootPart : part.vessel.rootPart;
                 int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
 
                 root.transform.Translate(delta / siblings, Space.World);
