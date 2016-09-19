@@ -815,19 +815,19 @@ namespace ProceduralParts
             if (textureSet == oldTextureSet)
                 return;
 
-            Material EndsMaterial;
-            Material SidesMaterial;
+            Material endsMaterial;
+            Material sidesMaterial;
 
             if(HighLogic.LoadedScene== GameScenes.LOADING)
             {
                 // if we are in loading screen, all changes have to be made to the icon materials. Otherwise all icons will have the same texture 
-                EndsMaterial = this.EndsIconMaterial;
-                SidesMaterial = this.SidesIconMaterial;
+                endsMaterial = this.EndsIconMaterial;
+                sidesMaterial = this.SidesIconMaterial;
             }
             else
             {
-                EndsMaterial = this.EndsMaterial;
-                SidesMaterial = this.SidesMaterial;
+                endsMaterial = this.EndsMaterial;
+                sidesMaterial = this.SidesMaterial;
             }
 
             int newIdx = loadedTextureSets.FindIndex(set => set.name == textureSet);
@@ -844,23 +844,33 @@ namespace ProceduralParts
             // Set shaders
             if (!part.Modules.Contains("ModulePaintable"))
             {
-                SidesMaterial.shader = Shader.Find(tex.sidesBump != null ? "KSP/Bumped Specular" : "KSP/Specular");
+                if (HighLogic.LoadedScene == GameScenes.LOADING)
+                {
+                    sidesMaterial.shader = Shader.Find("KSP/ScreenSpaceMask");
+                    if (endsMaterial != null)
+                        endsMaterial.shader = Shader.Find("KSP/ScreenSpaceMask");
+                }
+                else
+                {
+                    sidesMaterial.shader = Shader.Find(tex.sidesBump != null ? "KSP/Bumped Specular" : "KSP/Specular");
 
-                // pt is no longer specular ever, just diffuse.
-                if (EndsMaterial != null)
-                    EndsMaterial.shader = Shader.Find("KSP/Diffuse");
+                    // pt is no longer specular ever, just diffuse.
+                    if (endsMaterial != null)
+                        endsMaterial.shader = Shader.Find("KSP/Diffuse");
+
+                }
             }
 
-            SidesMaterial.SetColor("_SpecColor", tex.sidesSpecular);
-            SidesMaterial.SetFloat("_Shininess", tex.sidesShininess);
+            sidesMaterial.SetColor("_SpecColor", tex.sidesSpecular);
+            sidesMaterial.SetFloat("_Shininess", tex.sidesShininess);
 
             // TODO: shove into config file.
-            if (EndsMaterial != null)
+            if (endsMaterial != null)
             {
                 const float scale = 0.93f;
                 const float offset = (1f / scale - 1f) / 2f;
-                EndsMaterial.mainTextureScale = new Vector2(scale, scale);
-                EndsMaterial.mainTextureOffset = new Vector2(offset, offset);
+                endsMaterial.mainTextureScale = new Vector2(scale, scale);
+                endsMaterial.mainTextureOffset = new Vector2(offset, offset);
             }
 
             // set up UVs
@@ -887,17 +897,17 @@ namespace ProceduralParts
             }
 
             // apply
-            SidesMaterial.mainTextureScale = scaleUV;
-            SidesMaterial.mainTextureOffset = Vector2.zero;
-            SidesMaterial.SetTexture("_MainTex", tex.sides);
+            sidesMaterial.mainTextureScale = scaleUV;
+            sidesMaterial.mainTextureOffset = Vector2.zero;
+            sidesMaterial.SetTexture("_MainTex", tex.sides);
             if (tex.sidesBump != null)
             {
-                SidesMaterial.SetTextureScale("_BumpMap", scaleUV);
-                SidesMaterial.SetTextureOffset("_BumpMap", Vector2.zero);
-                SidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
+                sidesMaterial.SetTextureScale("_BumpMap", scaleUV);
+                sidesMaterial.SetTextureOffset("_BumpMap", Vector2.zero);
+                sidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
             }
-            if (EndsMaterial != null)
-                EndsMaterial.SetTexture("_MainTex", tex.ends);
+            if (endsMaterial != null)
+                endsMaterial.SetTexture("_MainTex", tex.ends);
         }
 
         #endregion
