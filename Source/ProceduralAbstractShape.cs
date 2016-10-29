@@ -379,5 +379,12 @@ namespace ProceduralParts
         }
 
         public abstract void UpdateTechConstraints();
+
+        protected void RefreshPartEditorWindow()
+        {
+            var window = FindObjectsOfType<UIPartActionWindow>().FirstOrDefault(w => w.part == part);
+            if (window != null)
+                window.displayDirty = true;
+        }
     }
 }

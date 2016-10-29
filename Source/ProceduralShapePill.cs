@@ -210,7 +210,7 @@ namespace ProceduralParts
             oldLength = length;
             oldFillet = fillet;
             // ReSharper restore CompareOfFloatsByEqualityOperator
-
+            RefreshPartEditorWindow();
             UpdateInterops();
         }
 
