@@ -507,10 +507,13 @@ namespace ProceduralParts
             // Purge the old resources
             foreach (PartResource res in part.Resources)
             {
-                if (keepAmount && selectedTankType.resources.Any(tr => tr.name == res.resourceName))
+                if (selectedTankType.resources.Any(tr => tr.name == res.resourceName))
+                {
+                    //always keep the resources because we need the flowState value
                     partResources.Add(res);
-                else
-                    partResources.Remove(res);
+                    if (!keepAmount)
+                        res.amount = -1;
+                }
             }
 
             part.Resources.dict.Clear();
@@ -528,7 +531,10 @@ namespace ProceduralParts
                 node.AddValue("maxAmount", maxAmount);
 
                 PartResource partResource = partResources.FirstOrDefault(r => r.resourceName == res.name);
-                if (!res.forceEmpty && null != partResource)
+                if (partResource != null)
+                    node.AddValue("flowState", partResource.flowState);
+
+                if (!res.forceEmpty && null != partResource && partResource.amount != -1)
                 { 
                     node.AddValue("amount", Math.Min(partResource.amount, maxAmount));
                 }
