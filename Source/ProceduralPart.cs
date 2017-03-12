@@ -1639,8 +1639,19 @@ namespace ProceduralParts
                 }
                 float dryCost=0;
                 float actualCost=0;
-                
-                if (!part.Modules.Contains("ModuleFuelTanks") && (object)PartResourceLibrary.Instance != null)
+
+                bool containsMFT = false;
+
+                try
+                {
+                    containsMFT = part.Modules.Contains("ModuleFuelTanks");
+                }
+                catch
+                {
+                    Debug.Log("Caught error in PartModuleList.Contains()");
+                }
+
+                if (!containsMFT && (object)PartResourceLibrary.Instance != null)
                 {
                     if (!costsIncludeResources)
                     {
