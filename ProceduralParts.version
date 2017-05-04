@@ -1,13 +1,13 @@
 {
-   "URL" : "https://raw.githubusercontent.com/Swamp-Ig/ProceduralParts/master/ProceduralParts.version",
+   "URL" : "https://raw.githubusercontent.com/Starwaster/ProceduralParts/master/ProceduralParts.version",
    "NAME" : "Procedural Parts",
    "GITHUB" : {
       "REPOSITORY" : "ProceduralParts",
-      "USERNAME" : "Swamp-Ig"
+      "USERNAME" : "Starwaster"
    },
    "VERSION" : {
       "BUILD" : 0,
-      "PATCH" : 8,
+      "PATCH" : 9,
       "MINOR" : 2,
       "MAJOR" : 1
    },
@@ -15,7 +15,7 @@
    "KSP_VERSION" : {
       "PATCH" : 1,
       "MINOR" : 2,
-      "MAJOR" : 1
+      "MAJOR" : 2
    }
 }
 
