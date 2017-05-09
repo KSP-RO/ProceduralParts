@@ -1,0 +1,16 @@
+{
+   "NAME" : "Procedural Parts",
+   "GITHUB" : {
+      "REPOSITORY" : "ProceduralParts",
+   },
+   "VERSION" : {
+      "BUILD" : 0,
+      "MINOR" : 2,
+      "MAJOR" : 1
+   },
+   "KSP_VERSION" : {
+      "PATCH" : 1,
+      "MINOR" : 2,
+   }
+}
+
