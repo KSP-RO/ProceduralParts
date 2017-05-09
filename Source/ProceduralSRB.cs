@@ -151,7 +151,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
         //public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
         [KSPEvent(guiActive = false, active = true)]
-        public void ChangeAttachNodeSize(BaseEventData data)
+        public void OnPartAttachNodeSizeChanged(BaseEventData data)
         {
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
@@ -565,10 +565,10 @@ namespace ProceduralParts
 
         // ReSharper disable once InconsistentNaming
         [KSPField]
-        public float thrust1m = 0;
+        public float thrust1m = 1;
 
         private float maxThrust = float.PositiveInfinity;
-        private float attachedEndSize = float.PositiveInfinity;
+        private float attachedEndSize = 1.25f;
 
         // Real fuels integration
         //[PartMessageListener(typeof(PartEngineConfigChanged))]
@@ -599,7 +599,7 @@ namespace ProceduralParts
                 {
                     float isp0 = Engine.atmosphereCurve.Evaluate(0);
                     float minBurnTime = (float)Math.Ceiling(isp0 * solidFuel.maxAmount * solidFuel.info.density * Engine.g / maxThrust);
-
+                    Debug.Log("UsingME = " + UsingME.ToString() + ", minBurnTime = " + minBurnTime.ToString() + ", maxThrust = " + maxThrust.ToString());
                     ((UI_FloatEdit)Fields["burnTimeME"].uiControlEditor).minValue = minBurnTime;
 
                     // Keep the thrust constant, change the current burn time to match
