@@ -135,7 +135,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
         //public void PartResourceChanged(PartResource resource, double amount)
         [KSPEvent(guiActive = false, active = true)]
-        public void OnPartResourceInitialAmountChanged(BaseEventData data)
+        public void OnPartResourceInitialAmountChanged(BaseEventDetails data)
         {
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
@@ -151,7 +151,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
         //public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
         [KSPEvent(guiActive = false, active = true)]
-        public void OnPartAttachNodeSizeChanged(BaseEventData data)
+        public void OnPartAttachNodeSizeChanged(BaseEventDetails data)
         {
             if (!HighLogic.LoadedSceneIsEditor)
                 return;

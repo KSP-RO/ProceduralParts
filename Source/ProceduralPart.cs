@@ -799,7 +799,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(ChangeTextureScaleDelegate))]
 		[KSPEvent(guiActive = false, active = true)]
 		//public void ChangeTextureScale(string texName, Material material, Vector2 targetScale)
-		public void OnChangeTextureScale(BaseEventData data)
+		public void OnChangeTextureScale(BaseEventDetails data)
 		{
 			string meshName = data.Get<string> ("meshName");
 			Vector2 targetScale = data.Get<Vector2> ("targetScale");
@@ -929,7 +929,7 @@ namespace ProceduralParts
 
 			public void NodePositionChanged(AttachNode node, Vector3 location, Vector3 orientation, Vector3 secondaryAxis)
 			{
-				var data = new BaseEventData (BaseEventData.Sender.USER);
+				var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 				data.Set<AttachNode> ("node", node);
 				data.Set("location", location);
 				data.Set("orientation", orientation);
@@ -1171,7 +1171,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(PartAttachNodePositionChanged), PartRelationship.Child, GameSceneFilter.AnyEditor)]
         [KSPEvent(guiActive = false, active = true)]
 		//public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
-		public void OnPartAttachNodePositionChanged(BaseEventData data)
+		public void OnPartAttachNodePositionChanged(BaseEventDetails data)
         {
 			//TODO resrict to child
 

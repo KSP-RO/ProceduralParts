@@ -36,7 +36,7 @@ namespace ProceduralParts
         //public event PartMassChanged MassChanged;
 		public void MassChanged (float mass)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<float> ("mass", mass);
 
 			part.SendEvent ("OnPartMassChanged", data, 0);
@@ -49,7 +49,7 @@ namespace ProceduralParts
 
 		public void MaxAmountChanged (Part part, PartResource resource, double amount)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<PartResource> ("resource", resource);
 			data.Set<double> ("amount", amount);
 			part.SendEvent ("OnResourceMaxChanged", data, 0);
@@ -59,7 +59,7 @@ namespace ProceduralParts
 		//public event PartResourceInitialAmountChanged InitialAmountChanged;
 		public void InitialAmountChanged (Part part, PartResource resource, double amount)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<PartResource> ("resource", resource);
 			data.Set<double> ("amount", amount);
 			part.SendEvent ("OnResourceInitialChanged", data, 0);
@@ -342,7 +342,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(PartAttachNodeSizeChanged))]
         //public void PartAttachNodeSizeChanged(AttachNode node, float minDia, float area) 
 		[KSPEvent(guiActive = false, active = true)]
-		public void PartAttachNodeSizeChanged(BaseEventData data) 
+		public void PartAttachNodeSizeChanged(BaseEventDetails data) 
         {
 			AttachNode node = data.Get<AttachNode> ("node");
             if (node.id != topNodeId)
