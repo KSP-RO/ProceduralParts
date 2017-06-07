@@ -5,14 +5,16 @@
       "REPOSITORY" : "ProceduralParts",
       "USERNAME" : "Starwaster"
    },
-   "VERSION" : {
-      "BUILD" : 0,
-      "PATCH" : 10,
+   "VERSION" :
+   {
+      "MAJOR" : 1,
       "MINOR" : 2,
-      "MAJOR" : 1
+      "PATCH" : 10,
+      "BUILD" : 0
    },
    "DOWNLOAD" : "https://github.com/Starwaster/ProceduralParts/releases",
-   "KSP_VERSION" : {
+   "KSP_VERSION" :
+   {
       "MAJOR" : 1,
       "MINOR" : 3,
       "PATCH" : 0
