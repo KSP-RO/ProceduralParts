@@ -281,7 +281,7 @@ namespace ProceduralParts
         }
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fairing"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.01f, useSI=true, unit = "m", sigFigs = 4)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.01f, useSI=true, unit = "m", sigFigs = 5)]
         public float fairingThickness = 0.05f;
         private float oldFairingThickness;
 
