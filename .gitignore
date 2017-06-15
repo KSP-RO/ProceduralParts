@@ -154,7 +154,4 @@ $RECYCLE.BIN/
 
 # Mac crap
 .DS_Store
-
-Source/Properties/AssemblyInfo.cs
-Source/Properties/AssemblyInfo.cs
 *.zip

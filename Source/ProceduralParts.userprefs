@@ -4,23 +4,28 @@
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
-  <MonoDevelop.Ide.Workbench ActiveDocument="ProceduralPart.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Properties\AssemblyInfo.cs">
     <Files>
-      <File FileName="ProceduralPart.cs" Line="1653" Column="17" />
-      <File FileName="ProceduralSRB.cs" Line="178" Column="22" />
+      <File FileName="ProceduralPart.cs" Line="430" Column="22" />
+      <File FileName="ProceduralSRB.cs" Line="1" Column="1" />
       <File FileName="ProceduralAbstractShape.cs" Line="203" Column="30" />
-      <File FileName="Properties\AssemblyInfo.cs" Line="32" Column="37" />
-      <File FileName="ProceduralShapePill.cs" Line="214" Column="13" />
-      <File FileName="ProceduralShapeCylinder.cs" Line="63" Column="13" />
-      <File FileName="ProceduralShapeCone.cs" Line="232" Column="13" />
+      <File FileName="Properties\AssemblyInfo.cs" Line="32" Column="40" />
+      <File FileName="ProceduralShapePill.cs" Line="1" Column="1" />
+      <File FileName="ProceduralShapeCylinder.cs" Line="1" Column="1" />
+      <File FileName="ProceduralShapeCone.cs" Line="1" Column="1" />
       <File FileName="ProceduralShapeBezierCone.cs" Line="109" Column="23" />
+      <File FileName="ProceduralHeatshield.cs" Line="1" Column="1" />
+      <File FileName="MathUtils.cs" Line="10" Column="22" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State name="__root__">
           <Node name="ProceduralParts" expanded="True">
             <Node name="ProceduralParts" expanded="True">
-              <Node name="ProceduralPart.cs" selected="True" />
+              <Node name="References" expanded="True" />
+              <Node name="Properties" expanded="True">
+                <Node name="AssemblyInfo.cs" selected="True" />
+              </Node>
             </Node>
           </Node>
         </State>
