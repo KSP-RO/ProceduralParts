@@ -108,7 +108,7 @@ namespace ProceduralParts
 
 		public void ChangeVolume(string volName, double newVolume)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<string> ("volName", volName);
 			data.Set<double> ("newTotalVolume", newVolume);
 			part.SendEvent ("OnPartVolumeChanged", data, 0);
@@ -122,7 +122,7 @@ namespace ProceduralParts
 
 		public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<AttachNode> ("node", node);
 			data.Set<float> ("minDia", minDia);
 			data.Set<float> ("area", area);
@@ -149,7 +149,7 @@ namespace ProceduralParts
         {
             //ChangeTextureScale(meshName, material, targetScale);
 
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<string> ("meshName", meshName);
 			data.Set<Material> ("material", material);
 			data.Set<Vector2> ("targetScale", targetScale);
