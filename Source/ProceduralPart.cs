@@ -1733,14 +1733,12 @@ namespace ProceduralParts
                 Vector3 min = transform.InverseTransformPoint(partCollider.bounds.min);
                 Vector3 max = transform.InverseTransformPoint(partCollider.bounds.max);
 
-                tempColliderSize.x = max.x - min.x;
-                tempColliderSize.y = max.y - min.y;
-                tempColliderSize.z = max.z - min.z;
+                tempColliderSize.x = Mathf.Max(max.x - min.x, 0.001f);
+                tempColliderSize.y = Mathf.Max(max.y - min.y, 0.001f);
+                tempColliderSize.z = Mathf.Max(max.z - min.z, 0.001f);
 
                 //Debug.Log(tempColliderSize);
             }
-
-
         }
 
         [KSPField]
