@@ -771,7 +771,7 @@ namespace ProceduralParts
         [KSPField]
         public bool useOldHeatEquation = false;
 
-        internal const float DraperPoint = 525f;
+        internal const float DraperPoint = 798f;
 
 
         private void AnimateHeat()
