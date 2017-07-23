@@ -441,7 +441,8 @@ namespace ProceduralParts
                 }
                 if (pv == null)
                 {
-                    Debug.LogError("Child v smaller than first point. Child v=" + a.uv[1] + " first point v=" + ptNode.Value.v);
+                    Debug.LogError("Child v " +
+                                   "smaller than first point. Child v=" + a.uv[1] + " first point v=" + ptNode.Value.v);
                     continue;                    
                 }
 

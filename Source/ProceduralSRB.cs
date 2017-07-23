@@ -158,11 +158,12 @@ namespace ProceduralParts
             AttachNode node = data.Get<AttachNode>("node");
             float minDia = data.Get<float>("minDia");
             // ReSharper disable once CompareOfFloatsByEqualityOperator
-            if (node.id != bottomAttachNodeName || minDia == attachedEndSize)
-                return;
 
-            attachedEndSize = minDia;
-            UpdateMaxThrust();
+            if (minDia != attachedEndSize)
+                attachedEndSize = minDia;
+
+            if (node.id == bottomAttachNodeName)
+                UpdateMaxThrust();
         }
 
         [KSPField]
@@ -205,6 +206,7 @@ namespace ProceduralParts
         public string thrustVectorTransformName;
         private Transform thrustTransform;
         private Transform bellTransform;
+        private Transform bellRootTransform;
 
         private EngineWrapper _engineWrapper;
         private EngineWrapper Engine
@@ -324,6 +326,9 @@ namespace ProceduralParts
             }
 
             bellTransform = part.FindModelTransform(srbBellName);
+            bellRootTransform = part.FindModelTransform(srbBellName + "root");
+            if (bellRootTransform == null)
+                bellRootTransform = bellTransform;
             thrustTransform = bellTransform.Find(thrustVectorTransformName);
 
 
@@ -771,13 +776,13 @@ namespace ProceduralParts
         [KSPField]
         public bool useOldHeatEquation = false;
 
-        internal const float DraperPoint = 798f;
+        internal const double DraperPoint = 798; 
 
 
         private void AnimateHeat()
         {
             // The emmissive module is too much effort to get working, just do it the easy way.
-            float num = Mathf.Clamp01(((float)part.temperature - DraperPoint) / ((float)part.maxTemp - DraperPoint));
+            float num = (float)(Math.Max(part.temperature, part.skinTemperature) - DraperPoint);
             if (float.IsNaN(num))
                 num = 0f;
 
