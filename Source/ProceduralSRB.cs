@@ -303,7 +303,7 @@ namespace ProceduralParts
 
         private void InitializeBells()
         {
-            //print("*PP* InitializeBells");
+            Debug.Log("*PSRB* InitializeBells");
             // Initialize the configs.
             if (srbConfigs == null)
                 LoadSRBConfigs();
@@ -313,7 +313,7 @@ namespace ProceduralParts
             switch (srbConfigs.Count)
             {
                 case 0:
-                    Debug.LogError("*PT*  No SRB bells configured");
+                    Debug.LogError("*PSRB*  No SRB bells configured");
                     return;
                 case 1:
                     field.guiActiveEditor = false;
@@ -337,7 +337,7 @@ namespace ProceduralParts
                 conf.model = part.FindModelTransform(conf.modelName);
                 if (conf.model == null)
                 {
-                    Debug.LogError("*PT* Unable to find model transform for SRB bell name: " + conf.modelName);
+                    Debug.LogError("*PSRB* Unable to find model transform for SRB bell name: " + conf.modelName);
                     srbConfigs.Remove(conf.modelName);
                     continue;
                 }
@@ -346,7 +346,7 @@ namespace ProceduralParts
                 conf.srbAttach = conf.model.Find(conf.srbAttachName);
                 if (conf.srbAttach == null)
                 {
-                    Debug.LogError("*PT* Unable to find srbAttach for SRB bell name: " + conf.modelName);
+                    Debug.LogError("*PSRB* Unable to find srbAttach for SRB bell name: " + conf.modelName);
                     srbConfigs.Remove(conf.modelName);
                     continue;
                 }
@@ -440,6 +440,8 @@ namespace ProceduralParts
 
                 SetBellRotation();
             }
+            else
+                Debug.Log("ProceduralSRB.InitializeBells() Unable to find ProceduralPart component! (null) for " + part.name);
 
             // Move thrust transform to the end of the bell
             thrustTransform.position = selectedBell.srbAttach.position;
