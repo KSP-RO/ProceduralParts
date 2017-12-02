@@ -1117,30 +1117,33 @@ namespace ProceduralParts
 
 
         public void OnEditorPartEvent(ConstructionEventType type, Part part)
-        {        
+        {
+            Debug.Log("ProceduralPart.OnEditorPartEvent");
             switch (type)
             {
                 case ConstructionEventType.PartRootSelected:
-
+                    Debug.Log("ConstructionEventType.PartRootSelected");
                     //StartCoroutine(RebuildPartAttachments());
                     Part[] children = childAttach.Select<FreePartAttachment, Part>(x => x.Child).ToArray();
 
-                foreach (Part attachment in children)
-                {
-                    PartChildDetached(attachment);
-                }
+                    foreach (Part attachment in children)
+                
+                    {
+                    
+                        PartChildDetached(attachment);
+                    }
 
-                foreach (Transform t in transform)
-                {
-                    Part child = t.GetComponent<Part>();
-                    if(child != null)
-                        PartChildAttached(child);
-                }
-                if (transform.parent == null)
-                    PartParentChanged(null);
-                else
-                    PartParentChanged(transform.parent.GetComponent<Part>());
-
+                    foreach (Transform t in transform)
+                    {
+                        Part child = t.GetComponent<Part>();
+                        if(child != null)
+                            PartChildAttached(child);
+                    }
+                    if (transform.parent == null)
+                        PartParentChanged(null);
+                    else
+                        PartParentChanged(transform.parent.GetComponent<Part>());
+                    
                 break;
 
                 case ConstructionEventType.PartOffset:
@@ -1164,7 +1167,10 @@ namespace ProceduralParts
                             //break;
                         }
                     }
-                    break;
+                break;
+
+                //case ConstructionEventType.roo
+                    
             }       
         }
 
@@ -1350,7 +1356,7 @@ namespace ProceduralParts
                 {
 
                     childAttach.Remove(node);
-                    //Debug.LogWarning("Detaching from: " + part + " child: " + child.transform.name);
+                    Debug.LogWarning("Detaching from: " + part + " child: " + child.transform.name);
                     return;
                 }
             Debug.LogWarning("*ST* Message recieved removing child, but can't find child");
@@ -1373,11 +1379,11 @@ namespace ProceduralParts
                 toAttach.Enqueue(() => PartParentChanged(newParent));
                 return;
             }
-            //Debug.Log("PartParentChanged");
+            Debug.Log("ProceduralPart.PartParentChanged");
             if (parentAttachment != null)
             {
                 RemovePartAttachment(parentAttachment);
-                //Debug.LogWarning("Detatching: " + part + " from parent: " + newParent);
+                Debug.LogWarning("ProceduralPart.PartParentChanged Detatching: " + part + " from parent: " + newParent);
                 parentAttachment = null;
             }
 
@@ -1399,9 +1405,9 @@ namespace ProceduralParts
 
             Part root = EditorLogic.SortedShipList[0];
 
-            //Debug.LogWarning("Attaching: " + part + " to new parent: " + newParent + " node:" + childToParent.id + " position=" + childToParent.position.ToString("G3"));
+            Debug.LogWarning("ProceduralPart.PartParentChange dAttaching: " + part + " to new parent: " + newParent + " node:" + childToParent.id + " position=" + childToParent.position.ToString("G3"));
 
-             //we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
+            //we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
             parentAttachment = AddPartAttachment(position, new ParentTransformable(root, part, childToParent));
             parentAttachment.child = newParent;
 
@@ -1756,14 +1762,19 @@ namespace ProceduralParts
                 part.DragCubes.Cubes.Add(dragCube);
                 part.DragCubes.ResetCubeWeights();
                 part.DragCubes.ForceUpdate(true, true, false);
+                wasFlaggedForDragCubeForceUpdate = true;
+                if ((object)vessel == null)
+                    Debug.Log("ProceduralParts.OnPartColliderChanged() - VESSEL IS NULL");
                 //rebuilding the drag cube might mess up the thermal graph. Firing a vessel event should cause it to rebuild
-                GameEvents.onVesselWasModified.Fire(part.vessel);
+                //GameEvents.onVesselWasModified.Fire(part.vessel);
                 //part.DragCubes.Procedural = true;
             }
 
         }
 
-        int dragCubeNeedsRerender = 0;
+        bool wasFlaggedForDragCubeForceUpdate = false;
+
+        int dragCubeNeedsRerender = -1;
         public void FixedUpdate()
         {
             /* FlightIntegrator resets our dragcube after loading, so we need to rerender it. We cannot do it on the first frame because it would
@@ -1775,15 +1786,20 @@ namespace ProceduralParts
                 {
                     --dragCubeNeedsRerender;
                 }
-                else
+                else if (dragCubeNeedsRerender == 0)
                 {
                     //Debug.Log("dragCube needs to re-render");
                     OnPartColliderChanged();
-                    dragCubeNeedsRerender = 0;
+                    dragCubeNeedsRerender = -1;
 
                     isEnabled = enabled = false; // normally this is done OnStart
 
                 }
+            }
+            if (wasFlaggedForDragCubeForceUpdate)
+            {
+                wasFlaggedForDragCubeForceUpdate = false;
+                GameEvents.onVesselWasModified.Fire(part.vessel);
             }
         }
 

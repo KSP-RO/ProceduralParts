@@ -376,11 +376,11 @@ namespace ProceduralParts
             if (part.Modules.Contains("ModuleEngineConfigs"))
             {
                 // ReSharper disable once InconsistentNaming
-                var mEC = part.Modules["ModuleEngineConfigs"];
-                ModularEnginesChangeThrust = (Action<float>)Delegate.CreateDelegate(typeof(Action<float>), mEC, "ChangeThrust");
+                var MEC = part.Modules["ModuleEngineConfigs"];
+                ModularEnginesChangeThrust = (Action<float>)Delegate.CreateDelegate(typeof(Action<float>), MEC, "ChangeThrust");
                 try
                 {
-                    ModularEnginesChangeEngineType = (Action<string>)Delegate.CreateDelegate(typeof(Action<string>), mEC, "ChangeEngineType");
+                    ModularEnginesChangeEngineType = (Action<string>)Delegate.CreateDelegate(typeof(Action<string>), MEC, "ChangeEngineType");
                 }
                 catch
                 {
@@ -661,6 +661,7 @@ namespace ProceduralParts
 
         private void UpdateThrustDependentCalcs()
         {
+            Debug.Log("ProceduralSRB.UpdateThrustDependentCalcs();");
             PartResource solidFuel = part.Resources["SolidFuel"];
 
             double solidFuelMassG;
@@ -675,7 +676,7 @@ namespace ProceduralParts
             {
                 //float burnTime0 = burnTimeME = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
                 //float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
-
+                Debug.Log("Not using MEC ChangeThrust, thrust = " + thrust.ToString());
                 fuelRate = thrust / (atmosphereCurve.Evaluate(0f) * Engine.g);
                 if (solidFuel != null)
                 {
@@ -687,7 +688,9 @@ namespace ProceduralParts
             }
             else
             {
+                Debug.Log("ME thrust calculation");
                 thrust = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
+                Debug.Log("thrust = " + thrust.ToString() + "; maxThrust = " + maxThrust.ToString());
                 if (thrust > maxThrust)
                 {
                     burnTimeME = (float)Math.Ceiling(atmosphereCurve.Evaluate(0) * solidFuelMassG / maxThrust);
