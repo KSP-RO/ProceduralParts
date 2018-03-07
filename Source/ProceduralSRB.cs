@@ -150,6 +150,15 @@ namespace ProceduralParts
 
         //[PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
         //public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+        public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+        {
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<AttachNode> ("node", node);
+            data.Set<float> ("minDia", minDia);
+            data.Set<float> ("area", area);
+            part.SendEvent ("OnPartAttachNodeSizeChanged", data, 0);
+        }
+
         [KSPEvent(guiActive = false, active = true)]
         public void OnPartAttachNodeSizeChanged(BaseEventDetails data)
         {
@@ -575,7 +584,7 @@ namespace ProceduralParts
         public float thrust1m = 1;
 
         private float maxThrust = float.PositiveInfinity;
-        private float attachedEndSize = 1.25f;
+        private float attachedEndSize = float.PositiveInfinity;
 
         // Real fuels integration
         //[PartMessageListener(typeof(PartEngineConfigChanged))]
