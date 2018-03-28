@@ -1118,11 +1118,11 @@ namespace ProceduralParts
 
         public void OnEditorPartEvent(ConstructionEventType type, Part part)
         {
-            Debug.Log("ProceduralPart.OnEditorPartEvent");
+            //Debug.Log("ProceduralPart.OnEditorPartEvent");
             switch (type)
             {
                 case ConstructionEventType.PartRootSelected:
-                    Debug.Log("ConstructionEventType.PartRootSelected");
+                    Debug.Log("[ProceduralPart.OnEditorPartEvent] ConstructionEventType.PartRootSelected");
                     //StartCoroutine(RebuildPartAttachments());
                     Part[] children = childAttach.Select<FreePartAttachment, Part>(x => x.Child).ToArray();
 
@@ -1139,14 +1139,18 @@ namespace ProceduralParts
                         if(child != null)
                             PartChildAttached(child);
                     }
+
                     if (transform.parent == null)
                         PartParentChanged(null);
                     else
                         PartParentChanged(transform.parent.GetComponent<Part>());
+
+                    Debug.Log("[ProceduralPart.OnEditorPartEvent] Finished PartRootSelected");
                     
                 break;
 
                 case ConstructionEventType.PartOffset:
+                    Debug.Log("[ProceduralPart.OnEditorPartEvent] ConstructionEventType.PartOffset");
                     foreach (FreePartAttachment ca in childAttach)
                     {
                         if (ca.Child == part || ca.Child.isSymmetryCounterPart(part))
@@ -1168,9 +1172,6 @@ namespace ProceduralParts
                         }
                     }
                 break;
-
-                //case ConstructionEventType.roo
-                    
             }       
         }
 
@@ -1383,7 +1384,7 @@ namespace ProceduralParts
             if (parentAttachment != null)
             {
                 RemovePartAttachment(parentAttachment);
-                Debug.LogWarning("ProceduralPart.PartParentChanged Detatching: " + part + " from parent: " + newParent);
+                Debug.Log("ProceduralPart.PartParentChanged Detaching: " + part + " from parent: " + newParent);
                 parentAttachment = null;
             }
 
@@ -1405,7 +1406,7 @@ namespace ProceduralParts
 
             Part root = EditorLogic.SortedShipList[0];
 
-            Debug.LogWarning("ProceduralPart.PartParentChange dAttaching: " + part + " to new parent: " + newParent + " node:" + childToParent.id + " position=" + childToParent.position.ToString("G3"));
+            Debug.Log("ProceduralPart.PartParentChanged Attaching: " + part + " to new parent: " + newParent + " node:" + childToParent.id + " position=" + childToParent.position.ToString("G3"));
 
             //we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
             parentAttachment = AddPartAttachment(position, new ParentTransformable(root, part, childToParent));
@@ -1650,11 +1651,18 @@ namespace ProceduralParts
 
                 try
                 {
-                    containsMFT = part.Modules.Contains("ModuleFuelTanks");
+                    for (int i = 0; i < part.Modules.Count; i++)
+                    {
+                        if (part.Modules[i].name == "ModuleFuelTanks")
+                        {
+                            containsMFT = true;
+                            break;
+                        }
+                    }
                 }
                 catch
                 {
-                    Debug.Log("Caught error in PartModuleList.Contains()");
+                    Debug.Log("Caught error searching for ModuleFuelTanks");
                 }
 
                 if (!containsMFT && (object)PartResourceLibrary.Instance != null)
