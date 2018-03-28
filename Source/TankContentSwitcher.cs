@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace ProceduralParts
 {
@@ -21,8 +22,19 @@ namespace ProceduralParts
     /// The class also accepts the message ChangeVolume(float volume) if attached to a dynamic resizing part
     /// such as ProceeduralTanks.
     /// </summary>
-    public class TankContentSwitcher : PartModule, IPartMassModifier, ICostMultiplier
+    public class TankContentSwitcher : PartModule, IPartMassModifier, ICostMultiplier, IEndDragHandler
     {
+        private bool displayDirty = false;
+        private UIPartActionWindow window;
+
+        #region IEndDragHandler implementation
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (this.displayDirty)
+                this.window.displayDirty = true;
+        }
+        #endregion
+
 		#region IPartMassModifier implementation
 
 		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
@@ -44,6 +56,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
+            this.window = part.FindActionWindow();
             //PartMessageService.Register(this);
             //this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
@@ -486,6 +499,14 @@ namespace ProceduralParts
                 InitialAmountChanged(part, partRes, partRes.amount);
             }
 
+            //UIPartActionWindow window = part.FindActionWindow();
+            if (this.window != null)
+            {
+                if (!this.window.dragging)
+                    this.window.displayDirty = true;
+                else
+                    this.displayDirty = true;
+            }
             return true;
         }
 
@@ -545,9 +566,9 @@ namespace ProceduralParts
                 part.AddResource(node);
             }
 
-            UIPartActionWindow window = part.FindActionWindow();
-            if (window != null)
-                window.displayDirty = true;
+            //UIPartActionWindow window = part.FindActionWindow();
+            if (this.window != null)
+                this.window.displayDirty = true;
 
             ResourceListChanged(part);
         }
