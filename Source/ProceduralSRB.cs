@@ -792,13 +792,25 @@ namespace ProceduralParts
 
         private void AnimateHeat()
         {
-            // The emmissive module is too much effort to get working, just do it the easy way.
-            float num = (float)(Math.Max(part.temperature, part.skinTemperature) - DraperPoint);
-            if (float.IsNaN(num))
+            // The emissive module is too much effort to get working, just do it the easy way.
+            double num = Clamp01((part.temperature - DraperPoint) / (part.maxTemp / DraperPoint));
+
+            if (double.IsNaN(num))
                 num = 0f;
 
             Material mat = selectedBell.model.GetComponent<Renderer>().sharedMaterial;
-            mat.SetColor("_EmissiveColor", new Color(num * num, 0, 0));
+            mat.SetColor("_EmissiveColor", new Color((float)(num * num), 0, 0));
+        }
+
+        private double Clamp01(double x)
+        {
+            if (x < 0) {
+                return 0;
+            }
+            if (x > 1) {
+                return 1;
+            }
+            return x;
         }
 
         #endregion
