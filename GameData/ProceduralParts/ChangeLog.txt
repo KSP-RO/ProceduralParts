@@ -1,5 +1,8 @@
 ============= Changelog for ProceduralParts  =========
 
+===  1.2.16  ===
+Fix SRB nozzle colour.
+
 ===  1.2.15  ===
 Fix SRB max thrust limit.
 The max limit should scale with the diameter and go past 720 kN.
