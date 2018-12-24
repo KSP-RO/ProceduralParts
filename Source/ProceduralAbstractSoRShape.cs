@@ -13,6 +13,7 @@ namespace ProceduralParts
         internal const int MinCircleVertexes = 12;
         internal const float MaxCircleError = 0.01f;
         internal const float MaxDiameterChange = 5.0f;
+        internal const float SliderPrecision = 0.001f;
 
         [KSPField]
         public string topNodeName = "top";
@@ -1269,5 +1270,15 @@ namespace ProceduralParts
         }
         #endregion
 
+        protected float TruncateForSlider(float value, float incrementDirection)
+        {
+            var truncateFunc = GetTruncateFunc(incrementDirection);
+            return truncateFunc.Invoke(value, SliderPrecision);
+        }
+
+        protected Func<float, float, float> GetTruncateFunc(float incrementDirection)
+        {
+            return incrementDirection < 0 ? (Func<float, float, float>)MathUtils.Floor : MathUtils.Ceiling;
+        }
     }
 }

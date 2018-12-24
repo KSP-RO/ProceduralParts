@@ -7,14 +7,13 @@ namespace ProceduralParts
 
     public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
     {
-
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float diameter = 1.25f;
         private float oldDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
         private float oldLength;
 
@@ -31,21 +30,27 @@ namespace ProceduralParts
                 return;
 
             Volume = diameter * diameter * 0.25f * Mathf.PI * length;
+            var oldVolume = Volume;
 
             if (HighLogic.LoadedSceneIsEditor)
             {
                 // Maxmin the volume.
                 if (Volume > PPart.volumeMax)
+                {
                     Volume = PPart.volumeMax;
+                }
                 else if (Volume < PPart.volumeMin)
+                {
                     Volume = PPart.volumeMin;
+                }
                 else
                     goto nochange;
 
+                var excessVol = oldVolume - Volume;
                 if (oldDiameter != diameter)
-                    diameter = Mathf.Sqrt(Volume / (0.25f * Mathf.PI * length));
+                    diameter = TruncateForSlider(Mathf.Sqrt(Volume / (0.25f * Mathf.PI * length)), -excessVol);
                 else
-                    length = Volume / (diameter * diameter * 0.25f * Mathf.PI);
+                    length = TruncateForSlider(Volume / (diameter * diameter * 0.25f * Mathf.PI), -excessVol);
             }
         nochange:
 

@@ -137,6 +137,7 @@ namespace ProceduralParts
             {
                 // The volume is directly proportional to the length
                 length *= Volume / vol;
+                length = TruncateForSlider(length, inc);
 
                 Volume = CalcVolume();
             }
@@ -153,19 +154,14 @@ namespace ProceduralParts
 
         private void IterateLimitVolume(ref float toTweak, float vol, float inc)
         {
-            float oToTweak = toTweak;
-            float lVol;
-            float lToTweak;
-            int count = 1;
-            do
+            var oldToTweak = toTweak;
+            var i = 1;
+            while (vol < PPart.volumeMin && inc > 0 || vol > PPart.volumeMax && inc < 0)
             {
-                lVol = vol;
-                lToTweak = toTweak;
-                toTweak = oToTweak + count++ * inc;
+                toTweak = TruncateForSlider(oldToTweak + i * inc, inc);
                 vol = CalcVolume();
+                i++;
             }
-            while (Mathf.Abs(vol - Volume) < Mathf.Abs(lVol - Volume));
-            toTweak = lToTweak;
         }
 
         private float CalcVolume()

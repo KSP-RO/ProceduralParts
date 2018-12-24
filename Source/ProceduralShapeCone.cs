@@ -10,17 +10,17 @@ namespace ProceduralParts
         #region Config parameters
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3", guiUnits="m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float topDiameter = 1.25f;
         protected float oldTopDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float bottomDiameter = 1.25f;
         protected float oldBottomDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
         protected float oldLength;
 
@@ -182,11 +182,14 @@ namespace ProceduralParts
                 MaintainParameterRelations();
 
                 float volume = (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
+                var oldVolume = volume;
 
                 if (MathUtils.TestClamp(ref volume, PPart.volumeMin, PPart.volumeMax))
                 {
+                    var excessVol = oldVolume - volume;
+
                     if (oldLength != length)
-                        length = volume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter));
+                        length = TruncateForSlider(volume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)), -excessVol);
                     else if(oldBottomDiameter != bottomDiameter)
                     {
                         // this becomes solving the quadratic on bottomDiameter
@@ -195,7 +198,7 @@ namespace ProceduralParts
                         float c = length * Mathf.PI * topDiameter * topDiameter - volume * 12f;
 
                         float det = Mathf.Sqrt(b * b - 4 * a * c);
-                        bottomDiameter = (det - b) / (2f * a);
+                        bottomDiameter = TruncateForSlider((det - b) / (2f * a), -excessVol);
                     }
                     else 
                     {
@@ -205,7 +208,7 @@ namespace ProceduralParts
                         float c = length * Mathf.PI * bottomDiameter * bottomDiameter - volume * 12f;
 
                         float det = Mathf.Sqrt(b * b - 4 * a * c);
-                        topDiameter = (det - b) / (2f * a);
+                        topDiameter = TruncateForSlider((det - b) / (2f * a), -excessVol);
                     }
                 }
                 Volume = volume;

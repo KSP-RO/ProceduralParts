@@ -9,17 +9,17 @@ namespace ProceduralParts
         : ProceduralAbstractSoRShape
     {
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float diameter = 1.25f;
         private float oldDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
         private float oldLength;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fillet", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float fillet = 1f;
         private float oldFillet;
 
@@ -58,14 +58,14 @@ namespace ProceduralParts
                     if (length < oldLength && fillet > length)
                         fillet = length;
 
-                    float volExcess = MaxMinVolume();
-                    if (volExcess != 0)
+                    float excessVol = MaxMinVolume();
+                    if (excessVol != 0)
                     {
                         // Again using alpha, solve the volume equation below equation for l
                         // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for l
                         // l = (-3 (pi-4) pi d f^2+pi (3 pi-10) f^3+24 v)/(6 pi d^2) 
                         length = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * Volume) / (6f * Pi * pow(diameter, 2));
-                        length = (float)Math.Round(length, 3);
+                        length = TruncateForSlider(length, -excessVol);
 
                         // We could iterate here with the fillet and push it back up if it's been pushed down
                         // but it's altogether too much bother. User will just have to suck it up and not be
@@ -89,8 +89,8 @@ namespace ProceduralParts
                             fillet = diameter;
                     }
 
-                    float volExcess = MaxMinVolume();
-                    if (volExcess != 0)
+                    float excessVol = MaxMinVolume();
+                    if (excessVol != 0)
                     {
                         // Unfortunatly diameter is not as easily isolated, but its still possible.
 
@@ -107,7 +107,7 @@ namespace ProceduralParts
                         if (diameter < 0)
                             diameter = (t1 - t2) / de;
 
-                        diameter = (float)Math.Round(diameter, 3);
+                        diameter = TruncateForSlider(diameter, -excessVol);
                     }
 
                     filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
@@ -146,17 +146,14 @@ namespace ProceduralParts
                         goto goldilocks;
                     }
 
-                    float lVol;
-                    float lFillet;
-                    do
+                    var oldFillet = fillet;
+                    var i = 1;
+                    while (vol < PPart.volumeMin && inc < 0 || vol > PPart.volumeMax && inc > 0)
                     {
-                        lVol = vol;
-                        lFillet = fillet;
-                        fillet += inc;
+                        fillet = TruncateForSlider(oldFillet + i * inc, inc);
                         vol = CalcVolume();
+                        i++;
                     }
-                    while (Mathf.Abs(vol - Volume) < Mathf.Abs(lVol - Volume));
-                    fillet = (float)Math.Round(lFillet, 3);
                 goldilocks: ;
                 }
             }
