@@ -176,21 +176,26 @@ namespace ProceduralParts
             if (!force && oldTopDiameter == topDiameter && oldBottomDiameter == bottomDiameter && oldLength == length)
                 return;
 
+            var refreshRequired = false;
+
             // Maxmin the volume.
             if (HighLogic.LoadedSceneIsEditor)
             {
                 MaintainParameterRelations();
 
-                float volume = (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
+                var volume = CalculateVolume();
                 var oldVolume = volume;
 
                 if (MathUtils.TestClamp(ref volume, PPart.volumeMin, PPart.volumeMax))
                 {
+                    refreshRequired = true;
                     var excessVol = oldVolume - volume;
 
                     if (oldLength != length)
+                    {
                         length = TruncateForSlider(volume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)), -excessVol);
-                    else if(oldBottomDiameter != bottomDiameter)
+                    }
+                    else if (oldBottomDiameter != bottomDiameter)
                     {
                         // this becomes solving the quadratic on bottomDiameter
                         float a = length * Mathf.PI;
@@ -200,7 +205,7 @@ namespace ProceduralParts
                         float det = Mathf.Sqrt(b * b - 4 * a * c);
                         bottomDiameter = TruncateForSlider((det - b) / (2f * a), -excessVol);
                     }
-                    else 
+                    else
                     {
                         // this becomes solving the quadratic on topDiameter
                         float a = length * Mathf.PI;
@@ -210,12 +215,13 @@ namespace ProceduralParts
                         float det = Mathf.Sqrt(b * b - 4 * a * c);
                         topDiameter = TruncateForSlider((det - b) / (2f * a), -excessVol);
                     }
+                    volume = CalculateVolume();
                 }
                 Volume = volume;
             }
             else
             {
-                Volume = (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
+                Volume = CalculateVolume();
             }
 
             // Perpendicular.
@@ -231,8 +237,16 @@ namespace ProceduralParts
             oldBottomDiameter = bottomDiameter;
             oldLength = length;
             // ReSharper restore CompareOfFloatsByEqualityOperator
-            //RefreshPartEditorWindow();
+            if (refreshRequired)
+            {
+                RefreshPartEditorWindow();
+            }
             UpdateInterops();
+        }
+
+        private float CalculateVolume()
+        {
+            return (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
         }
         #endregion
 

@@ -28,32 +28,38 @@ namespace ProceduralParts
             // ReSharper disable CompareOfFloatsByEqualityOperator
             if (!force && oldDiameter == diameter && oldLength == length)
                 return;
-
-            Volume = diameter * diameter * 0.25f * Mathf.PI * length;
-            var oldVolume = Volume;
+            var volume = CalculateVolume();
+            var oldVolume = volume;
+            var refreshRequired = false;
 
             if (HighLogic.LoadedSceneIsEditor)
             {
                 // Maxmin the volume.
-                if (Volume > PPart.volumeMax)
+                if (volume > PPart.volumeMax)
                 {
-                    Volume = PPart.volumeMax;
+                    volume = PPart.volumeMax;
                 }
-                else if (Volume < PPart.volumeMin)
+                else if (volume < PPart.volumeMin)
                 {
-                    Volume = PPart.volumeMin;
+                    volume = PPart.volumeMin;
                 }
                 else
                     goto nochange;
 
-                var excessVol = oldVolume - Volume;
+                refreshRequired = true;
+                var excessVol = oldVolume - volume;
                 if (oldDiameter != diameter)
-                    diameter = TruncateForSlider(Mathf.Sqrt(Volume / (0.25f * Mathf.PI * length)), -excessVol);
+                {
+                    diameter = TruncateForSlider(Mathf.Sqrt(volume / (0.25f * Mathf.PI * length)), -excessVol);
+                }
                 else
-                    length = TruncateForSlider(Volume / (diameter * diameter * 0.25f * Mathf.PI), -excessVol);
+                {
+                    length = TruncateForSlider(volume / (diameter * diameter * 0.25f * Mathf.PI), -excessVol);
+                }
+                volume = CalculateVolume();
             }
         nochange:
-
+            Volume = volume;
             Vector2 norm = new Vector2(1, 0);
 
             WriteMeshes(
@@ -64,8 +70,16 @@ namespace ProceduralParts
             oldDiameter = diameter;
             oldLength = length;
             // ReSharper restore CompareOfFloatsByEqualityOperator
-            //RefreshPartEditorWindow();
+            if (refreshRequired)
+            {
+                RefreshPartEditorWindow();
+            }
             UpdateInterops();
+        }
+
+        private float CalculateVolume()
+        {
+            return diameter * diameter * 0.25f * Mathf.PI * length;
         }
 
         public override void UpdateTechConstraints()

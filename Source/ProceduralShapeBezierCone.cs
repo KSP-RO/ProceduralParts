@@ -105,7 +105,6 @@ namespace ProceduralParts
 
             oldTopDiameter = topDiameter; oldBottomDiameter = bottomDiameter; oldLength = length;
             oldSelectedShape = selectedShape;
-            //RefreshPartEditorWindow();
             UpdateInterops();
         }
 
@@ -115,51 +114,58 @@ namespace ProceduralParts
 
         private void UpdateVolumeRange()
         {
-            Volume = CalcVolume();
+            var volume = CalcVolume();
+            var clampedVolume = volume;
 
-            float vol = Volume;
-            float inc;
-            if (Volume < PPart.volumeMin)
+            var inc = 0f;
+            if (volume < PPart.volumeMin)
             {
-                Volume = PPart.volumeMin;
+                clampedVolume = PPart.volumeMin;
                 inc = 0.001f;
             }
-            else if (Volume > PPart.volumeMax)
+            else if (volume > PPart.volumeMax)
             {
-                Volume = PPart.volumeMax;
+                clampedVolume = PPart.volumeMax;
                 inc = -0.001f;
             }
-            else
-                return;
 
+            if (inc != 0)
+            {
+                ClampToLimits(volume, clampedVolume, inc);
+                RefreshPartEditorWindow();
+            }
+
+            Volume = CalcVolume();
+            // ReSharper restore CompareOfFloatsByEqualityOperator
+        }
+
+        private void ClampToLimits(float volume, float clampedVolume, float inc)
+        {
             // ReSharper disable CompareOfFloatsByEqualityOperator
             if (length != oldLength || oldSelectedShape != selectedShape)
             {
                 // The volume is directly proportional to the length
-                length *= Volume / vol;
+                length *= clampedVolume / volume;
                 length = TruncateForSlider(length, inc);
-
-                Volume = CalcVolume();
             }
             else if (bottomDiameter != oldBottomDiameter)
             {
-                IterateLimitVolume(ref bottomDiameter, vol, inc);
+                IterateLimitVolume(ref bottomDiameter, volume, inc);
             }
             else if (topDiameter != oldTopDiameter)
             {
-                IterateLimitVolume(ref topDiameter, vol, inc);
+                IterateLimitVolume(ref topDiameter, volume, inc);
             }
-            // ReSharper restore CompareOfFloatsByEqualityOperator
         }
 
-        private void IterateLimitVolume(ref float toTweak, float vol, float inc)
+        private void IterateLimitVolume(ref float toTweak, float volume, float inc)
         {
             var oldToTweak = toTweak;
             var i = 1;
-            while (vol < PPart.volumeMin && inc > 0 || vol > PPart.volumeMax && inc < 0)
+            while (volume < PPart.volumeMin && inc > 0 || volume > PPart.volumeMax && inc < 0)
             {
                 toTweak = TruncateForSlider(oldToTweak + i * inc, inc);
-                vol = CalcVolume();
+                volume = CalcVolume();
                 i++;
             }
         }
