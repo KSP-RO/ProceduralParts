@@ -128,11 +128,11 @@ namespace ProceduralParts
                     if (inc != 0)
                     {
                         refreshRequired = true;
-                        var oldFillet = fillet;
+                        var tempFillet = fillet;
                         var i = 1;
                         while (volume < PPart.volumeMin && inc < 0 || volume > PPart.volumeMax && inc > 0)
                         {
-                            fillet = TruncateForSlider(oldFillet + i * inc, inc);
+                            fillet = TruncateForSlider(tempFillet + i * inc, inc);
                             volume = CalcVolume();
                             i++;
                         }
