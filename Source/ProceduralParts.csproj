@@ -78,6 +78,7 @@
     <Compile Include="ObjectSerializer.cs" />
     <Compile Include="ProceduralHeatshield.cs" />
     <Compile Include="ProceduralShapeBezierCone.cs" />
+    <Compile Include="ProceduralShapeOctagon.cs" />
     <Compile Include="ProceduralShapePill.cs" />
     <Compile Include="ProceduralSRB.cs" />
     <Compile Include="ProceduralShapeCone.cs" />
