@@ -121,12 +121,12 @@ namespace ProceduralParts
             if (volume < PPart.volumeMin)
             {
                 clampedVolume = PPart.volumeMin;
-                inc = 0.001f;
+                inc = IteratorIncrement;
             }
             else if (volume > PPart.volumeMax)
             {
                 clampedVolume = PPart.volumeMax;
-                inc = -0.001f;
+                inc = -IteratorIncrement;
             }
 
             if (inc != 0)

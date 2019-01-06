@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
+using KSPAPIExtensions;
 
 namespace ProceduralParts
 {
@@ -21,6 +22,9 @@ namespace ProceduralParts
 
     public abstract class ProceduralAbstractShape : PartModule
     {
+        internal const float SliderPrecision = 0.001f;
+        internal const float IteratorIncrement = 1048.5f / (1024 * 1024); // a float slightly below sliderprecision
+
         public override void OnAwake()
         {
             base.OnAwake();
@@ -385,6 +389,17 @@ namespace ProceduralParts
             var window = FindObjectsOfType<UIPartActionWindow>().FirstOrDefault(w => w.part == part);
             if (window != null)
                 window.displayDirty = true;
+        }
+
+        protected float TruncateForSlider(float value, float incrementDirection)
+        {
+            var truncateFunc = GetTruncateFunc(incrementDirection);
+            return truncateFunc.Invoke(value, SliderPrecision);
+        }
+
+        protected Func<float, float, float> GetTruncateFunc(float incrementDirection)
+        {
+            return incrementDirection < 0 ? (Func<float, float, float>)MathUtils.Floor : MathUtils.Ceiling;
         }
     }
 }

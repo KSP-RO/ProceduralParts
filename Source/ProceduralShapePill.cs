@@ -38,10 +38,10 @@ namespace ProceduralParts
         private static readonly Func<float, float> sqrt = Mathf.Sqrt;
         private static readonly Func<float, float, float> pow = Mathf.Pow;
 
-        protected override void UpdateShape(bool force)
+        protected override void UpdateShape(bool forceUpdate)
         {
             // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (!force && oldDiameter == diameter && oldLength == length && oldFillet == fillet)
+            if (!forceUpdate && oldDiameter == diameter && oldLength == length && oldFillet == fillet)
                 return;
 
             var refreshRequired = false;
@@ -144,11 +144,11 @@ namespace ProceduralParts
 
                     if (volume < PPart.volumeMin)
                     {
-                        inc = -0.001f;
+                        inc = -IteratorIncrement;
                     }
                     else if (volume > PPart.volumeMax)
                     {
-                        inc = 0.001f;
+                        inc = IteratorIncrement;
                     }
 
                     if (inc != 0)
