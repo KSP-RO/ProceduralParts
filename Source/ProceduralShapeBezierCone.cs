@@ -142,19 +142,19 @@ namespace ProceduralParts
         private void ClampToLimits(float volume, float clampedVolume, float inc)
         {
             // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (length != oldLength || oldSelectedShape != selectedShape)
-            {
-                // The volume is directly proportional to the length
-                length *= clampedVolume / volume;
-                length = TruncateForSlider(length, inc);
-            }
-            else if (bottomDiameter != oldBottomDiameter)
+            if (bottomDiameter != oldBottomDiameter)
             {
                 IterateLimitVolume(ref bottomDiameter, volume, inc);
             }
             else if (topDiameter != oldTopDiameter)
             {
                 IterateLimitVolume(ref topDiameter, volume, inc);
+            }
+            else
+            {
+                // The volume is directly proportional to the length
+                length *= clampedVolume / volume;
+                length = TruncateForSlider(length, inc);
             }
         }
 

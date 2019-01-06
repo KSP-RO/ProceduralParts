@@ -191,11 +191,7 @@ namespace ProceduralParts
                     refreshRequired = true;
                     var excessVol = oldVolume - volume;
 
-                    if (oldLength != length)
-                    {
-                        length = TruncateForSlider(volume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)), -excessVol);
-                    }
-                    else if (oldBottomDiameter != bottomDiameter)
+                    if (oldBottomDiameter != bottomDiameter)
                     {
                         // this becomes solving the quadratic on bottomDiameter
                         float a = length * Mathf.PI;
@@ -205,7 +201,7 @@ namespace ProceduralParts
                         float det = Mathf.Sqrt(b * b - 4 * a * c);
                         bottomDiameter = TruncateForSlider((det - b) / (2f * a), -excessVol);
                     }
-                    else
+                    else if (oldTopDiameter != topDiameter)
                     {
                         // this becomes solving the quadratic on topDiameter
                         float a = length * Mathf.PI;
@@ -214,6 +210,10 @@ namespace ProceduralParts
 
                         float det = Mathf.Sqrt(b * b - 4 * a * c);
                         topDiameter = TruncateForSlider((det - b) / (2f * a), -excessVol);
+                    }
+                    else
+                    {
+                        length = TruncateForSlider(volume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)), -excessVol);
                     }
                     volume = CalculateVolume();
                 }

@@ -55,33 +55,7 @@ namespace ProceduralParts
                 if (filletEdit == null)
                     filletEdit = (UI_FloatEdit)Fields["fillet"].uiControlEditor;
 
-                if (length != oldLength)
-                {
-                    if (length < oldLength && fillet > length)
-                        fillet = length;
-
-                    var volume = CalcVolume();
-                    var clampedVolume = GetClampedVolume(volume);
-                    var excessVol = volume - clampedVolume;
-                    if (excessVol != 0)
-                    {
-                        refreshRequired = true;
-                        // Again using alpha, solve the volume equation below equation for l
-                        // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for l
-                        // l = (-3 (pi-4) pi d f^2+pi (3 pi-10) f^3+24 v)/(6 pi d^2) 
-                        length = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * clampedVolume) / (6f * Pi * pow(diameter, 2));
-                        length = TruncateForSlider(length, -excessVol);
-                        volume = CalcVolume();
-
-                        // We could iterate here with the fillet and push it back up if it's been pushed down
-                        // but it's altogether too much bother. User will just have to suck it up and not be
-                        // so darn agressive with short lengths. I mean, seriously... :)
-                    }
-
-                    filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
-                    Volume = volume;
-                }
-                else if (diameter != oldDiameter)
+                if (diameter != oldDiameter)
                 {
                     if (useEndDiameter)
                     {
@@ -163,6 +137,32 @@ namespace ProceduralParts
                             i++;
                         }
                     }
+                    Volume = volume;
+                }
+                else if(length != oldLength || forceUpdate)
+                {
+                    if (length < oldLength && fillet > length)
+                        fillet = length;
+
+                    var volume = CalcVolume();
+                    var clampedVolume = GetClampedVolume(volume);
+                    var excessVol = volume - clampedVolume;
+                    if (excessVol != 0)
+                    {
+                        refreshRequired = true;
+                        // Again using alpha, solve the volume equation below equation for l
+                        // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for l
+                        // l = (-3 (pi-4) pi d f^2+pi (3 pi-10) f^3+24 v)/(6 pi d^2) 
+                        length = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * clampedVolume) / (6f * Pi * pow(diameter, 2));
+                        length = TruncateForSlider(length, -excessVol);
+                        volume = CalcVolume();
+
+                        // We could iterate here with the fillet and push it back up if it's been pushed down
+                        // but it's altogether too much bother. User will just have to suck it up and not be
+                        // so darn agressive with short lengths. I mean, seriously... :)
+                    }
+
+                    filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
                     Volume = volume;
                 }
             }
