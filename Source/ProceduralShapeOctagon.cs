@@ -33,9 +33,20 @@ namespace ProceduralParts
         private float Radius { get => NormRadius * Diameter; }
         private float HalfHeight { get => NormHalfHeight * Length; }
         private const int CapVerticesPerCap = 8;
-        private const int SideVerticesPerCap = 9;
+        private const int SideVerticesPerCap = 16;
         private const int SideTriangles = 16;
         private const int TrianglesPerCap = 6;
+        private static float InvSqrt2 = 1 / Mathf.Sqrt(2);
+        private static readonly Vector3[] Normals = {
+            new Vector3(-InvSqrt2, 0, -InvSqrt2),
+            new Vector3(0, 0, -1),
+            new Vector3(InvSqrt2, 0, -InvSqrt2),
+            new Vector3(1, 0, 0),
+            new Vector3(InvSqrt2, 0, InvSqrt2),
+            new Vector3(0, 0, 1),
+            new Vector3(-InvSqrt2, 0, InvSqrt2),
+            new Vector3(-1, 0, 0)
+        };
         
 
         public override void OnStart(StartState state)
@@ -194,14 +205,6 @@ namespace ProceduralParts
                 return;
             }
             Debug.Log($"UpdateShape called: {force}, dia: {Diameter}, oldDia: {oldDiameter}, length: {Length}, oldLength: {oldLength}");
-            if (Diameter < 0.1 || Diameter > 10 || float.IsNaN(Diameter))
-            {
-                Diameter = 1f;
-            }
-            if (Length < 0.1 || Length > 10 || float.IsNaN(Length))
-            {
-                Length = 1f;
-            }
 
             UpdateNodeSize(TopNodeName);
             UpdateNodeSize(BottomNodeName);
@@ -232,7 +235,7 @@ namespace ProceduralParts
             var mesh = new UncheckedMesh(CapVerticesPerCap * 2, SideTriangles);
             GenerateCapVertices(mesh, -HalfHeight, 0, false);
             GenerateCapVertices(mesh, HalfHeight, CapVerticesPerCap, true);
-            GenerateSideTriangles(mesh, CapVerticesPerCap);
+            GenerateSideTriangles(mesh, CapVerticesPerCap, 1);
 
             var colliderMesh = new Mesh();
             mesh.WriteTo(colliderMesh);
@@ -255,9 +258,9 @@ namespace ProceduralParts
             var mesh = new UncheckedMesh(SideVerticesPerCap * 2, SideTriangles);
             GenerateSideVertices(mesh, -HalfHeight, 0, 0);
             GenerateSideVertices(mesh, HalfHeight, 1, SideVerticesPerCap);
-            GenerateSideTriangles(mesh, SideVerticesPerCap);
+            GenerateSideTriangles(mesh, SideVerticesPerCap, 2);
 
-            var tankULength = 8 * NormSideLength * Diameter;
+            var tankULength = 8 * NormSideLength * Diameter * 2;
             var tankVLength = Length;
 
             //print("ULength=" + tankULength + " VLength=" + tankVLength);
@@ -296,17 +299,18 @@ namespace ProceduralParts
             }
         }
 
-        private static void GenerateSideTriangles(UncheckedMesh mesh, int numberOfCapVertices)
+        private static void GenerateSideTriangles(UncheckedMesh mesh, int numberOfCapVertices, int verticesPerCorner)
         {
             for (int i = 0; i < 8; i++)
             {
-                mesh.triangles[i * 6] = i;
-                mesh.triangles[i * 6 + 1] = i + numberOfCapVertices;
-                mesh.triangles[i * 6 + 2] = (i + 1) % numberOfCapVertices;
+                var baseVertex = i * verticesPerCorner + verticesPerCorner - 1;
+                mesh.triangles[i * 6] = baseVertex;
+                mesh.triangles[i * 6 + 1] = baseVertex + numberOfCapVertices;
+                mesh.triangles[i * 6 + 2] = (baseVertex + 1) % numberOfCapVertices;
 
-                mesh.triangles[i * 6 + 3] = (i + 1) % numberOfCapVertices;
-                mesh.triangles[i * 6 + 4] = i + numberOfCapVertices;
-                mesh.triangles[i * 6 + 5] = (i + 1) % numberOfCapVertices + numberOfCapVertices;
+                mesh.triangles[i * 6 + 3] = (baseVertex + 1) % numberOfCapVertices;
+                mesh.triangles[i * 6 + 4] = baseVertex + numberOfCapVertices;
+                mesh.triangles[i * 6 + 5] = (baseVertex + 1) % numberOfCapVertices + numberOfCapVertices;
             }
         }
 
@@ -329,16 +333,15 @@ namespace ProceduralParts
             //m.normals[o0] = new Vector3(xCoords[o][i] * norm.x, norm.y, zCoords[o][i] * norm.x);
             //m.tangents[o0] = new Vector4(-zCoords[o][i], 0, xCoords[o][i], -1.0f);
 
-            GenerateOctagonVertices(mesh, y, offset);
-            GenerateWrapAroundVertex(mesh, y, offset);
+            GenerateOctagonVertices(mesh, y, offset, 2);
 
             for (int i = 0; i < SideVerticesPerCap; i++)
             {
-                mesh.uv[offset + i] = new Vector2((float)i / CapVerticesPerCap * 2, v);
+                mesh.uv[offset + (i + 1) % SideVerticesPerCap] = new Vector2((float)((i + 1) / 2) / CapVerticesPerCap, v);
 
-                var vertex = mesh.verticies[offset + i];
-                mesh.normals[offset + i] = new Vector3(vertex.x, 0, vertex.z);
-                mesh.tangents[offset + i] = new Vector4(vertex.z, 0, -vertex.x, -1f);
+                var normal = Normals[(i + 1) / 2 % Normals.Length];
+                mesh.normals[offset + i] = normal;
+                mesh.tangents[offset + i] = new Vector4(normal.z, 0, -normal.x, 1f);
             }
         }
 
@@ -356,7 +359,7 @@ namespace ProceduralParts
                 mesh.uv[offset + 7] = new Vector2(0, -NormHalfSideLength + 0.5f);
             }
 
-            GenerateOctagonVertices(mesh, y, offset);
+            GenerateOctagonVertices(mesh, y, offset, 1);
 
             for (int i = 0; i < CapVerticesPerCap; i++)
             {
@@ -366,21 +369,28 @@ namespace ProceduralParts
             }
         }
 
-        private void GenerateWrapAroundVertex(UncheckedMesh mesh, float y, int offset)
+        private void GenerateOctagonVertices(UncheckedMesh mesh, float y, int offset, int verticesPerCornerCount)
         {
-            mesh.verticies[offset + 8] = new Vector3(-HalfSideLength, y, -Radius);
-        }
-
-        private void GenerateOctagonVertices(UncheckedMesh mesh, float y, int offset)
-        {
-            mesh.verticies[offset + 0] = new Vector3(-HalfSideLength, y, -Radius);
-            mesh.verticies[offset + 1] = new Vector3(HalfSideLength, y, -Radius);
-            mesh.verticies[offset + 2] = new Vector3(Radius, y, -HalfSideLength);
-            mesh.verticies[offset + 3] = new Vector3(Radius, y, HalfSideLength);
-            mesh.verticies[offset + 4] = new Vector3(HalfSideLength, y, Radius);
-            mesh.verticies[offset + 5] = new Vector3(-HalfSideLength, y, Radius);
-            mesh.verticies[offset + 6] = new Vector3(-Radius, y, HalfSideLength);
-            mesh.verticies[offset + 7] = new Vector3(-Radius, y, -HalfSideLength);
+            var vectors = new List<Vector3>()
+            {
+                new Vector3(-HalfSideLength, y, -Radius),
+                new Vector3(HalfSideLength, y, -Radius),
+                new Vector3(Radius, y, -HalfSideLength),
+                new Vector3(Radius, y, HalfSideLength),
+                new Vector3(HalfSideLength, y, Radius),
+                new Vector3(-HalfSideLength, y, Radius),
+                new Vector3(-Radius, y, HalfSideLength),
+                new Vector3(-Radius, y, -HalfSideLength)
+            };
+            int i = 0;
+            foreach(var vector in vectors)
+            {
+                for(int j = 0; j < verticesPerCornerCount; j++)
+                {
+                    mesh.verticies[offset + i] = vector;
+                    i++;
+                }
+            }
         }
 
         public override object AddAttachment(TransformFollower attach, bool normalized)
