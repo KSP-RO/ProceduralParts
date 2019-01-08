@@ -25,13 +25,17 @@ namespace ProceduralParts
         public float Length = 1f;
         private float oldLength;
         private static readonly float NormSideLength = 1 / (1 + Mathf.Sqrt(2));
-        //private static readonly float SideOffset = (1 - SideLength) / 2;
         private static readonly float NormHalfSideLength = NormSideLength / 2;
+        private static readonly float NormSideOffset = 0.5f - NormHalfSideLength;
         private static readonly float NormRadius = 0.5f;
         private const float NormHalfHeight = 0.5f;
         private float HalfSideLength { get => NormHalfSideLength * Diameter; }
         private float Radius { get => NormRadius * Diameter; }
         private float HalfHeight { get => NormHalfHeight * Length; }
+        private float SideOffset { get => NormSideOffset * Diameter; }
+        private float Area { get => Diameter * Diameter - SideOffset * SideOffset; }
+        private float VolumeCalculated { get => Area * Length; }
+
         private const int CapVerticesPerCap = 8;
         private const int SideVerticesPerCap = 16;
         private const int SideTriangles = 16;
@@ -206,18 +210,53 @@ namespace ProceduralParts
             }
             Debug.Log($"UpdateShape called: {force}, dia: {Diameter}, oldDia: {oldDiameter}, length: {Length}, oldLength: {oldLength}");
 
+            RecalculateVolume();
+
             UpdateNodeSize(TopNodeName);
             UpdateNodeSize(BottomNodeName);
             GenerateSideMesh();
             GenerateCapMesh();
             GenerateColliderMesh();
 
-            Volume = 1f;
             UpdateProps();
             oldLength = Length;
             oldDiameter = Diameter;
-
             RaiseModelAndColliderChanged();
+        }
+
+        private void RecalculateVolume()
+        {
+            var volume = VolumeCalculated;
+
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                volume = ClampToVolumeRestrictions(volume);
+            }
+            Volume = volume;
+        }
+
+        private float ClampToVolumeRestrictions(float volume)
+        {
+            var oldVolume = volume;
+            volume = Mathf.Clamp(volume, PPart.volumeMin, PPart.volumeMax);
+            if (volume != oldVolume)
+            {
+                var excessVol = oldVolume - volume;
+                if (oldDiameter != Diameter)
+                {
+                    var requiredDiameter = Mathf.Sqrt(volume / Length / (1 - NormSideOffset * NormSideOffset));
+                    Diameter = TruncateForSlider(requiredDiameter, -excessVol);
+                }
+                else
+                {
+                    var requiredLength = volume / Area;
+                    Length = TruncateForSlider(requiredLength, -excessVol);
+                }
+                volume = VolumeCalculated;
+                RefreshPartEditorWindow();
+            }
+
+            return volume;
         }
 
         private void UpdateProps()
