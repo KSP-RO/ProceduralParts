@@ -433,9 +433,9 @@ namespace ProceduralParts
             }
         }
 
-        public override object AddAttachment(TransformFollower attach, bool normalized)
+        public override object AddAttachment(TransformFollower transformFollower, bool normalized)
         {
-            return normalized ? AddAttachmentNormalized(attach) : AddAttachmentNotNormalized(attach);
+            return normalized ? AddNormalizedAttachment(transformFollower) : AddNonNormalizedAttachment(transformFollower);
         }
 
         private enum Location
@@ -461,7 +461,7 @@ namespace ProceduralParts
         private readonly LinkedList<Attachment> bottomAttachments = new LinkedList<Attachment>();
         private readonly LinkedList<Attachment> sideAttachments = new LinkedList<Attachment>();
 
-        private object AddAttachmentNotNormalized(TransformFollower transformFollower)
+        private object AddNonNormalizedAttachment(TransformFollower transformFollower)
         {
             var position = transformFollower.transform.localPosition;
 
@@ -470,18 +470,18 @@ namespace ProceduralParts
 
             if(attachmentHeightToRadiusSquared > tankCornerHeightToRadiusSquared)
             {
-                return AddCapAttachment(transformFollower, position);
+                return AddNonNormalizedCapAttachment(transformFollower, position);
             }
             else
             {
-                return AddSideAttachment(transformFollower, position);
+                return AddNonNormalizedSideAttachment(transformFollower, position);
             }
         }
 
-        private object AddSideAttachment(TransformFollower transformFollower, Vector3 position)
+        private object AddNonNormalizedSideAttachment(TransformFollower transformFollower, Vector3 position)
         {
             var theta = Mathf.Atan2(-position.z, position.x);
-            var uv = GetSideAttachmentUv(position, theta);
+            var uv = GetNonNormalizedSideAttachmentUv(position, theta);
             var orientation = SideAttachOrientation(theta, out Vector3 normal);
             var attachment = CreateAttachment(transformFollower, uv, Location.Side, orientation);
 
@@ -491,7 +491,7 @@ namespace ProceduralParts
             return attachment;
         }
 
-        private Vector2 GetSideAttachmentUv(Vector3 position, float theta)
+        private Vector2 GetNonNormalizedSideAttachmentUv(Vector3 position, float theta)
         {
             var uv = new Vector2((Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f, position.y / Length + 0.5f);
             if (float.IsNaN(uv[0]))
@@ -502,23 +502,30 @@ namespace ProceduralParts
             return uv;
         }
 
-        private object AddCapAttachment(TransformFollower transformFollower, Vector3 position)
+        private Attachment AddNonNormalizedCapAttachment(TransformFollower transformFollower, Vector3 position)
         {
             var uv = new Vector2(position.x / Radius + 0.5f, position.z / Radius + 0.5f);
+            return AddCapAttachment(transformFollower, position, uv);
+        }
+
+        private Attachment AddCapAttachment(TransformFollower follower, Vector3 position, Vector2 uv)
+        {
+            Log("Adding normalized attachment to position=" + position + " attach=" + follower.name);
             if (position.y > 0)
             {
-                return AddCapAttachment(transformFollower, uv, Location.Top, Quaternion.LookRotation(Vector3.up, Vector3.right), topAttachments);
+                return AddCapAttachment(follower, uv, Location.Top, Quaternion.LookRotation(Vector3.up, Vector3.right));
             }
             else
             {
-                return AddCapAttachment(transformFollower, uv, Location.Bottom, Quaternion.LookRotation(Vector3.down, Vector3.left), bottomAttachments);
+                return AddCapAttachment(follower, uv, Location.Bottom, Quaternion.LookRotation(Vector3.down, Vector3.left));
             }
         }
 
-        private Attachment AddCapAttachment(TransformFollower transformFollower, Vector2 uv, Location location, Quaternion orientation, LinkedList<Attachment> attachmentList)
+        private Attachment AddCapAttachment(TransformFollower transformFollower, Vector2 uv, Location location, Quaternion orientation)
         {
             var attachment = CreateAttachment(transformFollower, uv, location, orientation);
 
+            var attachmentList = location == Location.Top ? topAttachments : bottomAttachments;
             attachment.node = attachmentList.AddLast(attachment);
             Log("Adding non-normalized attachment to position= location=" + attachment.location + " uv=" + attachment.uv + " attach=" + transformFollower.name);
 
@@ -536,54 +543,55 @@ namespace ProceduralParts
             };
         }
 
-        private object AddAttachmentNormalized(TransformFollower follower)
+        private object AddNormalizedAttachment(TransformFollower follower)
         {
-            Attachment attachment = new Attachment
-            {
-                follower = follower
-            };
-
             var position = follower.transform.localPosition;
+            Attachment attachment;
 
-            // This is easy, just get the UV and location correctly and force an update.
             // as the position might be after some rotation and translation, it might not be exactly +/- 0.5
             if (Mathf.Abs(Mathf.Abs(position.y) - 0.5f) < 1e-5f)
             {
-                if (position.y > 0)
-                {
-                    Log("Adding normalized top attachment to position=" + position + " attach=" + follower.name);
-                    attachment.location = Location.Top;
-                    attachment.uv = new Vector2(position.x + 0.5f, position.z + 0.5f);
-                    attachment.node = topAttachments.AddLast(attachment);
-                    attachment.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.up, Vector3.right));
-                }
-                else if (position.y < 0)
-                {
-                    Log("Adding normalized bottom attachment to position=" + position + " attach=" + follower.name);
-                    attachment.location = Location.Bottom;
-                    attachment.uv = new Vector2(position.x + 0.5f, position.z + 0.5f);
-                    attachment.node = bottomAttachments.AddLast(attachment);
-                    attachment.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.down, Vector3.left));
-                }
+                attachment = AddNormalizedCapAttachment(follower, position);
             }
             else
             {
-                Log("Adding normalized side attachment to position=" + position + " attach=" + follower.name);
-                attachment.location = Location.Side;
-                float theta = Mathf.Atan2(-position.z, position.x);
-                attachment.uv[0] = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
-                if (float.IsNaN(attachment.uv[0]))
-                    attachment.uv[0] = 0f;
-                attachment.uv[1] = 0.5f - position.y;
-
-                Vector3 normal = new Vector3(position.x * 2f, 0, position.z * 2f);
-                attachment.follower.SetLocalRotationReference(Quaternion.FromToRotation(Vector3.up, normal));
-
-                // side attachments are kept sorted
-                AddSideAttachment(attachment);
+                attachment = AddNormalizedSideAttachment(follower, position);
             }
             ForceNextUpdate();
             return attachment;
+        }
+
+        private Attachment AddNormalizedSideAttachment(TransformFollower follower, Vector3 position)
+        {
+            var uv = GetNormalizedSideAttachmentUv(follower, position);
+            var normalVector = new Vector3(position.x * 2f, 0, position.z * 2f);
+            var attachment = CreateAttachment(follower, uv, Location.Side, Quaternion.FromToRotation(Vector3.up, normalVector));
+            AddSideAttachment(attachment);
+            return attachment;
+        }
+
+        private static Vector2 GetNormalizedSideAttachmentUv(TransformFollower follower, Vector3 position)
+        {
+            Log("Adding normalized side attachment to position=" + position + " attach=" + follower.name);
+            var theta = Mathf.Atan2(-position.z, position.x);
+            var uv = new Vector2(GetSideAttachmentU(theta), 0.5f - position.y);
+            if (float.IsNaN(uv[0]))
+            {
+                uv[0] = 0f;
+            }
+
+            return uv;
+        }
+
+        private static float GetSideAttachmentU(float theta)
+        {
+            return (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
+        }
+
+        private Attachment AddNormalizedCapAttachment(TransformFollower follower, Vector3 position)
+        {
+            var uv = new Vector2(position.x + 0.5f, position.z + 0.5f);
+            return AddCapAttachment(follower, position, uv);
         }
 
         private void AddSideAttachment(Attachment attachment)
@@ -652,21 +660,20 @@ namespace ProceduralParts
 
         private void MoveSideAttachment(Attachment attachment)
         {
-            float theta = Mathf.Lerp(0, Mathf.PI * 2f, attachment.uv[0]);
+            var theta = Mathf.Lerp(0, Mathf.PI * 2f, attachment.uv[0]);
 
-            float x = Mathf.Cos(theta) * Radius;
-            float z = -Mathf.Sin(theta) * Radius;
+            var x = Mathf.Cos(theta) * Radius;
+            var z = -Mathf.Sin(theta) * Radius;
 
-            Vector3 pos = new Vector3(x, attachment.uv[1] - 0.5f, z);
+            var pos = new Vector3(x, attachment.uv[1] - 0.5f, z);
             Log("Moving side attachment:" + attachment + " to:" + pos.ToString("F3"));
             attachment.follower.transform.localPosition = pos;
 
-            Vector3 normal;
-            Quaternion rot = SideAttachOrientation(theta, out normal);
+            var orientation = SideAttachOrientation(theta, out Vector3 normal);
 
-            Log("Moving to orientation: normal: " + normal.ToString("F3") + " theta:" + (theta * 180f / Mathf.PI) + rot.ToStringAngleAxis());
+            Log("Moving to orientation: normal: " + normal.ToString("F3") + " theta:" + (theta * 180f / Mathf.PI) + orientation.ToStringAngleAxis());
 
-            attachment.follower.transform.localRotation = rot;
+            attachment.follower.transform.localRotation = orientation;
             attachment.follower.ForceUpdate();
         }
 
