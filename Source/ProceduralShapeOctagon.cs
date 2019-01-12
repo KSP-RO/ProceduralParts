@@ -397,7 +397,7 @@ namespace ProceduralParts
             {
                 var vertex = mesh.verticies[offset + i];
                 mesh.normals[offset + i] = new Vector3(0, up ? 1 : -1, 0);
-                mesh.tangents[offset + i] = new Vector4(-1, 0, 0, up ? 1 : -1);
+                mesh.tangents[offset + i] = new Vector4(1, 0, 0, 1f);
             }
         }
 
