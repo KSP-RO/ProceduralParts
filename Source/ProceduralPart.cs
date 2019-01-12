@@ -627,6 +627,7 @@ namespace ProceduralParts
             public string name;
 
             public bool autoScale;
+            public bool endsAutoScale;
             public bool autoWidthDivide;
             public float autoHeightSteps;
             public Vector2 scale = new Vector2(2f, 1f);
@@ -634,12 +635,17 @@ namespace ProceduralParts
             public Texture sides;
             public Texture sidesBump;
             public Texture ends;
+            public Texture endsBump;
             public string sidesName;
             public string endsName;
             public string sidesBumpName;
+            public string endsBumpName;
 
             public Color sidesSpecular = new Color(0.2f, 0.2f, 0.2f);
             public float sidesShininess = 0.4f;
+
+            public Color endsSpecular = new Color(0.2f, 0.2f, 0.2f);
+            public float endsShininess = 0.4f;
         }
         private static List<TextureSet> loadedTextureSets;
         private static string[] loadedTextureSetNames;
@@ -711,10 +717,13 @@ namespace ProceduralParts
                 name = textureSet,
                 sidesName = node.GetNode("sides").GetValue("texture"),
                 endsName = node.GetNode("ends").GetValue("texture"),
-                sidesBumpName = ""
+                sidesBumpName = "",
+                endsBumpName = ""
             };
             if (node.GetNode("sides").HasValue("bump"))
                 tex.sidesBumpName = node.GetNode("sides").GetValue("bump");
+            if (node.GetNode("ends").HasValue("bump"))
+                tex.endsBumpName = node.GetNode("ends").GetValue("bump");
 
             if (node.GetNode("sides").HasValue("uScale"))
                 float.TryParse(node.GetNode("sides").GetValue("uScale"), out tex.scale.x);
@@ -724,6 +733,8 @@ namespace ProceduralParts
 
             if (node.GetNode("sides").HasValue("autoScale"))
                 bool.TryParse(node.GetNode("sides").GetValue("autoScale"), out tex.autoScale);
+            if (node.GetNode("ends").HasValue("autoScale"))
+                bool.TryParse(node.GetNode("ends").GetValue("autoScale"), out tex.endsAutoScale);
             if (node.GetNode("sides").HasValue("autoWidthDivide"))
                 bool.TryParse(node.GetNode("sides").GetValue("autoWidthDivide"), out tex.autoWidthDivide);
             if (node.GetNode("sides").HasValue("autoHeightSteps"))
@@ -733,6 +744,10 @@ namespace ProceduralParts
                 tex.sidesSpecular = ConfigNode.ParseColor(node.GetNode("sides").GetValue("specular"));
             if (node.GetNode("sides").HasValue("shininess"))
                 float.TryParse(node.GetNode("sides").GetValue("shininess"), out tex.sidesShininess);
+            if (node.GetNode("ends").HasValue("specular"))
+                tex.endsSpecular = ConfigNode.ParseColor(node.GetNode("ends").GetValue("specular"));
+            if (node.GetNode("ends").HasValue("shininess"))
+                float.TryParse(node.GetNode("ends").GetValue("shininess"), out tex.endsShininess);
 
             Texture[] textures = Resources.FindObjectsOfTypeAll(typeof(Texture)) as Texture[];
 
@@ -756,6 +771,13 @@ namespace ProceduralParts
                 return null;
             }
 
+            if (string.IsNullOrEmpty(tex.endsBumpName))
+                tex.endsBump = null;
+            else if (!TryFindTexture(textures, ref tex.endsBumpName, out tex.endsBump))
+            {
+                Debug.LogError("*ST* Cap bump textures not found for " + textureSet);
+                return null;
+            }
 
             return tex;
         }
@@ -856,22 +878,12 @@ namespace ProceduralParts
 
                     // pt is no longer specular ever, just diffuse.
                     if (endsMaterial != null)
-                        endsMaterial.shader = Shader.Find("KSP/Diffuse");
-
+                        endsMaterial.shader = Shader.Find(tex.endsBump != null ? "KSP/Bumped Specular" : "KSP/Specular");
                 }
             }
 
             sidesMaterial.SetColor("_SpecColor", tex.sidesSpecular);
             sidesMaterial.SetFloat("_Shininess", tex.sidesShininess);
-
-            // TODO: shove into config file.
-            if (endsMaterial != null)
-            {
-                const float scale = 0.93f;
-                const float offset = (1f / scale - 1f) / 2f;
-                endsMaterial.mainTextureScale = new Vector2(scale, scale);
-                endsMaterial.mainTextureOffset = new Vector2(offset, offset);
-            }
 
             // set up UVs
             Vector2 scaleUV = tex.scale;
@@ -907,7 +919,24 @@ namespace ProceduralParts
                 sidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
             }
             if (endsMaterial != null)
+            {
+                var endsScaleFactor = tex.endsAutoScale ? scaleUV.x / Mathf.PI * 2 : 0.93f;
+                var endsScale = new Vector2(endsScaleFactor, endsScaleFactor);
+                var offset = (1f / endsScaleFactor - 1f) / 2f;
+                var endsOffset = new Vector2(offset, offset);
+                endsMaterial.mainTextureScale = endsScale;
+                endsMaterial.mainTextureOffset = endsOffset;
+                endsMaterial.SetColor("_SpecColor", tex.endsSpecular);
+                endsMaterial.SetFloat("_Shininess", tex.endsShininess);
                 endsMaterial.SetTexture("_MainTex", tex.ends);
+
+                if(tex.endsBump != null)
+                {
+                    endsMaterial.SetTextureScale("_BumpMap", endsScale);
+                    endsMaterial.SetTextureOffset("_BumpMap", endsOffset);
+                    endsMaterial.SetTexture("_BumpMap", tex.endsBump);
+                }
+            }
         }
 
         #endregion
