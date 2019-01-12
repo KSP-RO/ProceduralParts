@@ -368,11 +368,6 @@ namespace ProceduralParts
 
         private void GenerateSideVertices(UncheckedMesh mesh, float y, float v, int offset)
         {
-            //m.uv[o0] = new Vector2(uCoords[o][i], v);
-            //m.verticies[o0] = new Vector3(xCoords[o][i] * 0.5f * diameter, y, zCoords[o][i] * 0.5f * diameter);
-            //m.normals[o0] = new Vector3(xCoords[o][i] * norm.x, norm.y, zCoords[o][i] * norm.x);
-            //m.tangents[o0] = new Vector4(-zCoords[o][i], 0, xCoords[o][i], -1.0f);
-
             GenerateOctagonVertices(mesh, y, offset, 2);
 
             for (int i = 0; i < SideVerticesPerCap; i++)
@@ -387,17 +382,14 @@ namespace ProceduralParts
 
         private void GenerateCapVertices(UncheckedMesh mesh, float y, int offset, bool up)
         {
-            for (int i = 0; i < CapVerticesPerCap; i++)
-            {
-                mesh.uv[offset + 0] = new Vector2(-NormHalfSideLength + 0.5f, 0);
-                mesh.uv[offset + 1] = new Vector2(NormHalfSideLength + 0.5f, 0);
-                mesh.uv[offset + 2] = new Vector2(1, -NormHalfSideLength + 0.5f);
-                mesh.uv[offset + 3] = new Vector2(1, NormHalfSideLength + 0.5f);
-                mesh.uv[offset + 4] = new Vector2(NormHalfSideLength + 0.5f, 1);
-                mesh.uv[offset + 5] = new Vector2(-NormHalfSideLength + 0.5f, 1);
-                mesh.uv[offset + 6] = new Vector2(0, NormHalfSideLength + 0.5f);
-                mesh.uv[offset + 7] = new Vector2(0, -NormHalfSideLength + 0.5f);
-            }
+            mesh.uv[offset + 0] = new Vector2(-NormHalfSideLength + 0.5f, 0);
+            mesh.uv[offset + 1] = new Vector2(NormHalfSideLength + 0.5f, 0);
+            mesh.uv[offset + 2] = new Vector2(1, -NormHalfSideLength + 0.5f);
+            mesh.uv[offset + 3] = new Vector2(1, NormHalfSideLength + 0.5f);
+            mesh.uv[offset + 4] = new Vector2(NormHalfSideLength + 0.5f, 1);
+            mesh.uv[offset + 5] = new Vector2(-NormHalfSideLength + 0.5f, 1);
+            mesh.uv[offset + 6] = new Vector2(0, NormHalfSideLength + 0.5f);
+            mesh.uv[offset + 7] = new Vector2(0, -NormHalfSideLength + 0.5f);
 
             GenerateOctagonVertices(mesh, y, offset, 1);
 
