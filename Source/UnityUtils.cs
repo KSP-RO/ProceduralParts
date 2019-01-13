@@ -89,7 +89,7 @@ namespace KSPAPIExtensions
 		public readonly int nVrt;
 		public readonly int nTri;
 
-		public readonly Vector3[] verticies;
+		public readonly Vector3[] vertices;
 		public readonly Vector3[] normals;
 		public readonly Vector4[] tangents;
 		public readonly Vector2[] uv;
@@ -105,7 +105,7 @@ namespace KSPAPIExtensions
 			this.nVrt = nVrt;
 			this.nTri = nTri;
 
-			verticies = new Vector3[nVrt];
+			vertices = new Vector3[nVrt];
 			normals = new Vector3[nVrt];
 			tangents = new Vector4[nVrt];
 			uv = new Vector2[nVrt];
@@ -123,7 +123,7 @@ namespace KSPAPIExtensions
 			mesh.Clear();
 			if (name != null)
 				mesh.name = name;
-			mesh.vertices = verticies;
+			mesh.vertices = vertices;
 			mesh.normals = normals;
 			mesh.tangents = tangents;
 			mesh.uv = uv;
@@ -149,10 +149,10 @@ namespace KSPAPIExtensions
 		public string DumpMesh()
 		{
 			StringBuilder sb = new StringBuilder().AppendLine();
-			for (int i = 0; i < verticies.Length; ++i)
+			for (int i = 0; i < vertices.Length; ++i)
 			{
 				sb
-					.Append(verticies[i].ToString("F4")).Append(", ")
+					.Append(vertices[i].ToString("F4")).Append(", ")
 						.Append(uv[i].ToString("F4")).Append(", ")
 						.Append(normals[i].ToString("F4")).Append(", ")
 						.Append(tangents[i].ToString("F4")).AppendLine();
