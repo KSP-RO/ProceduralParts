@@ -14,9 +14,9 @@ namespace ProceduralParts
         public float Diameter = 1f;
         private float oldDiameter;
 
-        //[KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Corners"),
-        //    UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 2, incrementLarge = 2, minValue = 4, maxValue = 8)]
-        public int CornerCount = 8;
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), UI_FloatRange(minValue = 4, maxValue = 8, stepIncrement = 2, scene = UI_Scene.Editor)]
+        public float _numberOfAddedMLILayers = 0; // This is the number of layers added by the player.
+        public float cornerCount = 8;
         private int oldCornerCount;
 
         [KSPField]
@@ -30,6 +30,7 @@ namespace ProceduralParts
         public float Length = 1f;
         private float oldLength;
 
+        public int CornerCount => (int)cornerCount;
         private float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
         private float EdgeToEdgeAngle => Mathf.PI - CornerCenterCornerAngle;
         private float StartAngle => 1.5f * Mathf.PI - CornerCenterCornerAngle / 2f;
@@ -387,13 +388,14 @@ namespace ProceduralParts
 
                 SetSideVertexData(mesh, v, cornerNumber, cornerAngle, vertexCornerIndex, vertexIndex);
             }
+            mesh.uv[offset].x = 1;
         }
 
         private void SetSideVertexData(UncheckedMesh mesh, float v, int cornerNumber, float cornerAngle, int vertexCornerIndex, int vertexIndex)
         {
-            mesh.uv[(vertexIndex + 1) % SideVerticesPerCap] = new Vector2((float)(cornerNumber + vertexCornerIndex) / CornerCount, v);
+            mesh.uv[vertexIndex] = new Vector2((float)cornerNumber / CornerCount, v);
 
-            var normalAngle = cornerAngle + EdgeToEdgeAngle / 2 * (-1 + 2 * vertexCornerIndex);
+            var normalAngle = cornerAngle + CornerCenterCornerAngle / 2 * (-1 + 2 * vertexCornerIndex);
             var normal = CreateVectorFromAngle(normalAngle, 0, 1);
             mesh.normals[vertexIndex] = normal;
             mesh.tangents[vertexIndex] = new Vector4(normal.z, 0, -normal.x, 1f);
@@ -416,8 +418,7 @@ namespace ProceduralParts
 
         private void SetCapVertexData(UncheckedMesh mesh, Vector3 cornerVector, int vertexIndex, bool up)
         {
-            mesh.uv[vertexIndex] = new Vector2(cornerVector.x + 0.5f, cornerVector.z + 0.5f); // / MaxHorizontalDiameter;
-
+            mesh.uv[vertexIndex] = new Vector2(cornerVector.x, cornerVector.z) / Diameter + new Vector2(0.5f, 0.5f); // / MaxHorizontalDiameter;
             mesh.normals[vertexIndex] = new Vector3(0, up ? 1 : -1, 0);
             mesh.tangents[vertexIndex] = new Vector4(1, 0, 0, 1f);
         }
