@@ -14,6 +14,11 @@ namespace ProceduralParts
         public float Diameter = 1f;
         private float oldDiameter;
 
+        //[KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Corners"),
+        //    UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 2, incrementLarge = 2, minValue = 4, maxValue = 8)]
+        public int CornerCount = 8;
+        private int oldCornerCount;
+
         [KSPField]
         public string TopNodeName = "top";
 
@@ -24,34 +29,27 @@ namespace ProceduralParts
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float Length = 1f;
         private float oldLength;
-        private static readonly float NormSideLength = 1 / (1 + Mathf.Sqrt(2));
-        private static readonly float NormHalfSideLength = NormSideLength / 2;
-        private static readonly float NormSideOffset = 0.5f - NormHalfSideLength;
-        private static readonly float NormRadius = 0.5f;
-        private const float NormHalfHeight = 0.5f;
-        private float HalfSideLength { get => NormHalfSideLength * Diameter; }
-        private float Radius { get => NormRadius * Diameter; }
-        private float HalfHeight { get => NormHalfHeight * Length; }
-        private float SideOffset { get => NormSideOffset * Diameter; }
-        private float Area { get => Diameter * Diameter - SideOffset * SideOffset; }
-        private float VolumeCalculated { get => Area * Length; }
 
-        private const int CapVerticesPerCap = 8;
-        private const int SideVerticesPerCap = 16;
-        private const int SideTriangles = 16;
-        private const int TrianglesPerCap = 6;
-        private static float InvSqrt2 = 1 / Mathf.Sqrt(2);
-        private static readonly Vector3[] Normals = {
-            new Vector3(-InvSqrt2, 0, -InvSqrt2),
-            new Vector3(0, 0, -1),
-            new Vector3(InvSqrt2, 0, -InvSqrt2),
-            new Vector3(1, 0, 0),
-            new Vector3(InvSqrt2, 0, InvSqrt2),
-            new Vector3(0, 0, 1),
-            new Vector3(-InvSqrt2, 0, InvSqrt2),
-            new Vector3(-1, 0, 0)
-        };
-        
+        private float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
+        private float EdgeToEdgeAngle => Mathf.PI - CornerCenterCornerAngle;
+        private float StartAngle => 1.5f * Mathf.PI - CornerCenterCornerAngle / 2f;
+        private int SideTriangles => CornerCount * 2;
+        private int TrianglesPerCap => CornerCount - 2;
+
+        private float NormHalfSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
+        private float NormSideLength => NormHalfSideLength * 2;
+        private const float NormRadius = 0.5f;
+        private const float NormHalfHeight = 0.5f;
+        private float HalfSideLength => NormHalfSideLength * Diameter;
+        private float Radius => NormRadius * Diameter;
+        private float HalfHeight => NormHalfHeight * Length;
+        private float Area => Radius * HalfSideLength * CornerCount;
+        private float VolumeCalculated => Area * Length;
+        private int SideVerticesPerCap => CornerCount * 2;
+        private float NormHorizontalDiameter => Mathf.Cos(StartAngle - (CornerCount - 2) / 4 * CornerCenterCornerAngle) * -2;
+
+        //4: 1.25 Pi + 0 Pi => 1.25 Pi
+
 
         public override void OnStart(StartState state)
         {
@@ -60,7 +58,7 @@ namespace ProceduralParts
 
         public override Vector3 FromCylindricCoordinates(ShapeCoordinates coords)
         {
-            Vector3 position = new Vector3();
+            var position = new Vector3();
 
             switch (coords.HeightMode)
             {
@@ -110,7 +108,7 @@ namespace ProceduralParts
         public override void GetCylindricCoordinates(Vector3 position, ShapeCoordinates shapeCoordinates)
         {
             Log("GetCylindricCoordinates called: pos:" + position + ", coords:" + shapeCoordinates);
-            Vector2 direction = new Vector2(position.x, position.z);
+            var direction = new Vector2(position.x, position.z);
 
             switch (shapeCoordinates.HeightMode)
             {
@@ -140,7 +138,7 @@ namespace ProceduralParts
 
             shapeCoordinates.r = 0;
 
-            float theta = Mathf.Atan2(-direction.y, direction.x);
+            var theta = Mathf.Atan2(-direction.y, direction.x);
 
             shapeCoordinates.u = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
             if (float.IsNaN(shapeCoordinates.u))
@@ -172,7 +170,7 @@ namespace ProceduralParts
                 Fields["Length"].guiActiveEditor = false;
             else
             {
-                UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["Length"].uiControlEditor;
+                var lengthEdit = (UI_FloatEdit)Fields["Length"].uiControlEditor;
                 lengthEdit.maxValue = PPart.lengthMax;
                 lengthEdit.minValue = PPart.lengthMin;
                 lengthEdit.incrementLarge = PPart.lengthLargeStep;
@@ -184,7 +182,7 @@ namespace ProceduralParts
                 Fields["Diameter"].guiActiveEditor = false;
             else
             {
-                UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["Diameter"].uiControlEditor;
+                var diameterEdit = (UI_FloatEdit)Fields["Diameter"].uiControlEditor;
                 if (null != diameterEdit)
                 {
                     diameterEdit.maxValue = PPart.diameterMax;
@@ -204,7 +202,7 @@ namespace ProceduralParts
 
         protected override void UpdateShape(bool force)
         {
-            if (!force && Diameter == oldDiameter && Length == oldLength)
+            if (!force && Diameter == oldDiameter && Length == oldLength && CornerCount == oldCornerCount)
             {
                 return;
             }
@@ -222,6 +220,7 @@ namespace ProceduralParts
             UpdateProps();
             oldLength = Length;
             oldDiameter = Diameter;
+            oldCornerCount = CornerCount;
             RaiseModelAndColliderChanged();
         }
 
@@ -245,7 +244,7 @@ namespace ProceduralParts
                 var excessVol = oldVolume - volume;
                 if (oldDiameter != Diameter)
                 {
-                    var requiredDiameter = Mathf.Sqrt(volume / Length / (1 - NormSideOffset * NormSideOffset));
+                    var requiredDiameter = Mathf.Sqrt(volume / Length / CornerCount / NormHalfSideLength / NormRadius);
                     Diameter = TruncateForSlider(requiredDiameter, -excessVol);
                 }
                 else
@@ -262,9 +261,9 @@ namespace ProceduralParts
 
         private void UpdateProps()
         {
-            foreach (PartModule pm in GetComponents<PartModule>())
+            foreach (var pm in GetComponents<PartModule>())
             {
-                IProp prop = pm as IProp;
+                var prop = pm as IProp;
                 if (null != prop)
                     prop.UpdateProp();
             }
@@ -272,10 +271,10 @@ namespace ProceduralParts
 
         private void GenerateColliderMesh()
         {
-            var mesh = new UncheckedMesh(CapVerticesPerCap * 2, SideTriangles);
-            GenerateCapVertices(mesh, -HalfHeight, 0, false);
-            GenerateCapVertices(mesh, HalfHeight, CapVerticesPerCap, true);
-            GenerateSideTriangles(mesh, CapVerticesPerCap, 1);
+            var mesh = new UncheckedMesh(CornerCount * 2, SideTriangles);
+            GenerateCapVertices(mesh, -HalfHeight, 0);
+            GenerateCapVertices(mesh, HalfHeight, CornerCount);
+            GenerateSideTriangles(mesh, CornerCount, 1);
 
             var colliderMesh = new Mesh();
             mesh.WriteTo(colliderMesh);
@@ -284,11 +283,11 @@ namespace ProceduralParts
 
         private void GenerateCapMesh()
         {
-            var mesh = new UncheckedMesh(CapVerticesPerCap * 2, TrianglesPerCap * 2);
-            GenerateCapVertices(mesh, HalfHeight, 0, true);
-            GenerateCapVertices(mesh, -HalfHeight, CapVerticesPerCap, false);
-            GenerateCapTriangles(mesh, true);
+            var mesh = new UncheckedMesh(CornerCount * 2, TrianglesPerCap * 2);
+            GenerateCapVertices(mesh, -HalfHeight, 0);
+            GenerateCapVertices(mesh, HalfHeight, CornerCount);
             GenerateCapTriangles(mesh, false);
+            GenerateCapTriangles(mesh, true);
 
             WriteToAppropriateMesh(mesh, PPart.EndsIconMesh, EndsMesh);
         }
@@ -300,7 +299,7 @@ namespace ProceduralParts
             GenerateSideVertices(mesh, HalfHeight, 1, SideVerticesPerCap);
             GenerateSideTriangles(mesh, SideVerticesPerCap, 2);
 
-            var tankULength = 8 * NormSideLength * Diameter * 2;
+            var tankULength = CornerCount * NormSideLength * Diameter * 2;
             var tankVLength = Length;
 
             //print("ULength=" + tankULength + " VLength=" + tankVLength);
@@ -312,7 +311,7 @@ namespace ProceduralParts
 
         private void UpdateNodeSize(string nodeName)
         {
-            AttachNode node = part.attachNodes.Find(n => n.id == nodeName);
+            var node = part.attachNodes.Find(n => n.id == nodeName);
             if (node == null)
                 return;
             node.size = Math.Min((int)(Diameter / PPart.diameterLargeStep), 3);
@@ -339,9 +338,9 @@ namespace ProceduralParts
             }
         }
 
-        private static void GenerateSideTriangles(UncheckedMesh mesh, int numberOfCapVertices, int verticesPerCorner)
+        private void GenerateSideTriangles(UncheckedMesh mesh, int numberOfCapVertices, int verticesPerCorner)
         {
-            for (int i = 0; i < 8; i++)
+            for (var i = 0; i < CornerCount; i++)
             {
                 var baseVertex = i * verticesPerCorner + verticesPerCorner - 1;
                 mesh.triangles[i * 6] = baseVertex;
@@ -354,74 +353,83 @@ namespace ProceduralParts
             }
         }
 
-        private static void GenerateCapTriangles(UncheckedMesh mesh, bool up)
+        private void GenerateCapTriangles(UncheckedMesh mesh, bool up)
         {
-            var triangleOffset = up ? 0 : TrianglesPerCap * 3;
-            var vertexOffset = up ? 0 : CapVerticesPerCap;
-            for (int i = 0; i < 6; i++)
+            var triangleOffset = up ? TrianglesPerCap * 3 : 0;
+            var vertexOffset = up ? CornerCount : 0;
+            for (var i = 0; i < TrianglesPerCap; i++)
             {
-                mesh.triangles[i * 3 + triangleOffset] = i + vertexOffset;
-                mesh.triangles[i * 3 + 1 + triangleOffset] = (up ? 7 : i + 1) + vertexOffset;
-                mesh.triangles[i * 3 + 2 + triangleOffset] = (up ? i + 1 : 7) + vertexOffset;
+                mesh.triangles[i * 3 + triangleOffset] = vertexOffset;
+                mesh.triangles[i * 3 + 1 + triangleOffset] = (up ? i + 2 : i + 1) + vertexOffset;
+                mesh.triangles[i * 3 + 2 + triangleOffset] = (up ? i + 1 : i + 2) + vertexOffset;
             }
         }
 
         private void GenerateSideVertices(UncheckedMesh mesh, float y, float v, int offset)
         {
-            GenerateOctagonVertices(mesh, y, offset, 2);
-
-            for (int i = 0; i < SideVerticesPerCap; i++)
+            for(var cornerNumber = 0; cornerNumber < CornerCount; cornerNumber++)
             {
-                mesh.uv[offset + (i + 1) % SideVerticesPerCap] = new Vector2((float)((i + 1) / 2) / CapVerticesPerCap, v);
-
-                var normal = Normals[(i + 1) / 2 % Normals.Length];
-                mesh.normals[offset + i] = normal;
-                mesh.tangents[offset + i] = new Vector4(normal.z, 0, -normal.x, 1f);
+                CreateSideCornerVertices(mesh, y, v, offset, cornerNumber);
             }
         }
 
-        private void GenerateCapVertices(UncheckedMesh mesh, float y, int offset, bool up)
+        private void CreateSideCornerVertices(UncheckedMesh mesh, float y, float v, int offset, int cornerNumber)
         {
-            mesh.uv[offset + 0] = new Vector2(-NormHalfSideLength + 0.5f, 0);
-            mesh.uv[offset + 1] = new Vector2(NormHalfSideLength + 0.5f, 0);
-            mesh.uv[offset + 2] = new Vector2(1, -NormHalfSideLength + 0.5f);
-            mesh.uv[offset + 3] = new Vector2(1, NormHalfSideLength + 0.5f);
-            mesh.uv[offset + 4] = new Vector2(NormHalfSideLength + 0.5f, 1);
-            mesh.uv[offset + 5] = new Vector2(-NormHalfSideLength + 0.5f, 1);
-            mesh.uv[offset + 6] = new Vector2(0, NormHalfSideLength + 0.5f);
-            mesh.uv[offset + 7] = new Vector2(0, -NormHalfSideLength + 0.5f);
+            var cornerAngle = GetCornerAngle(cornerNumber);
+            var cornerVector = CreateVectorFromAngle(cornerAngle, y, Radius);
+            var verticesPerCorner = 2;
+            Log("Generating vertex: " + cornerVector);
 
-            GenerateOctagonVertices(mesh, y, offset, 1);
-
-            for (int i = 0; i < CapVerticesPerCap; i++)
+            for (var vertexCornerIndex = 0; vertexCornerIndex < verticesPerCorner; vertexCornerIndex++)
             {
-                var vertex = mesh.verticies[offset + i];
-                mesh.normals[offset + i] = new Vector3(0, up ? 1 : -1, 0);
-                mesh.tangents[offset + i] = new Vector4(1, 0, 0, 1f);
+                var vertexIndex = offset + cornerNumber * verticesPerCorner + vertexCornerIndex;
+                mesh.vertices[vertexIndex] = cornerVector;
+
+                SetSideVertexData(mesh, v, cornerNumber, cornerAngle, vertexCornerIndex, vertexIndex);
             }
         }
 
-        private void GenerateOctagonVertices(UncheckedMesh mesh, float y, int offset, int verticesPerCornerCount)
+        private void SetSideVertexData(UncheckedMesh mesh, float v, int cornerNumber, float cornerAngle, int vertexCornerIndex, int vertexIndex)
         {
-            var vectors = new List<Vector3>()
+            mesh.uv[(vertexIndex + 1) % SideVerticesPerCap] = new Vector2((float)(cornerNumber + vertexCornerIndex) / CornerCount, v);
+
+            var normalAngle = cornerAngle + EdgeToEdgeAngle / 2 * (-1 + 2 * vertexCornerIndex);
+            var normal = CreateVectorFromAngle(normalAngle, 0, 1);
+            mesh.normals[vertexIndex] = normal;
+            mesh.tangents[vertexIndex] = new Vector4(normal.z, 0, -normal.x, 1f);
+        }
+
+        private void CreateCapCornerVertices(UncheckedMesh mesh, float y, int offset, int cornerNumber)
+        {
+            var cornerAngle = GetCornerAngle(cornerNumber);
+            var cornerVector = CreateVectorFromAngle(cornerAngle, y, Radius);
+            var verticesPerCorner = 1;
+
+            for (var vertexCornerIndex = 0; vertexCornerIndex < verticesPerCorner; vertexCornerIndex++)
             {
-                new Vector3(-HalfSideLength, y, -Radius),
-                new Vector3(HalfSideLength, y, -Radius),
-                new Vector3(Radius, y, -HalfSideLength),
-                new Vector3(Radius, y, HalfSideLength),
-                new Vector3(HalfSideLength, y, Radius),
-                new Vector3(-HalfSideLength, y, Radius),
-                new Vector3(-Radius, y, HalfSideLength),
-                new Vector3(-Radius, y, -HalfSideLength)
-            };
-            int i = 0;
-            foreach(var vector in vectors)
+                var vertexIndex = offset + cornerNumber * verticesPerCorner + vertexCornerIndex;
+                mesh.vertices[vertexIndex] = cornerVector;
+
+                SetCapVertexData(mesh, cornerVector, vertexIndex, y > 0);
+            }
+        }
+
+        private void SetCapVertexData(UncheckedMesh mesh, Vector3 cornerVector, int vertexIndex, bool up)
+        {
+            mesh.uv[vertexIndex] = new Vector2(cornerVector.x + 0.5f, cornerVector.z + 0.5f); // / MaxHorizontalDiameter;
+
+            mesh.normals[vertexIndex] = new Vector3(0, up ? 1 : -1, 0);
+            mesh.tangents[vertexIndex] = new Vector4(1, 0, 0, 1f);
+        }
+
+        private float GetCornerAngle(int cornerNumber) => StartAngle + CornerCenterCornerAngle * cornerNumber;
+        private static Vector3 CreateVectorFromAngle(float angle, float y, float radius) => new Vector3(Mathf.Cos(angle) * radius, y, Mathf.Sin(angle) * radius);
+
+        private void GenerateCapVertices(UncheckedMesh mesh, float y, int offset)
+        {
+            for (var cornerNumber = 0; cornerNumber < CornerCount; cornerNumber++)
             {
-                for(int j = 0; j < verticesPerCornerCount; j++)
-                {
-                    mesh.verticies[offset + i] = vector;
-                    i++;
-                }
+                CreateCapCornerVertices(mesh, y, offset, cornerNumber);
             }
         }
 
@@ -474,7 +482,7 @@ namespace ProceduralParts
         {
             var theta = Mathf.Atan2(-position.z, position.x);
             var uv = GetNonNormalizedSideAttachmentUv(position, theta);
-            var orientation = SideAttachOrientation(theta, out Vector3 normal);
+            var orientation = SideAttachOrientation(theta, out var normal);
             var attachment = CreateAttachment(transformFollower, uv, Location.Side, orientation);
 
             Log("Adding non-normalized side attachment to position=" + position + " location=" + attachment.location + " uv=" + attachment.uv + " attach=" + transformFollower.name);
@@ -588,7 +596,7 @@ namespace ProceduralParts
 
         private void AddSideAttachment(Attachment attachment)
         {
-            for (LinkedListNode<Attachment> node = sideAttachments.First; node != null; node = node.Next)
+            for (var node = sideAttachments.First; node != null; node = node.Next)
                 if (node.Value.uv[1] > attachment.uv[1])
                 {
                     attachment.node = sideAttachments.AddBefore(node, attachment);
@@ -600,7 +608,7 @@ namespace ProceduralParts
         public override TransformFollower RemoveAttachment(object data, bool normalize)
         {
             Log("Remove attachment called: norm: " + normalize);
-            Attachment attach = (Attachment)data;
+            var attach = (Attachment)data;
             switch (attach.location)
             {
                 case Location.Top:
@@ -618,11 +626,11 @@ namespace ProceduralParts
 
                     if (normalize)
                     {
-                        float theta = Mathf.Lerp(0, Mathf.PI * 2f, attach.uv[0]);
-                        float x = Mathf.Cos(theta);
-                        float z = -Mathf.Sin(theta);
+                        var theta = Mathf.Lerp(0, Mathf.PI * 2f, attach.uv[0]);
+                        var x = Mathf.Cos(theta);
+                        var z = -Mathf.Sin(theta);
 
-                        Vector3 normal = new Vector3(x, 0, z);
+                        var normal = new Vector3(x, 0, z);
                         attach.follower.transform.localPosition = new Vector3(normal.x * 0.5f, 0.5f - attach.uv[1], normal.z * 0.5f);
                         attach.follower.transform.localRotation = Quaternion.FromToRotation(Vector3.up, normal);
                     }
@@ -661,7 +669,7 @@ namespace ProceduralParts
             Log("Moving side attachment:" + attachment + " to:" + pos.ToString("F3"));
             attachment.follower.transform.localPosition = pos;
 
-            var orientation = SideAttachOrientation(theta, out Vector3 normal);
+            var orientation = SideAttachOrientation(theta, out var normal);
 
             Log("Moving to orientation: normal: " + normal.ToString("F3") + " theta:" + (theta * 180f / Mathf.PI) + orientation.ToStringAngleAxis());
 
