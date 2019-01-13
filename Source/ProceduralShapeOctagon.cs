@@ -11,11 +11,10 @@ namespace ProceduralParts
     {
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
-        public float Diameter = 1f;
+        public float diameter = 1f;
         private float oldDiameter;
 
         [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), UI_FloatRange(minValue = 4, maxValue = 8, stepIncrement = 2, scene = UI_Scene.Editor)]
-        public float _numberOfAddedMLILayers = 0; // This is the number of layers added by the player.
         public float cornerCount = 8;
         private int oldCornerCount;
 
@@ -37,14 +36,21 @@ namespace ProceduralParts
         private int SideTriangles => CornerCount * 2;
         private int TrianglesPerCap => CornerCount - 2;
 
-        private float NormHalfSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
-        private float NormSideLength => NormHalfSideLength * 2;
+        private float NormHalfSideLength => NormSideLength / 2;
+        private float NormSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
         private const float NormRadius = 0.5f;
         private const float NormHalfHeight = 0.5f;
-        private float HalfSideLength => NormHalfSideLength * Diameter;
-        private float Radius => NormRadius * Diameter;
+        private float InnerDiameter
+        {
+            get => diameter;
+            set => diameter = value;
+        }
+
+        private float HalfSideLength => NormHalfSideLength * InnerDiameter;
+        private float InnerRadius => NormRadius * InnerDiameter;
+        private float OuterRadius => InnerRadius / Mathf.Cos(CornerCenterCornerAngle);
         private float HalfHeight => NormHalfHeight * Length;
-        private float Area => Radius * HalfSideLength * CornerCount;
+        private float Area => InnerRadius * HalfSideLength * CornerCount;
         private float VolumeCalculated => Area * Length;
         private int SideVerticesPerCap => CornerCount * 2;
         private float NormHorizontalDiameter => Mathf.Cos(StartAngle - (CornerCount - 2) / 4 * CornerCenterCornerAngle) * -2;
@@ -88,7 +94,7 @@ namespace ProceduralParts
 
             if (coords.RadiusMode != ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_CENTER)
             {
-                radius = coords.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ? Radius + coords.r : Radius * coords.r;
+                radius = coords.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ? InnerRadius + coords.r : InnerRadius * coords.r;
             }
 
             var theta = Mathf.Lerp(0, Mathf.PI * 2f, coords.u);
@@ -152,8 +158,8 @@ namespace ProceduralParts
             }
 
             shapeCoordinates.r = shapeCoordinates.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
-                direction.magnitude - Radius :
-                direction.magnitude / Radius; // RELATIVE_TO_SHAPE_RADIUS
+                direction.magnitude - InnerRadius :
+                direction.magnitude / InnerRadius; // RELATIVE_TO_SHAPE_RADIUS
 
             // sometimes, if the shapes radius is 0, r rersults in NaN
             if (float.IsNaN(shapeCoordinates.r) || float.IsPositiveInfinity(shapeCoordinates.r) || float.IsNegativeInfinity(shapeCoordinates.r))
@@ -190,7 +196,7 @@ namespace ProceduralParts
                     diameterEdit.minValue = PPart.diameterMin;
                     diameterEdit.incrementLarge = PPart.diameterLargeStep;
                     diameterEdit.incrementSmall = PPart.diameterSmallStep;
-                    Diameter = Mathf.Clamp(Diameter, PPart.diameterMin, PPart.diameterMax);
+                    InnerDiameter = Mathf.Clamp(InnerDiameter, PPart.diameterMin, PPart.diameterMax);
                 }
                 else
                     Debug.LogError("*PP* could not find field 'diameter'");
@@ -203,11 +209,11 @@ namespace ProceduralParts
 
         protected override void UpdateShape(bool force)
         {
-            if (!force && Diameter == oldDiameter && Length == oldLength && CornerCount == oldCornerCount)
+            if (!force && InnerDiameter == oldDiameter && Length == oldLength && CornerCount == oldCornerCount)
             {
                 return;
             }
-            Debug.Log($"UpdateShape called: {force}, dia: {Diameter}, oldDia: {oldDiameter}, length: {Length}, oldLength: {oldLength}");
+            Debug.Log($"UpdateShape called: {force}, dia: {InnerDiameter}, oldDia: {oldDiameter}, length: {Length}, oldLength: {oldLength}");
 
             RecalculateVolume();
 
@@ -220,7 +226,7 @@ namespace ProceduralParts
 
             UpdateProps();
             oldLength = Length;
-            oldDiameter = Diameter;
+            oldDiameter = InnerDiameter;
             oldCornerCount = CornerCount;
             RaiseModelAndColliderChanged();
         }
@@ -243,10 +249,10 @@ namespace ProceduralParts
             if (volume != oldVolume)
             {
                 var excessVol = oldVolume - volume;
-                if (oldDiameter != Diameter)
+                if (oldDiameter != InnerDiameter)
                 {
                     var requiredDiameter = Mathf.Sqrt(volume / Length / CornerCount / NormHalfSideLength / NormRadius);
-                    Diameter = TruncateForSlider(requiredDiameter, -excessVol);
+                    InnerDiameter = TruncateForSlider(requiredDiameter, -excessVol);
                 }
                 else
                 {
@@ -300,7 +306,7 @@ namespace ProceduralParts
             GenerateSideVertices(mesh, HalfHeight, 1, SideVerticesPerCap);
             GenerateSideTriangles(mesh, SideVerticesPerCap, 2);
 
-            var tankULength = CornerCount * NormSideLength * Diameter * 2;
+            var tankULength = CornerCount * NormSideLength * InnerDiameter * 2;
             var tankVLength = Length;
 
             //print("ULength=" + tankULength + " VLength=" + tankVLength);
@@ -315,16 +321,16 @@ namespace ProceduralParts
             var node = part.attachNodes.Find(n => n.id == nodeName);
             if (node == null)
                 return;
-            node.size = Math.Min((int)(Diameter / PPart.diameterLargeStep), 3);
+            node.size = Math.Min((int)(InnerDiameter / PPart.diameterLargeStep), 3);
 
             // Breaking force and torque scales with the area of the surface (node size).
             node.breakingTorque = node.breakingForce = Mathf.Max(50 * node.size * node.size, 50);
 
             // Send messages for the changing of the ends
-            RaiseChangeAttachNodeSize(node, Diameter, Mathf.PI * Diameter * Diameter * 0.25f);
+            RaiseChangeAttachNodeSize(node, InnerDiameter, Mathf.PI * InnerDiameter * InnerDiameter * 0.25f);
 
             // TODO: separate out the meshes for each end so we can use the scale for texturing.
-            RaiseChangeTextureScale(nodeName, PPart.EndsMaterial, new Vector2(Diameter, Diameter));
+            RaiseChangeTextureScale(nodeName, PPart.EndsMaterial, new Vector2(InnerDiameter, InnerDiameter));
         }
 
         private static void WriteToAppropriateMesh(UncheckedMesh mesh, Mesh iconMesh, Mesh normalMesh)
@@ -377,7 +383,7 @@ namespace ProceduralParts
         private void CreateSideCornerVertices(UncheckedMesh mesh, float y, float v, int offset, int cornerNumber)
         {
             var cornerAngle = GetCornerAngle(cornerNumber);
-            var cornerVector = CreateVectorFromAngle(cornerAngle, y, Radius);
+            var cornerVector = CreateVectorFromAngle(cornerAngle, y, InnerRadius);
             var verticesPerCorner = 2;
             Log("Generating vertex: " + cornerVector);
 
@@ -404,7 +410,7 @@ namespace ProceduralParts
         private void CreateCapCornerVertices(UncheckedMesh mesh, float y, int offset, int cornerNumber)
         {
             var cornerAngle = GetCornerAngle(cornerNumber);
-            var cornerVector = CreateVectorFromAngle(cornerAngle, y, Radius);
+            var cornerVector = CreateVectorFromAngle(cornerAngle, y, InnerRadius);
             var verticesPerCorner = 1;
 
             for (var vertexCornerIndex = 0; vertexCornerIndex < verticesPerCorner; vertexCornerIndex++)
@@ -418,7 +424,7 @@ namespace ProceduralParts
 
         private void SetCapVertexData(UncheckedMesh mesh, Vector3 cornerVector, int vertexIndex, bool up)
         {
-            mesh.uv[vertexIndex] = new Vector2(cornerVector.x, cornerVector.z) / Diameter + new Vector2(0.5f, 0.5f); // / MaxHorizontalDiameter;
+            mesh.uv[vertexIndex] = new Vector2(cornerVector.x, cornerVector.z) / InnerDiameter + new Vector2(0.5f, 0.5f); // / MaxHorizontalDiameter;
             mesh.normals[vertexIndex] = new Vector3(0, up ? 1 : -1, 0);
             mesh.tangents[vertexIndex] = new Vector4(1, 0, 0, 1f);
         }
@@ -467,7 +473,7 @@ namespace ProceduralParts
             var position = transformFollower.transform.localPosition;
 
             var attachmentHeightToRadiusSquared = position.y * position.y / (position.x * position.x + position.z * position.z);
-            var tankCornerHeightToRadiusSquared = Length * Length / (Diameter * Diameter);
+            var tankCornerHeightToRadiusSquared = Length * Length / (InnerDiameter * InnerDiameter);
 
             if(attachmentHeightToRadiusSquared > tankCornerHeightToRadiusSquared)
             {
@@ -505,7 +511,7 @@ namespace ProceduralParts
 
         private Attachment AddNonNormalizedCapAttachment(TransformFollower transformFollower, Vector3 position)
         {
-            var uv = new Vector2(position.x / Radius + 0.5f, position.z / Radius + 0.5f);
+            var uv = new Vector2(position.x / InnerRadius + 0.5f, position.z / InnerRadius + 0.5f);
             return AddCapAttachment(transformFollower, position, uv);
         }
 
@@ -663,8 +669,8 @@ namespace ProceduralParts
         {
             var theta = Mathf.Lerp(0, Mathf.PI * 2f, attachment.uv[0]);
 
-            var x = Mathf.Cos(theta) * Radius;
-            var z = -Mathf.Sin(theta) * Radius;
+            var x = Mathf.Cos(theta) * InnerRadius;
+            var z = -Mathf.Sin(theta) * InnerRadius;
 
             var pos = new Vector3(x, attachment.uv[1] - 0.5f, z);
             Log("Moving side attachment:" + attachment + " to:" + pos.ToString("F3"));
@@ -687,9 +693,9 @@ namespace ProceduralParts
         private void MoveCapAttachment(Attachment attachment, float yCoordinate)
         {
             var pos = new Vector3(
-                                (attachment.uv[0] - 0.5f) * Radius,
+                                (attachment.uv[0] - 0.5f) * InnerRadius,
                                 yCoordinate,
-                                (attachment.uv[1] - 0.5f) * Radius);
+                                (attachment.uv[1] - 0.5f) * InnerRadius);
             Log("Moving cap attachment:" + attachment + " to:" + pos.ToString("F7") + " uv: " + attachment.uv.ToString("F5"));
             attachment.follower.transform.localPosition = pos;
             attachment.follower.ForceUpdate();
