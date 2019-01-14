@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace ProceduralParts
 {
-    class ProceduralShapeOctagon : ProceduralAbstractShape
+    class ProceduralShapePolygon : ProceduralAbstractShape
     {
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
