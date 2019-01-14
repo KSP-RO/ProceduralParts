@@ -161,12 +161,6 @@ namespace ProceduralParts
             shapeCoordinates.r = shapeCoordinates.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
                 direction.magnitude - InnerRadius :
                 direction.magnitude / InnerRadius; // RELATIVE_TO_SHAPE_RADIUS
-
-            // sometimes, if the shapes radius is 0, r rersults in NaN
-            if (float.IsNaN(shapeCoordinates.r) || float.IsPositiveInfinity(shapeCoordinates.r) || float.IsNegativeInfinity(shapeCoordinates.r))
-            {
-                shapeCoordinates.r = 0;
-            }
         }
 
         public override void UpdateTechConstraints()
@@ -191,16 +185,11 @@ namespace ProceduralParts
             else
             {
                 var diameterEdit = (UI_FloatEdit)Fields[nameof(diameter)].uiControlEditor;
-                if (null != diameterEdit)
-                {
-                    diameterEdit.maxValue = PPart.diameterMax;
-                    diameterEdit.minValue = PPart.diameterMin;
-                    diameterEdit.incrementLarge = PPart.diameterLargeStep;
-                    diameterEdit.incrementSmall = PPart.diameterSmallStep;
-                    InnerDiameter = Mathf.Clamp(InnerDiameter, PPart.diameterMin, PPart.diameterMax);
-                }
-                else
-                    Debug.LogError("*PP* could not find field 'diameter'");
+                diameterEdit.maxValue = PPart.diameterMax;
+                diameterEdit.minValue = PPart.diameterMin;
+                diameterEdit.incrementLarge = PPart.diameterLargeStep;
+                diameterEdit.incrementSmall = PPart.diameterSmallStep;
+                InnerDiameter = Mathf.Clamp(InnerDiameter, PPart.diameterMin, PPart.diameterMax);
             }
         }
 
