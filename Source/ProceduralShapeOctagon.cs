@@ -19,7 +19,7 @@ namespace ProceduralParts
             set => diameter = value;
         }
 
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), UI_FloatRange(minValue = 3, maxValue = 8, stepIncrement = 1, scene = UI_Scene.Editor)]
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), UI_FloatRange(minValue = 3, maxValue = 12, stepIncrement = 1, scene = UI_Scene.Editor)]
         public float cornerCount = 8;
         private int oldCornerCount;
 
@@ -42,7 +42,7 @@ namespace ProceduralParts
         public int CornerCount => (int)cornerCount;
         private float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
         private float EdgeToEdgeAngle => Mathf.PI - CornerCenterCornerAngle;
-        private float StartAngle => 1.5f * Mathf.PI - CornerCenterCornerAngle / 2f;
+        private float StartAngle => 0.5f * Mathf.PI - CornerCenterCornerAngle / 2f;
         private int SideTriangles => CornerCount * 2;
         private int TrianglesPerCap => CornerCount - 2;
 
