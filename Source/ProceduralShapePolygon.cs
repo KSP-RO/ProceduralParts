@@ -268,10 +268,12 @@ namespace ProceduralParts
 
         private void GenerateColliderMesh()
         {
-            var mesh = new UncheckedMesh(CornerCount * 2, SideTriangles);
+            var mesh = new UncheckedMesh(CornerCount * 2, SideTriangles + 2 * TrianglesPerCap);
             GenerateCapVertices(mesh, -HalfHeight, 0);
             GenerateCapVertices(mesh, HalfHeight, CornerCount);
             GenerateSideTriangles(mesh, CornerCount, 1);
+            GenerateCapTriangles(mesh, false, SideTriangles);
+            GenerateCapTriangles(mesh, true, SideTriangles + TrianglesPerCap);
 
             var colliderMesh = new Mesh();
             mesh.WriteTo(colliderMesh);
@@ -283,8 +285,8 @@ namespace ProceduralParts
             var mesh = new UncheckedMesh(CornerCount * 2, TrianglesPerCap * 2);
             GenerateCapVertices(mesh, -HalfHeight, 0);
             GenerateCapVertices(mesh, HalfHeight, CornerCount);
-            GenerateCapTriangles(mesh, false);
-            GenerateCapTriangles(mesh, true);
+            GenerateCapTriangles(mesh, false, 0);
+            GenerateCapTriangles(mesh, true, TrianglesPerCap);
 
             WriteToAppropriateMesh(mesh, PPart.EndsIconMesh, EndsMesh);
         }
@@ -350,15 +352,15 @@ namespace ProceduralParts
             }
         }
 
-        private void GenerateCapTriangles(UncheckedMesh mesh, bool up)
+        private void GenerateCapTriangles(UncheckedMesh mesh, bool up, int triangleOffset)
         {
-            var triangleOffset = up ? TrianglesPerCap * 3 : 0;
+            var triangleIndexOffset = triangleOffset * 3;
             var vertexOffset = up ? CornerCount : 0;
             for (var i = 0; i < TrianglesPerCap; i++)
             {
-                mesh.triangles[i * 3 + triangleOffset] = vertexOffset;
-                mesh.triangles[i * 3 + 1 + triangleOffset] = (up ? i + 2 : i + 1) + vertexOffset;
-                mesh.triangles[i * 3 + 2 + triangleOffset] = (up ? i + 1 : i + 2) + vertexOffset;
+                mesh.triangles[i * 3 + triangleIndexOffset] = vertexOffset;
+                mesh.triangles[i * 3 + 1 + triangleIndexOffset] = (up ? i + 2 : i + 1) + vertexOffset;
+                mesh.triangles[i * 3 + 2 + triangleIndexOffset] = (up ? i + 1 : i + 2) + vertexOffset;
             }
         }
 
