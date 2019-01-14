@@ -54,10 +54,12 @@ namespace ProceduralParts
         private float HalfSideLength => NormHalfSideLength * InnerDiameter;
         private float InnerRadius => NormInnerRadius * InnerDiameter;
         private float OuterRadius => InnerRadius / Mathf.Cos(CornerCenterCornerAngle / 2);
+        private float NormOuterDiameter => 1f / Mathf.Cos(CornerCenterCornerAngle / 2);
         private float HalfHeight => NormHalfHeight * Length;
         private float Area => InnerRadius * HalfSideLength * CornerCount;
         private float VolumeCalculated => Area * Length;
         private int SideVerticesPerCap => CornerCount * 2;
+        private float NormHorizontalDiameter => Mathf.Cos(StartAngle - (CornerCount - 1) / 4 * CornerCenterCornerAngle) * NormOuterDiameter;
 
         public override void OnStart(StartState state)
         {
@@ -416,7 +418,7 @@ namespace ProceduralParts
 
         private void SetCapVertexData(UncheckedMesh mesh, Vector3 cornerVector, int vertexIndex, bool up)
         {
-            mesh.uv[vertexIndex] = new Vector2(cornerVector.x, cornerVector.z) / InnerDiameter + new Vector2(0.5f, 0.5f); // / MaxHorizontalDiameter;
+            mesh.uv[vertexIndex] = new Vector2(cornerVector.x, cornerVector.z) / InnerDiameter / NormHorizontalDiameter + new Vector2(0.5f, 0.5f);
             mesh.normals[vertexIndex] = new Vector3(0, up ? 1 : -1, 0);
             mesh.tangents[vertexIndex] = new Vector4(1, 0, 0, 1f);
         }
