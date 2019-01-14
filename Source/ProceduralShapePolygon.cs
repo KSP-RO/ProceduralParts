@@ -9,8 +9,12 @@ namespace ProceduralParts
 {
     class ProceduralShapePolygon : ProceduralAbstractShape
     {
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), UI_FloatRange(minValue = 3, maxValue = 12, stepIncrement = 1, scene = UI_Scene.Editor)]
+        public float cornerCount = 8;
+        private int oldCornerCount;
+
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+            UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float diameter = 1f;
         private float oldDiameter;
         private float InnerDiameter
@@ -19,18 +23,8 @@ namespace ProceduralParts
             set => diameter = value;
         }
 
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), UI_FloatRange(minValue = 3, maxValue = 12, stepIncrement = 1, scene = UI_Scene.Editor)]
-        public float cornerCount = 8;
-        private int oldCornerCount;
-
-        [KSPField]
-        public string TopNodeName = "top";
-
-        [KSPField]
-        public string BottomNodeName = "bottom";
-
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+            UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
         private float oldLength;
         private float Length
@@ -38,6 +32,12 @@ namespace ProceduralParts
             get => length;
             set => length = value;
         }
+
+        [KSPField]
+        public string TopNodeName = "top";
+
+        [KSPField]
+        public string BottomNodeName = "bottom";
 
         public int CornerCount => (int)cornerCount;
         private float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
