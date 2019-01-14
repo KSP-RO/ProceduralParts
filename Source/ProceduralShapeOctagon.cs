@@ -13,8 +13,13 @@ namespace ProceduralParts
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float diameter = 1f;
         private float oldDiameter;
+        private float InnerDiameter
+        {
+            get => diameter;
+            set => diameter = value;
+        }
 
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), UI_FloatRange(minValue = 4, maxValue = 8, stepIncrement = 2, scene = UI_Scene.Editor)]
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), UI_FloatRange(minValue = 3, maxValue = 8, stepIncrement = 1, scene = UI_Scene.Editor)]
         public float cornerCount = 8;
         private int oldCornerCount;
 
@@ -26,8 +31,13 @@ namespace ProceduralParts
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
-        public float Length = 1f;
+        public float length = 1f;
         private float oldLength;
+        private float Length
+        {
+            get => length;
+            set => length = value;
+        }
 
         public int CornerCount => (int)cornerCount;
         private float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
@@ -38,25 +48,16 @@ namespace ProceduralParts
 
         private float NormHalfSideLength => NormSideLength / 2;
         private float NormSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
-        private const float NormRadius = 0.5f;
+        private const float NormInnerRadius = 0.5f;
         private const float NormHalfHeight = 0.5f;
-        private float InnerDiameter
-        {
-            get => diameter;
-            set => diameter = value;
-        }
 
         private float HalfSideLength => NormHalfSideLength * InnerDiameter;
-        private float InnerRadius => NormRadius * InnerDiameter;
-        private float OuterRadius => InnerRadius / Mathf.Cos(CornerCenterCornerAngle);
+        private float InnerRadius => NormInnerRadius * InnerDiameter;
+        private float OuterRadius => InnerRadius / Mathf.Cos(CornerCenterCornerAngle / 2);
         private float HalfHeight => NormHalfHeight * Length;
         private float Area => InnerRadius * HalfSideLength * CornerCount;
         private float VolumeCalculated => Area * Length;
         private int SideVerticesPerCap => CornerCount * 2;
-        private float NormHorizontalDiameter => Mathf.Cos(StartAngle - (CornerCount - 2) / 4 * CornerCenterCornerAngle) * -2;
-
-        //4: 1.25 Pi + 0 Pi => 1.25 Pi
-
 
         public override void OnStart(StartState state)
         {
@@ -174,10 +175,10 @@ namespace ProceduralParts
                 return;
 
             if (PPart.lengthMin == PPart.lengthMax)
-                Fields["Length"].guiActiveEditor = false;
+                Fields[nameof(length)].guiActiveEditor = false;
             else
             {
-                var lengthEdit = (UI_FloatEdit)Fields["Length"].uiControlEditor;
+                var lengthEdit = (UI_FloatEdit)Fields[nameof(length)].uiControlEditor;
                 lengthEdit.maxValue = PPart.lengthMax;
                 lengthEdit.minValue = PPart.lengthMin;
                 lengthEdit.incrementLarge = PPart.lengthLargeStep;
@@ -186,10 +187,10 @@ namespace ProceduralParts
             }
 
             if (PPart.diameterMin == PPart.diameterMax)
-                Fields["Diameter"].guiActiveEditor = false;
+                Fields[nameof(diameter)].guiActiveEditor = false;
             else
             {
-                var diameterEdit = (UI_FloatEdit)Fields["Diameter"].uiControlEditor;
+                var diameterEdit = (UI_FloatEdit)Fields[nameof(diameter)].uiControlEditor;
                 if (null != diameterEdit)
                 {
                     diameterEdit.maxValue = PPart.diameterMax;
@@ -251,7 +252,7 @@ namespace ProceduralParts
                 var excessVol = oldVolume - volume;
                 if (oldDiameter != InnerDiameter)
                 {
-                    var requiredDiameter = Mathf.Sqrt(volume / Length / CornerCount / NormHalfSideLength / NormRadius);
+                    var requiredDiameter = Mathf.Sqrt(volume / Length / CornerCount / NormHalfSideLength / NormInnerRadius);
                     InnerDiameter = TruncateForSlider(requiredDiameter, -excessVol);
                 }
                 else
@@ -383,7 +384,7 @@ namespace ProceduralParts
         private void CreateSideCornerVertices(UncheckedMesh mesh, float y, float v, int offset, int cornerNumber)
         {
             var cornerAngle = GetCornerAngle(cornerNumber);
-            var cornerVector = CreateVectorFromAngle(cornerAngle, y, InnerRadius);
+            var cornerVector = CreateVectorFromAngle(cornerAngle, y, OuterRadius);
             var verticesPerCorner = 2;
             Log("Generating vertex: " + cornerVector);
 
@@ -410,7 +411,7 @@ namespace ProceduralParts
         private void CreateCapCornerVertices(UncheckedMesh mesh, float y, int offset, int cornerNumber)
         {
             var cornerAngle = GetCornerAngle(cornerNumber);
-            var cornerVector = CreateVectorFromAngle(cornerAngle, y, InnerRadius);
+            var cornerVector = CreateVectorFromAngle(cornerAngle, y, OuterRadius);
             var verticesPerCorner = 1;
 
             for (var vertexCornerIndex = 0; vertexCornerIndex < verticesPerCorner; vertexCornerIndex++)
