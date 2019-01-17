@@ -19,7 +19,7 @@ namespace ProceduralParts
         private float oldDiameter;
         private float InnerDiameter
         {
-            get => diameter;
+            get => useOuterDiameter ? diameter * Mathf.Cos(CornerCenterCornerAngle / 2) : diameter;
             set => diameter = value;
         }
 
@@ -32,6 +32,10 @@ namespace ProceduralParts
             get => length;
             set => length = value;
         }
+
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Use Outer Diameter"), UI_Toggle(scene = UI_Scene.Editor)]
+        public bool useOuterDiameter = false;
+        private float oldUseOuterDiameter;
 
         [KSPField]
         public string TopNodeName = "top";
@@ -244,7 +248,7 @@ namespace ProceduralParts
                 if (oldDiameter != InnerDiameter)
                 {
                     var requiredDiameter = Mathf.Sqrt(volume / Length / CornerCount / NormHalfSideLength / NormInnerRadius);
-                    InnerDiameter = TruncateForSlider(requiredDiameter, -excessVol);
+                    InnerDiameter = TruncateForSlider(ConvertToEditorDiameter(requiredDiameter), -excessVol);
                 }
                 else
                 {
@@ -257,6 +261,8 @@ namespace ProceduralParts
 
             return volume;
         }
+
+        private float ConvertToEditorDiameter(float diameter) => useOuterDiameter ? diameter / Mathf.Cos(CornerCenterCornerAngle / 2) : diameter;
 
         private void UpdateProps()
         {
