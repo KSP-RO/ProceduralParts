@@ -17,11 +17,7 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float diameter = 1f;
         private float oldDiameter;
-        private float InnerDiameter
-        {
-            get => useOuterDiameter ? diameter * Mathf.Cos(CornerCenterCornerAngle / 2) : diameter;
-            set => diameter = value;
-        }
+        private float InnerDiameter => CornerCount % 2 == 0 ? diameter : GetInnerDiameterFromHeight(diameter);
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
@@ -32,10 +28,6 @@ namespace ProceduralParts
             get => length;
             set => length = value;
         }
-
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Use Outer Diameter"), UI_Toggle(scene = UI_Scene.Editor)]
-        public bool useOuterDiameter = false;
-        private float oldUseOuterDiameter;
 
         [KSPField]
         public string TopNodeName = "top";
@@ -63,7 +55,11 @@ namespace ProceduralParts
         private float Area => InnerRadius * HalfSideLength * CornerCount;
         private float VolumeCalculated => Area * Length;
         private int SideVerticesPerCap => CornerCount * 2;
-        private float NormHorizontalDiameter => Mathf.Cos(StartAngle - (CornerCount - 1) / 4 * CornerCenterCornerAngle) * NormOuterDiameter;
+        private float NormHorizontalDiameter => CornerCount % 4 == 0 ? 1 : NormOuterDiameter;
+
+        private float GetInnerDiameterFromHeight(float height) => height / ((1 + 1 / Mathf.Cos(CornerCenterCornerAngle / 2)) / 2);
+        private float ConvertToEditorDiameter(float innerDiameter) => CornerCount % 2 == 0 ? innerDiameter : GetHeightFromInnerDiameter(innerDiameter);
+        private float GetHeightFromInnerDiameter(float innerDiameter) => innerDiameter * ((1 + 1 / Mathf.Cos(CornerCenterCornerAngle / 2)) / 2);
 
         public override void OnStart(StartState state)
         {
@@ -195,7 +191,7 @@ namespace ProceduralParts
                 diameterEdit.minValue = PPart.diameterMin;
                 diameterEdit.incrementLarge = PPart.diameterLargeStep;
                 diameterEdit.incrementSmall = PPart.diameterSmallStep;
-                InnerDiameter = Mathf.Clamp(InnerDiameter, PPart.diameterMin, PPart.diameterMax);
+                diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
             }
         }
 
@@ -209,7 +205,7 @@ namespace ProceduralParts
             {
                 return;
             }
-            Debug.Log($"UpdateShape called: {force}, dia: {InnerDiameter}, oldDia: {oldDiameter}, length: {Length}, oldLength: {oldLength}");
+            Log($"UpdateShape called: {force}, dia: {diameter}, idia: {InnerDiameter}, oldDia: {oldDiameter}, length: {Length}, oldLength: {oldLength}");
 
             RecalculateVolume();
 
@@ -247,8 +243,8 @@ namespace ProceduralParts
                 var excessVol = oldVolume - volume;
                 if (oldDiameter != InnerDiameter)
                 {
-                    var requiredDiameter = Mathf.Sqrt(volume / Length / CornerCount / NormHalfSideLength / NormInnerRadius);
-                    InnerDiameter = TruncateForSlider(ConvertToEditorDiameter(requiredDiameter), -excessVol);
+                    var requiredInnerDiameter = Mathf.Sqrt(volume / Length / CornerCount / NormHalfSideLength / NormInnerRadius);
+                    diameter = TruncateForSlider(ConvertToEditorDiameter(requiredInnerDiameter), -excessVol);
                 }
                 else
                 {
@@ -261,8 +257,6 @@ namespace ProceduralParts
 
             return volume;
         }
-
-        private float ConvertToEditorDiameter(float diameter) => useOuterDiameter ? diameter / Mathf.Cos(CornerCenterCornerAngle / 2) : diameter;
 
         private void UpdateProps()
         {
@@ -374,7 +368,7 @@ namespace ProceduralParts
 
         private void GenerateSideVertices(UncheckedMesh mesh, float y, float v, int offset)
         {
-            for(var cornerNumber = 0; cornerNumber < CornerCount; cornerNumber++)
+            for (var cornerNumber = 0; cornerNumber < CornerCount; cornerNumber++)
             {
                 CreateSideCornerVertices(mesh, y, v, offset, cornerNumber);
             }
@@ -475,7 +469,7 @@ namespace ProceduralParts
             var attachmentHeightToRadiusSquared = position.y * position.y / (position.x * position.x + position.z * position.z);
             var tankCornerHeightToRadiusSquared = Length * Length / (InnerDiameter * InnerDiameter);
 
-            if(attachmentHeightToRadiusSquared > tankCornerHeightToRadiusSquared)
+            if (attachmentHeightToRadiusSquared > tankCornerHeightToRadiusSquared)
             {
                 return AddNonNormalizedCapAttachment(transformFollower, position);
             }
