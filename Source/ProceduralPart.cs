@@ -194,7 +194,13 @@ namespace ProceduralParts
                 }
 
                 if (HighLogic.LoadedSceneIsEditor)
+                {
                     symmetryClone = true;
+                    var capTextureField = Fields[nameof(capTextureIndex)];
+
+                    var chooseOption = (UI_ChooseOption) capTextureField.uiControlEditor;
+                    chooseOption.options = Enum.GetNames(typeof(CapTextureMode));
+                }
 
                 if (GameSceneFilter.AnyEditor.IsLoaded())
                     GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
@@ -618,9 +624,19 @@ namespace ProceduralParts
 
         #region Texture Sets
 
+        public enum CapTextureMode
+        {
+            Ends, Side, GreySide, PlainWhite
+        }
+
         [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string textureSet = "Original";
         private string oldTextureSet = "*****";
+
+        [KSPField(guiName = "Ends Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]
+        public int capTextureIndex = 0;
+        private CapTextureMode CapTexture => (CapTextureMode)capTextureIndex;
+        private CapTextureMode oldCapTexture = CapTextureMode.Ends;
 
         public class TextureSet
         {
@@ -834,13 +850,13 @@ namespace ProceduralParts
 
         private void UpdateTexture()
         {
-            if (textureSet == oldTextureSet)
+            if (textureSet == oldTextureSet && CapTexture == oldCapTexture)
                 return;
 
             Material endsMaterial;
             Material sidesMaterial;
 
-            if(HighLogic.LoadedScene== GameScenes.LOADING)
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
             {
                 // if we are in loading screen, all changes have to be made to the icon materials. Otherwise all icons will have the same texture 
                 endsMaterial = this.EndsIconMaterial;
@@ -860,33 +876,49 @@ namespace ProceduralParts
                 return;
             }
             oldTextureSet = textureSet;
+            oldCapTexture = CapTexture;
 
             TextureSet tex = loadedTextureSets[newIdx];
 
-            // Set shaders
             if (!part.Modules.Contains("ModulePaintable"))
             {
-                if (HighLogic.LoadedScene == GameScenes.LOADING)
-                {
-                    sidesMaterial.shader = Shader.Find("KSP/ScreenSpaceMask");
-                    if (endsMaterial != null)
-                        endsMaterial.shader = Shader.Find("KSP/ScreenSpaceMask");
-                }
-                else
-                {
-                    sidesMaterial.shader = Shader.Find(tex.sidesBump != null ? "KSP/Bumped Specular" : "KSP/Specular");
-
-                    // pt is no longer specular ever, just diffuse.
-                    if (endsMaterial != null)
-                        endsMaterial.shader = Shader.Find(tex.endsBump != null ? "KSP/Bumped Specular" : "KSP/Specular");
-                }
+                SetupShader(sidesMaterial, tex.sidesBump);
             }
 
             sidesMaterial.SetColor("_SpecColor", tex.sidesSpecular);
             sidesMaterial.SetFloat("_Shininess", tex.sidesShininess);
 
-            // set up UVs
-            Vector2 scaleUV = tex.scale;
+            var scaleUV = GetScaleUv(tex);
+
+            sidesMaterial.mainTextureScale = scaleUV;
+            sidesMaterial.mainTextureOffset = Vector2.zero;
+            sidesMaterial.SetTexture("_MainTex", tex.sides);
+            if (tex.sidesBump != null)
+            {
+                sidesMaterial.SetTextureScale("_BumpMap", scaleUV);
+                sidesMaterial.SetTextureOffset("_BumpMap", Vector2.zero);
+                sidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
+            }
+            if (endsMaterial != null)
+            {
+                SetupEndsTexture(endsMaterial, tex, scaleUV);
+            }
+        }
+
+        private static void SetupShader(Material material, Texture bumpMap)
+        {
+            if (HighLogic.LoadedScene != GameScenes.LOADING)
+            {
+                material.shader = Shader.Find(bumpMap != null ? "KSP/Bumped Specular" : "KSP/Specular");
+            } else
+            {
+                material.shader = Shader.Find("KSP/ScreenSpaceMask");
+            }
+        }
+
+        private Vector2 GetScaleUv(TextureSet tex)
+        {
+            var scaleUV = tex.scale;
             if (tex.autoScale)
             {
                 scaleUV.x = (float)Math.Round(scaleUV.x * sideTextureScale.x / 8f);
@@ -908,34 +940,50 @@ namespace ProceduralParts
                 }
             }
 
-            // apply
-            sidesMaterial.mainTextureScale = scaleUV;
-            sidesMaterial.mainTextureOffset = Vector2.zero;
-            sidesMaterial.SetTexture("_MainTex", tex.sides);
-            if (tex.sidesBump != null)
-            {
-                sidesMaterial.SetTextureScale("_BumpMap", scaleUV);
-                sidesMaterial.SetTextureOffset("_BumpMap", Vector2.zero);
-                sidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
-            }
-            if (endsMaterial != null)
-            {
-                var endsScaleFactor = tex.endsAutoScale ? scaleUV.x / Mathf.PI * 2 : 0.93f;
-                var endsScale = new Vector2(endsScaleFactor, endsScaleFactor);
-                var offset = (1f / endsScaleFactor - 1f) / 2f;
-                var endsOffset = new Vector2(offset, offset);
-                endsMaterial.mainTextureScale = endsScale;
-                endsMaterial.mainTextureOffset = endsOffset;
-                endsMaterial.SetColor("_SpecColor", tex.endsSpecular);
-                endsMaterial.SetFloat("_Shininess", tex.endsShininess);
-                endsMaterial.SetTexture("_MainTex", tex.ends);
+            return scaleUV;
+        }
 
-                if(tex.endsBump != null)
+        private void SetupEndsTexture(Material endsMaterial, TextureSet tex, Vector2 scaleUV)
+        {
+            if (CapTexture == CapTextureMode.Ends)
+            {
+                SetEndsTextureProperties(endsMaterial, tex.ends, tex.endsBump, tex.endsSpecular, tex.endsShininess, tex.endsAutoScale, scaleUV);
+            }
+            else if (CapTexture == CapTextureMode.Side)
+            {
+                SetEndsTextureProperties(endsMaterial, tex.sides, tex.sidesBump, tex.sidesSpecular, tex.sidesShininess, tex.autoScale, scaleUV);
+            }
+            else
+            {
+                var texture = loadedTextureSets.FirstOrDefault(x => x.name == Enum.GetName(typeof(CapTextureMode), CapTexture));
+                if (texture != null)
                 {
-                    endsMaterial.SetTextureScale("_BumpMap", endsScale);
-                    endsMaterial.SetTextureOffset("_BumpMap", endsOffset);
-                    endsMaterial.SetTexture("_BumpMap", tex.endsBump);
+                    var endsScaleUV = GetScaleUv(texture);
+                    SetEndsTextureProperties(endsMaterial, texture.sides, texture.sidesBump, texture.sidesSpecular, texture.sidesShininess, texture.autoScale, endsScaleUV);
                 }
+            }
+        }
+
+        private static void SetEndsTextureProperties(Material endsMaterial, Texture texture, Texture bumpMap, Color specular, float shininess, bool autoScale, Vector2 scaleUV)
+        {
+            var endsScaleFactor = autoScale ? scaleUV.x / Mathf.PI * 2 : 0.93f;
+            var endsScale = new Vector2(endsScaleFactor, endsScaleFactor);
+            var offset = (1f / endsScaleFactor - 1f) / 2f;
+            var endsOffset = new Vector2(offset, offset);
+            endsMaterial.mainTextureScale = endsScale;
+            endsMaterial.mainTextureOffset = endsOffset;
+
+            endsMaterial.SetColor("_SpecColor", specular);
+            endsMaterial.SetFloat("_Shininess", shininess);
+            endsMaterial.SetTexture("_MainTex", texture);
+
+            SetupShader(endsMaterial, bumpMap);
+
+            if (bumpMap != null)
+            {
+                endsMaterial.SetTextureScale("_BumpMap", endsScale);
+                endsMaterial.SetTextureOffset("_BumpMap", endsOffset);
+                endsMaterial.SetTexture("_BumpMap", bumpMap);
             }
         }
 
