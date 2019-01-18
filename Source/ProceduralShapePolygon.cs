@@ -28,6 +28,9 @@ namespace ProceduralParts
             set => length = value;
         }
 
+        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Circumdiameter", guiFormat = "F3", guiUnits = "\u2009m")]
+        public float OuterDiameter = 0;
+
         [KSPField]
         public string TopNodeName = "top";
 
@@ -221,6 +224,7 @@ namespace ProceduralParts
             oldLength = Length;
             oldInnerDiameter = InnerDiameter;
             oldCornerCount = CornerCount;
+            OuterDiameter = InnerDiameter / OuterToInnerFactor;
             RaiseModelAndColliderChanged();
         }
 
