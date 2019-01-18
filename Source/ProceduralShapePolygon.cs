@@ -16,8 +16,7 @@ namespace ProceduralParts
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float diameter = 1f;
-        private float oldDiameter;
-        private float InnerDiameter => CornerCount % 2 == 0 ? diameter : GetInnerDiameterFromHeight(diameter);
+        private float oldInnerDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
@@ -35,7 +34,7 @@ namespace ProceduralParts
         [KSPField]
         public string BottomNodeName = "bottom";
 
-        public int CornerCount => (int)cornerCount;
+        private int CornerCount => (int)cornerCount;
         private float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
         private float EdgeToEdgeAngle => Mathf.PI - CornerCenterCornerAngle;
         private float StartAngle => 0.5f * Mathf.PI - CornerCenterCornerAngle / 2f;
@@ -47,19 +46,21 @@ namespace ProceduralParts
         private const float NormInnerRadius = 0.5f;
         private const float NormHalfHeight = 0.5f;
 
+        private float InnerDiameter => CornerCount % 2 == 0 ? diameter : GetInnerDiameterFromHeight(diameter);
         private float HalfSideLength => NormHalfSideLength * InnerDiameter;
         private float InnerRadius => NormInnerRadius * InnerDiameter;
-        private float OuterRadius => InnerRadius / Mathf.Cos(CornerCenterCornerAngle / 2);
-        private float NormOuterDiameter => 1f / Mathf.Cos(CornerCenterCornerAngle / 2);
+        private float OuterToInnerFactor => Mathf.Cos(CornerCenterCornerAngle / 2);
+        private float OuterRadius => InnerRadius / OuterToInnerFactor;
+        private float NormOuterDiameter => 1f / OuterToInnerFactor;
         private float HalfHeight => NormHalfHeight * Length;
         private float Area => InnerRadius * HalfSideLength * CornerCount;
         private float VolumeCalculated => Area * Length;
         private int SideVerticesPerCap => CornerCount * 2;
         private float NormHorizontalDiameter => CornerCount % 4 == 0 ? 1 : NormOuterDiameter;
 
-        private float GetInnerDiameterFromHeight(float height) => height / ((1 + 1 / Mathf.Cos(CornerCenterCornerAngle / 2)) / 2);
+        private float GetInnerDiameterFromHeight(float height) => height / ((1 + 1 / OuterToInnerFactor) / 2);
         private float ConvertToEditorDiameter(float innerDiameter) => CornerCount % 2 == 0 ? innerDiameter : GetHeightFromInnerDiameter(innerDiameter);
-        private float GetHeightFromInnerDiameter(float innerDiameter) => innerDiameter * ((1 + 1 / Mathf.Cos(CornerCenterCornerAngle / 2)) / 2);
+        private float GetHeightFromInnerDiameter(float innerDiameter) => innerDiameter * ((1 + 1 / OuterToInnerFactor) / 2);
 
         public override void OnStart(StartState state)
         {
@@ -201,11 +202,11 @@ namespace ProceduralParts
 
         protected override void UpdateShape(bool force)
         {
-            if (!force && InnerDiameter == oldDiameter && Length == oldLength && CornerCount == oldCornerCount)
+            if (!force && InnerDiameter == oldInnerDiameter && Length == oldLength && CornerCount == oldCornerCount)
             {
                 return;
             }
-            Log($"UpdateShape called: {force}, dia: {diameter}, idia: {InnerDiameter}, oldDia: {oldDiameter}, length: {Length}, oldLength: {oldLength}");
+            Log($"UpdateShape called: {force}, dia: {diameter}, idia: {InnerDiameter}, oldDia: {oldInnerDiameter}, length: {Length}, oldLength: {oldLength}");
 
             RecalculateVolume();
 
@@ -218,7 +219,7 @@ namespace ProceduralParts
 
             UpdateProps();
             oldLength = Length;
-            oldDiameter = InnerDiameter;
+            oldInnerDiameter = InnerDiameter;
             oldCornerCount = CornerCount;
             RaiseModelAndColliderChanged();
         }
@@ -241,7 +242,7 @@ namespace ProceduralParts
             if (volume != oldVolume)
             {
                 var excessVol = oldVolume - volume;
-                if (oldDiameter != InnerDiameter)
+                if (oldInnerDiameter != InnerDiameter)
                 {
                     var requiredInnerDiameter = Mathf.Sqrt(volume / Length / CornerCount / NormHalfSideLength / NormInnerRadius);
                     diameter = TruncateForSlider(ConvertToEditorDiameter(requiredInnerDiameter), -excessVol);
