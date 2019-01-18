@@ -966,9 +966,9 @@ namespace ProceduralParts
 
         private static void SetEndsTextureProperties(Material endsMaterial, Texture texture, Texture bumpMap, Color specular, float shininess, bool autoScale, Vector2 scaleUV)
         {
-            var endsScaleFactor = autoScale ? scaleUV.x / Mathf.PI * 2 : 0.93f;
+            var endsScaleFactor = autoScale ? scaleUV.x / Mathf.PI * 2 : 0.95f;
             var endsScale = new Vector2(endsScaleFactor, endsScaleFactor);
-            var offset = (1f / endsScaleFactor - 1f) / 2f;
+            var offset = 0.5f - 0.5f * endsScaleFactor;
             var endsOffset = new Vector2(offset, offset);
             endsMaterial.mainTextureScale = endsScale;
             endsMaterial.mainTextureOffset = endsOffset;
