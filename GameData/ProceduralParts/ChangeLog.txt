@@ -1,5 +1,8 @@
 ============= Changelog for ProceduralParts  =========
 
+===  1.2.17  ===
+Obey max/min volume more precisely (#12)
+
 ===  1.2.16  ===
 Fix SRB nozzle colour.
 
