@@ -29,6 +29,16 @@ namespace KSPAPIExtensions
             return false;
         }
 
+        public static float Ceiling(float value, float precision)
+        {
+            return (float)Math.Ceiling(value / precision) * precision;
+        }
+
+        public static float Floor(float value, float precision)
+        {
+            return (float)Math.Floor(value / precision) * precision;
+        }
+
         /// <summary>
         /// Round value to the nearest. 
         /// </summary>

@@ -9,17 +9,17 @@ namespace ProceduralParts
         : ProceduralAbstractSoRShape
     {
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float diameter = 1.25f;
         private float oldDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
         private float oldLength;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fillet", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 5, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float fillet = 1f;
         private float oldFillet;
 
@@ -38,11 +38,13 @@ namespace ProceduralParts
         private static readonly Func<float, float> sqrt = Mathf.Sqrt;
         private static readonly Func<float, float, float> pow = Mathf.Pow;
 
-        protected override void UpdateShape(bool force)
+        protected override void UpdateShape(bool forceUpdate)
         {
             // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (!force && oldDiameter == diameter && oldLength == length && oldFillet == fillet)
+            if (!forceUpdate && oldDiameter == diameter && oldLength == length && oldFillet == fillet)
                 return;
+
+            var refreshRequired = false;
 
             if (HighLogic.LoadedSceneIsFlight)
             {
@@ -53,28 +55,7 @@ namespace ProceduralParts
                 if (filletEdit == null)
                     filletEdit = (UI_FloatEdit)Fields["fillet"].uiControlEditor;
 
-                if (length != oldLength)
-                {
-                    if (length < oldLength && fillet > length)
-                        fillet = length;
-
-                    float volExcess = MaxMinVolume();
-                    if (volExcess != 0)
-                    {
-                        // Again using alpha, solve the volume equation below equation for l
-                        // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for l
-                        // l = (-3 (pi-4) pi d f^2+pi (3 pi-10) f^3+24 v)/(6 pi d^2) 
-                        length = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * Volume) / (6f * Pi * pow(diameter, 2));
-                        length = (float)Math.Round(length, 3);
-
-                        // We could iterate here with the fillet and push it back up if it's been pushed down
-                        // but it's altogether too much bother. User will just have to suck it up and not be
-                        // so darn agressive with short lengths. I mean, seriously... :)
-                    }
-
-                    filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
-                }
-                else if (diameter != oldDiameter)
+                if (diameter != oldDiameter)
                 {
                     if (useEndDiameter)
                     {
@@ -89,9 +70,12 @@ namespace ProceduralParts
                             fillet = diameter;
                     }
 
-                    float volExcess = MaxMinVolume();
-                    if (volExcess != 0)
+                    var volume = CalcVolume();
+                    var clampedVolume = GetClampedVolume(volume);
+                    var excessVol = volume - clampedVolume;
+                    if (excessVol != 0)
                     {
+                        refreshRequired = true; 
                         // Unfortunatly diameter is not as easily isolated, but its still possible.
 
                         // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for d
@@ -99,7 +83,7 @@ namespace ProceduralParts
                         // d = (-3 (pi-4) pi f^2 ± sqrt(3 pi) sqrt(3 (pi-4)^2 pi f^4+8 pi (3 pi-10) f^3 l+192 l v)) / (12 pi l)
 
                         float t1 = -3 * (Pi - 4f) * Pi * fillet * fillet;
-                        float t2 = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * Volume);
+                        float t2 = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * clampedVolume);
                         float de = (12f * Pi * length);
 
                         // I'm pretty sure only the +ve value is required, but make the -ve possible too.
@@ -107,10 +91,12 @@ namespace ProceduralParts
                         if (diameter < 0)
                             diameter = (t1 - t2) / de;
 
-                        diameter = (float)Math.Round(diameter, 3);
+                        diameter = TruncateForSlider(diameter, -excessVol);
+                        volume = CalcVolume();
                     }
 
                     filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
+                    Volume = volume;
                 }
                 else if (fillet != oldFillet)
                 {
@@ -127,37 +113,57 @@ namespace ProceduralParts
                     // The equation is far too complicated plug this into alpha and you'll see what I mean:
                     // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for f
 
-                    float vol = CalcVolume();
-                    float inc;
+                    var volume = CalcVolume();
+                    float inc = 0;
 
-                    if (vol < PPart.volumeMin)
+                    if (volume < PPart.volumeMin)
                     {
-                        Volume = PPart.volumeMin;
-                        inc = -0.001f;
+                        inc = -IteratorIncrement;
                     }
-                    else if (vol > PPart.volumeMax)
+                    else if (volume > PPart.volumeMax)
                     {
-                        Volume = PPart.volumeMax;
-                        inc = 0.001f;
-                    }
-                    else
-                    {
-                        Volume = vol;
-                        goto goldilocks;
+                        inc = IteratorIncrement;
                     }
 
-                    float lVol;
-                    float lFillet;
-                    do
+                    if (inc != 0)
                     {
-                        lVol = vol;
-                        lFillet = fillet;
-                        fillet += inc;
-                        vol = CalcVolume();
+                        refreshRequired = true;
+                        var tempFillet = fillet;
+                        var i = 1;
+                        while (volume < PPart.volumeMin && inc < 0 || volume > PPart.volumeMax && inc > 0)
+                        {
+                            fillet = TruncateForSlider(tempFillet + i * inc, inc);
+                            volume = CalcVolume();
+                            i++;
+                        }
                     }
-                    while (Mathf.Abs(vol - Volume) < Mathf.Abs(lVol - Volume));
-                    fillet = (float)Math.Round(lFillet, 3);
-                goldilocks: ;
+                    Volume = volume;
+                }
+                else if(length != oldLength || forceUpdate)
+                {
+                    if (length < oldLength && fillet > length)
+                        fillet = length;
+
+                    var volume = CalcVolume();
+                    var clampedVolume = GetClampedVolume(volume);
+                    var excessVol = volume - clampedVolume;
+                    if (excessVol != 0)
+                    {
+                        refreshRequired = true;
+                        // Again using alpha, solve the volume equation below equation for l
+                        // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for l
+                        // l = (-3 (pi-4) pi d f^2+pi (3 pi-10) f^3+24 v)/(6 pi d^2) 
+                        length = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * clampedVolume) / (6f * Pi * pow(diameter, 2));
+                        length = TruncateForSlider(length, -excessVol);
+                        volume = CalcVolume();
+
+                        // We could iterate here with the fillet and push it back up if it's been pushed down
+                        // but it's altogether too much bother. User will just have to suck it up and not be
+                        // so darn agressive with short lengths. I mean, seriously... :)
+                    }
+
+                    filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
+                    Volume = volume;
                 }
             }
 
@@ -210,7 +216,10 @@ namespace ProceduralParts
             oldLength = length;
             oldFillet = fillet;
             // ReSharper restore CompareOfFloatsByEqualityOperator
-            //RefreshPartEditorWindow();
+            if (refreshRequired)
+            {
+                RefreshPartEditorWindow();
+            }
             UpdateInterops();
         }
 
@@ -237,24 +246,17 @@ namespace ProceduralParts
             return Mathf.PI / 24f * (6f * diameter * diameter * length + 3f * (Mathf.PI - 4) * diameter * fillet * fillet + (10f - 3f * Mathf.PI) * fillet * fillet * fillet);
         }
 
-        private float MaxMinVolume()
+        private float GetClampedVolume(float volume)
         {
-
-            Volume = CalcVolume();
-
-            if (Volume > PPart.volumeMax)
+            if (volume > PPart.volumeMax)
             {
-                float excess = Volume - PPart.volumeMax;
-                Volume = PPart.volumeMax;
-                return excess;
+                volume = PPart.volumeMax;
             }
-            if (Volume < PPart.volumeMin)
+            else if (volume < PPart.volumeMin)
             {
-                float excess = Volume - PPart.volumeMin;
-                Volume = PPart.volumeMin;
-                return excess;
+                volume = PPart.volumeMin;
             }
-            return 0;
+            return volume;
         }
 
         public override void UpdateTechConstraints()
