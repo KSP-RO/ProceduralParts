@@ -1434,10 +1434,10 @@ namespace ProceduralParts
                 {
 
                     childAttach.Remove(node);
-                    Debug.LogWarning("Detaching from: " + part + " child: " + child.transform.name);
+                    Debug.LogWarning("Detaching from: " + part + " child: " + child?.transform?.name);
                     return;
                 }
-            Debug.LogWarning("*ST* Message recieved removing child, but can't find child");
+            Debug.LogWarning("*ST* Message received removing child, but can't find child");
         }
 
         //[PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
@@ -1452,16 +1452,25 @@ namespace ProceduralParts
 				childToParent = part.FindAttachNodeByPart(newParent);
 			}
 
+            bool srfAttached = false;
+            
+            if (childToParent == null && newParent?.srfAttachNode?.attachedPart == part)
+            {
+                childToParent = newParent.srfAttachNode;
+                srfAttached = true;
+            }
+            
             if (shape == null || (newParent != null && childToParent == null)) //OnUpdate hasn't fired yet
             {
                 toAttach.Enqueue(() => PartParentChanged(newParent));
                 return;
             }
+            
             Debug.Log("ProceduralPart.PartParentChanged");
             if (parentAttachment != null)
             {
-                RemovePartAttachment(parentAttachment);
                 Debug.Log("ProceduralPart.PartParentChanged Detaching: " + part + " from parent: " + newParent);
+                RemovePartAttachment(parentAttachment);
                 parentAttachment = null;
             }
 
@@ -1475,11 +1484,18 @@ namespace ProceduralParts
             //    return;
             //}
             Vector3 position = transform.TransformPoint(childToParent.position);
+
             
             // ReSharper disable once InconsistentNaming
             Func<Vector3> Offset;
             if (nodeOffsets.TryGetValue(childToParent.id, out Offset))
+            {
                 position -= Offset();
+            }
+            else if(srfAttached)
+            {
+                position -= (childToParent.attachedPart.transform.position - childToParent.owner.transform.position);
+            }
 
             Part root = EditorLogic.SortedShipList[0];
 
