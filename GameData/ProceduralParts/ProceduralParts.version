@@ -1,0 +1,28 @@
+{
+   "URL" : "https://raw.githubusercontent.com/Tidal-Stream/ProceduralParts/master/GameData/ProceduralParts/ProceduralParts.version",
+   "NAME" : "Procedural Parts",
+   "GITHUB" : {
+      "REPOSITORY" : "ProceduralParts",
+      "USERNAME" : "Tidal-Stream"
+   },
+   "VERSION" :
+   {
+      "MAJOR" : 1,
+      "MINOR" : 3,
+      "PATCH" : 19,
+      "BUILD" : 0
+   },
+   "DOWNLOAD" : "https://github.com/Tidal-Stream/ProceduralParts/releases",
+   "KSP_VERSION_MIN" :
+   {
+      "MAJOR" : 1,
+      "MINOR" : 3,
+      "PATCH" : 1
+  },
+   "KSP_VERSION_MAX" :
+   {
+      "MAJOR" : 1,
+      "MINOR" : 7,
+      "PATCH" : 99
+   }
+}

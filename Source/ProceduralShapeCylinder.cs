@@ -7,14 +7,13 @@ namespace ProceduralParts
 
     public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
     {
-
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float diameter = 1.25f;
         private float oldDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.001f, sigFigs = 3, unit="m", useSI = true)]
+		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
         private float oldLength;
 
@@ -29,26 +28,38 @@ namespace ProceduralParts
             // ReSharper disable CompareOfFloatsByEqualityOperator
             if (!force && oldDiameter == diameter && oldLength == length)
                 return;
-
-            Volume = diameter * diameter * 0.25f * Mathf.PI * length;
+            var volume = CalculateVolume();
+            var oldVolume = volume;
+            var refreshRequired = false;
 
             if (HighLogic.LoadedSceneIsEditor)
             {
                 // Maxmin the volume.
-                if (Volume > PPart.volumeMax)
-                    Volume = PPart.volumeMax;
-                else if (Volume < PPart.volumeMin)
-                    Volume = PPart.volumeMin;
+                if (volume > PPart.volumeMax)
+                {
+                    volume = PPart.volumeMax;
+                }
+                else if (volume < PPart.volumeMin)
+                {
+                    volume = PPart.volumeMin;
+                }
                 else
                     goto nochange;
 
+                refreshRequired = true;
+                var excessVol = oldVolume - volume;
                 if (oldDiameter != diameter)
-                    diameter = Mathf.Sqrt(Volume / (0.25f * Mathf.PI * length));
+                {
+                    diameter = TruncateForSlider(Mathf.Sqrt(volume / (0.25f * Mathf.PI * length)), -excessVol);
+                }
                 else
-                    length = Volume / (diameter * diameter * 0.25f * Mathf.PI);
+                {
+                    length = TruncateForSlider(volume / (diameter * diameter * 0.25f * Mathf.PI), -excessVol);
+                }
+                volume = CalculateVolume();
             }
         nochange:
-
+            Volume = volume;
             Vector2 norm = new Vector2(1, 0);
 
             WriteMeshes(
@@ -59,8 +70,16 @@ namespace ProceduralParts
             oldDiameter = diameter;
             oldLength = length;
             // ReSharper restore CompareOfFloatsByEqualityOperator
-            //RefreshPartEditorWindow();
+            if (refreshRequired)
+            {
+                RefreshPartEditorWindow();
+            }
             UpdateInterops();
+        }
+
+        private float CalculateVolume()
+        {
+            return diameter * diameter * 0.25f * Mathf.PI * length;
         }
 
         public override void UpdateTechConstraints()

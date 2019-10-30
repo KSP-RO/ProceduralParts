@@ -194,7 +194,13 @@ namespace ProceduralParts
                 }
 
                 if (HighLogic.LoadedSceneIsEditor)
+                {
                     symmetryClone = true;
+                    var capTextureField = Fields[nameof(capTextureIndex)];
+
+                    var chooseOption = (UI_ChooseOption) capTextureField.uiControlEditor;
+                    chooseOption.options = Enum.GetNames(typeof(CapTextureMode));
+                }
 
                 if (GameSceneFilter.AnyEditor.IsLoaded())
                     GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
@@ -618,15 +624,26 @@ namespace ProceduralParts
 
         #region Texture Sets
 
+        public enum CapTextureMode
+        {
+            Ends, Side, GreySide, PlainWhite
+        }
+
         [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string textureSet = "Original";
         private string oldTextureSet = "*****";
+
+        [KSPField(guiName = "Ends Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]
+        public int capTextureIndex = 0;
+        private CapTextureMode CapTexture => (CapTextureMode)capTextureIndex;
+        private CapTextureMode oldCapTexture = CapTextureMode.Ends;
 
         public class TextureSet
         {
             public string name;
 
             public bool autoScale;
+            public bool endsAutoScale;
             public bool autoWidthDivide;
             public float autoHeightSteps;
             public Vector2 scale = new Vector2(2f, 1f);
@@ -634,12 +651,17 @@ namespace ProceduralParts
             public Texture sides;
             public Texture sidesBump;
             public Texture ends;
+            public Texture endsBump;
             public string sidesName;
             public string endsName;
             public string sidesBumpName;
+            public string endsBumpName;
 
             public Color sidesSpecular = new Color(0.2f, 0.2f, 0.2f);
             public float sidesShininess = 0.4f;
+
+            public Color endsSpecular = new Color(0.2f, 0.2f, 0.2f);
+            public float endsShininess = 0.4f;
         }
         private static List<TextureSet> loadedTextureSets;
         private static string[] loadedTextureSetNames;
@@ -711,10 +733,13 @@ namespace ProceduralParts
                 name = textureSet,
                 sidesName = node.GetNode("sides").GetValue("texture"),
                 endsName = node.GetNode("ends").GetValue("texture"),
-                sidesBumpName = ""
+                sidesBumpName = "",
+                endsBumpName = ""
             };
             if (node.GetNode("sides").HasValue("bump"))
                 tex.sidesBumpName = node.GetNode("sides").GetValue("bump");
+            if (node.GetNode("ends").HasValue("bump"))
+                tex.endsBumpName = node.GetNode("ends").GetValue("bump");
 
             if (node.GetNode("sides").HasValue("uScale"))
                 float.TryParse(node.GetNode("sides").GetValue("uScale"), out tex.scale.x);
@@ -724,6 +749,8 @@ namespace ProceduralParts
 
             if (node.GetNode("sides").HasValue("autoScale"))
                 bool.TryParse(node.GetNode("sides").GetValue("autoScale"), out tex.autoScale);
+            if (node.GetNode("ends").HasValue("autoScale"))
+                bool.TryParse(node.GetNode("ends").GetValue("autoScale"), out tex.endsAutoScale);
             if (node.GetNode("sides").HasValue("autoWidthDivide"))
                 bool.TryParse(node.GetNode("sides").GetValue("autoWidthDivide"), out tex.autoWidthDivide);
             if (node.GetNode("sides").HasValue("autoHeightSteps"))
@@ -733,6 +760,10 @@ namespace ProceduralParts
                 tex.sidesSpecular = ConfigNode.ParseColor(node.GetNode("sides").GetValue("specular"));
             if (node.GetNode("sides").HasValue("shininess"))
                 float.TryParse(node.GetNode("sides").GetValue("shininess"), out tex.sidesShininess);
+            if (node.GetNode("ends").HasValue("specular"))
+                tex.endsSpecular = ConfigNode.ParseColor(node.GetNode("ends").GetValue("specular"));
+            if (node.GetNode("ends").HasValue("shininess"))
+                float.TryParse(node.GetNode("ends").GetValue("shininess"), out tex.endsShininess);
 
             Texture[] textures = Resources.FindObjectsOfTypeAll(typeof(Texture)) as Texture[];
 
@@ -756,6 +787,13 @@ namespace ProceduralParts
                 return null;
             }
 
+            if (string.IsNullOrEmpty(tex.endsBumpName))
+                tex.endsBump = null;
+            else if (!TryFindTexture(textures, ref tex.endsBumpName, out tex.endsBump))
+            {
+                Debug.LogError("*ST* Cap bump textures not found for " + textureSet);
+                return null;
+            }
 
             return tex;
         }
@@ -799,7 +837,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(ChangeTextureScaleDelegate))]
 		[KSPEvent(guiActive = false, active = true)]
 		//public void ChangeTextureScale(string texName, Material material, Vector2 targetScale)
-		public void OnChangeTextureScale(BaseEventData data)
+		public void OnChangeTextureScale(BaseEventDetails data)
 		{
 			string meshName = data.Get<string> ("meshName");
 			Vector2 targetScale = data.Get<Vector2> ("targetScale");
@@ -812,13 +850,13 @@ namespace ProceduralParts
 
         private void UpdateTexture()
         {
-            if (textureSet == oldTextureSet)
+            if (textureSet == oldTextureSet && CapTexture == oldCapTexture)
                 return;
 
             Material endsMaterial;
             Material sidesMaterial;
 
-            if(HighLogic.LoadedScene== GameScenes.LOADING)
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
             {
                 // if we are in loading screen, all changes have to be made to the icon materials. Otherwise all icons will have the same texture 
                 endsMaterial = this.EndsIconMaterial;
@@ -838,43 +876,49 @@ namespace ProceduralParts
                 return;
             }
             oldTextureSet = textureSet;
+            oldCapTexture = CapTexture;
 
             TextureSet tex = loadedTextureSets[newIdx];
 
-            // Set shaders
             if (!part.Modules.Contains("ModulePaintable"))
             {
-                if (HighLogic.LoadedScene == GameScenes.LOADING)
-                {
-                    sidesMaterial.shader = Shader.Find("KSP/ScreenSpaceMask");
-                    if (endsMaterial != null)
-                        endsMaterial.shader = Shader.Find("KSP/ScreenSpaceMask");
-                }
-                else
-                {
-                    sidesMaterial.shader = Shader.Find(tex.sidesBump != null ? "KSP/Bumped Specular" : "KSP/Specular");
-
-                    // pt is no longer specular ever, just diffuse.
-                    if (endsMaterial != null)
-                        endsMaterial.shader = Shader.Find("KSP/Diffuse");
-
-                }
+                SetupShader(sidesMaterial, tex.sidesBump);
             }
 
             sidesMaterial.SetColor("_SpecColor", tex.sidesSpecular);
             sidesMaterial.SetFloat("_Shininess", tex.sidesShininess);
 
-            // TODO: shove into config file.
+            var scaleUV = GetScaleUv(tex);
+
+            sidesMaterial.mainTextureScale = scaleUV;
+            sidesMaterial.mainTextureOffset = Vector2.zero;
+            sidesMaterial.SetTexture("_MainTex", tex.sides);
+            if (tex.sidesBump != null)
+            {
+                sidesMaterial.SetTextureScale("_BumpMap", scaleUV);
+                sidesMaterial.SetTextureOffset("_BumpMap", Vector2.zero);
+                sidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
+            }
             if (endsMaterial != null)
             {
-                const float scale = 0.93f;
-                const float offset = (1f / scale - 1f) / 2f;
-                endsMaterial.mainTextureScale = new Vector2(scale, scale);
-                endsMaterial.mainTextureOffset = new Vector2(offset, offset);
+                SetupEndsTexture(endsMaterial, tex, scaleUV);
             }
+        }
 
-            // set up UVs
-            Vector2 scaleUV = tex.scale;
+        private static void SetupShader(Material material, Texture bumpMap)
+        {
+            if (HighLogic.LoadedScene != GameScenes.LOADING)
+            {
+                material.shader = Shader.Find(bumpMap != null ? "KSP/Bumped Specular" : "KSP/Specular");
+            } else
+            {
+                material.shader = Shader.Find("KSP/ScreenSpaceMask");
+            }
+        }
+
+        private Vector2 GetScaleUv(TextureSet tex)
+        {
+            var scaleUV = tex.scale;
             if (tex.autoScale)
             {
                 scaleUV.x = (float)Math.Round(scaleUV.x * sideTextureScale.x / 8f);
@@ -896,18 +940,51 @@ namespace ProceduralParts
                 }
             }
 
-            // apply
-            sidesMaterial.mainTextureScale = scaleUV;
-            sidesMaterial.mainTextureOffset = Vector2.zero;
-            sidesMaterial.SetTexture("_MainTex", tex.sides);
-            if (tex.sidesBump != null)
+            return scaleUV;
+        }
+
+        private void SetupEndsTexture(Material endsMaterial, TextureSet tex, Vector2 scaleUV)
+        {
+            if (CapTexture == CapTextureMode.Ends)
             {
-                sidesMaterial.SetTextureScale("_BumpMap", scaleUV);
-                sidesMaterial.SetTextureOffset("_BumpMap", Vector2.zero);
-                sidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
+                SetEndsTextureProperties(endsMaterial, tex.ends, tex.endsBump, tex.endsSpecular, tex.endsShininess, tex.endsAutoScale, scaleUV);
             }
-            if (endsMaterial != null)
-                endsMaterial.SetTexture("_MainTex", tex.ends);
+            else if (CapTexture == CapTextureMode.Side)
+            {
+                SetEndsTextureProperties(endsMaterial, tex.sides, tex.sidesBump, tex.sidesSpecular, tex.sidesShininess, tex.autoScale, scaleUV);
+            }
+            else
+            {
+                var texture = loadedTextureSets.FirstOrDefault(x => x.name == Enum.GetName(typeof(CapTextureMode), CapTexture));
+                if (texture != null)
+                {
+                    var endsScaleUV = GetScaleUv(texture);
+                    SetEndsTextureProperties(endsMaterial, texture.sides, texture.sidesBump, texture.sidesSpecular, texture.sidesShininess, texture.autoScale, endsScaleUV);
+                }
+            }
+        }
+
+        private static void SetEndsTextureProperties(Material endsMaterial, Texture texture, Texture bumpMap, Color specular, float shininess, bool autoScale, Vector2 scaleUV)
+        {
+            var endsScaleFactor = autoScale ? scaleUV.x / Mathf.PI * 2 : 0.95f;
+            var endsScale = new Vector2(endsScaleFactor, endsScaleFactor);
+            var offset = 0.5f - 0.5f * endsScaleFactor;
+            var endsOffset = new Vector2(offset, offset);
+            endsMaterial.mainTextureScale = endsScale;
+            endsMaterial.mainTextureOffset = endsOffset;
+
+            endsMaterial.SetColor("_SpecColor", specular);
+            endsMaterial.SetFloat("_Shininess", shininess);
+            endsMaterial.SetTexture("_MainTex", texture);
+
+            SetupShader(endsMaterial, bumpMap);
+
+            if (bumpMap != null)
+            {
+                endsMaterial.SetTextureScale("_BumpMap", endsScale);
+                endsMaterial.SetTextureOffset("_BumpMap", endsOffset);
+                endsMaterial.SetTexture("_BumpMap", bumpMap);
+            }
         }
 
         #endregion
@@ -929,7 +1006,7 @@ namespace ProceduralParts
 
 			public void NodePositionChanged(AttachNode node, Vector3 location, Vector3 orientation, Vector3 secondaryAxis)
 			{
-				var data = new BaseEventData (BaseEventData.Sender.USER);
+				var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 				data.Set<AttachNode> ("node", node);
 				data.Set("location", location);
 				data.Set("orientation", orientation);
@@ -1117,33 +1194,40 @@ namespace ProceduralParts
 
 
         public void OnEditorPartEvent(ConstructionEventType type, Part part)
-        {        
+        {
+            //Debug.Log("ProceduralPart.OnEditorPartEvent");
             switch (type)
             {
                 case ConstructionEventType.PartRootSelected:
-
+                    Debug.Log("[ProceduralPart.OnEditorPartEvent] ConstructionEventType.PartRootSelected");
                     //StartCoroutine(RebuildPartAttachments());
                     Part[] children = childAttach.Select<FreePartAttachment, Part>(x => x.Child).ToArray();
 
-                foreach (Part attachment in children)
-                {
-                    PartChildDetached(attachment);
-                }
+                    foreach (Part attachment in children)
+                
+                    {
+                    
+                        PartChildDetached(attachment);
+                    }
 
-                foreach (Transform t in transform)
-                {
-                    Part child = t.GetComponent<Part>();
-                    if(child != null)
-                        PartChildAttached(child);
-                }
-                if (transform.parent == null)
-                    PartParentChanged(null);
-                else
-                    PartParentChanged(transform.parent.GetComponent<Part>());
+                    foreach (Transform t in transform)
+                    {
+                        Part child = t.GetComponent<Part>();
+                        if(child != null)
+                            PartChildAttached(child);
+                    }
 
+                    if (transform.parent == null)
+                        PartParentChanged(null);
+                    else
+                        PartParentChanged(transform.parent.GetComponent<Part>());
+
+                    Debug.Log("[ProceduralPart.OnEditorPartEvent] Finished PartRootSelected");
+                    
                 break;
 
                 case ConstructionEventType.PartOffset:
+                    Debug.Log("[ProceduralPart.OnEditorPartEvent] ConstructionEventType.PartOffset");
                     foreach (FreePartAttachment ca in childAttach)
                     {
                         if (ca.Child == part || ca.Child.isSymmetryCounterPart(part))
@@ -1164,14 +1248,14 @@ namespace ProceduralParts
                             //break;
                         }
                     }
-                    break;
+                break;
             }       
         }
 
         //[PartMessageListener(typeof(PartAttachNodePositionChanged), PartRelationship.Child, GameSceneFilter.AnyEditor)]
         [KSPEvent(guiActive = false, active = true)]
 		//public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
-		public void OnPartAttachNodePositionChanged(BaseEventData data)
+		public void OnPartAttachNodePositionChanged(BaseEventDetails data)
         {
 			//TODO resrict to child
 
@@ -1350,10 +1434,10 @@ namespace ProceduralParts
                 {
 
                     childAttach.Remove(node);
-                    //Debug.LogWarning("Detaching from: " + part + " child: " + child.transform.name);
+                    Debug.LogWarning("Detaching from: " + part + " child: " + child?.transform?.name);
                     return;
                 }
-            Debug.LogWarning("*ST* Message recieved removing child, but can't find child");
+            Debug.LogWarning("*ST* Message received removing child, but can't find child");
         }
 
         //[PartMessageListener(typeof(PartParentChanged), scenes: GameSceneFilter.AnyEditor)]
@@ -1368,16 +1452,25 @@ namespace ProceduralParts
 				childToParent = part.FindAttachNodeByPart(newParent);
 			}
 
+            bool srfAttached = false;
+            
+            if (childToParent == null && newParent?.srfAttachNode?.attachedPart == part)
+            {
+                childToParent = newParent.srfAttachNode;
+                srfAttached = true;
+            }
+            
             if (shape == null || (newParent != null && childToParent == null)) //OnUpdate hasn't fired yet
             {
                 toAttach.Enqueue(() => PartParentChanged(newParent));
                 return;
             }
-            //Debug.Log("PartParentChanged");
+            
+            Debug.Log("ProceduralPart.PartParentChanged");
             if (parentAttachment != null)
             {
+                Debug.Log("ProceduralPart.PartParentChanged Detaching: " + part + " from parent: " + newParent);
                 RemovePartAttachment(parentAttachment);
-                //Debug.LogWarning("Detatching: " + part + " from parent: " + newParent);
                 parentAttachment = null;
             }
 
@@ -1391,17 +1484,24 @@ namespace ProceduralParts
             //    return;
             //}
             Vector3 position = transform.TransformPoint(childToParent.position);
+
             
             // ReSharper disable once InconsistentNaming
             Func<Vector3> Offset;
             if (nodeOffsets.TryGetValue(childToParent.id, out Offset))
+            {
                 position -= Offset();
+            }
+            else if(srfAttached)
+            {
+                position -= (childToParent.attachedPart.transform.position - childToParent.owner.transform.position);
+            }
 
             Part root = EditorLogic.SortedShipList[0];
 
-            //Debug.LogWarning("Attaching: " + part + " to new parent: " + newParent + " node:" + childToParent.id + " position=" + childToParent.position.ToString("G3"));
+            Debug.Log("ProceduralPart.PartParentChanged Attaching: " + part + " to new parent: " + newParent + " node:" + childToParent.id + " position=" + childToParent.position.ToString("G3"));
 
-             //we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
+            //we need to delta this childAttachment down so that when the translation from the parent reaches here i ends in the right spot
             parentAttachment = AddPartAttachment(position, new ParentTransformable(root, part, childToParent));
             parentAttachment.child = newParent;
 
@@ -1639,8 +1739,26 @@ namespace ProceduralParts
                 }
                 float dryCost=0;
                 float actualCost=0;
-                
-                if (!part.Modules.Contains("ModuleFuelTanks") && (object)PartResourceLibrary.Instance != null)
+
+                bool containsMFT = false;
+
+                try
+                {
+                    for (int i = 0; i < part.Modules.Count; i++)
+                    {
+                        if (part.Modules[i].name == "ModuleFuelTanks")
+                        {
+                            containsMFT = true;
+                            break;
+                        }
+                    }
+                }
+                catch
+                {
+                    Debug.Log("Caught error searching for ModuleFuelTanks");
+                }
+
+                if (!containsMFT && (object)PartResourceLibrary.Instance != null)
                 {
                     if (!costsIncludeResources)
                     {
@@ -1722,14 +1840,12 @@ namespace ProceduralParts
                 Vector3 min = transform.InverseTransformPoint(partCollider.bounds.min);
                 Vector3 max = transform.InverseTransformPoint(partCollider.bounds.max);
 
-                tempColliderSize.x = max.x - min.x;
-                tempColliderSize.y = max.y - min.y;
-                tempColliderSize.z = max.z - min.z;
+                tempColliderSize.x = Mathf.Max(max.x - min.x, 0.001f);
+                tempColliderSize.y = Mathf.Max(max.y - min.y, 0.001f);
+                tempColliderSize.z = Mathf.Max(max.z - min.z, 0.001f);
 
                 //Debug.Log(tempColliderSize);
             }
-
-
         }
 
         [KSPField]
@@ -1747,14 +1863,19 @@ namespace ProceduralParts
                 part.DragCubes.Cubes.Add(dragCube);
                 part.DragCubes.ResetCubeWeights();
                 part.DragCubes.ForceUpdate(true, true, false);
+                wasFlaggedForDragCubeForceUpdate = true;
+                if ((object)vessel == null)
+                    Debug.Log("ProceduralParts.OnPartColliderChanged() - VESSEL IS NULL");
                 //rebuilding the drag cube might mess up the thermal graph. Firing a vessel event should cause it to rebuild
-                GameEvents.onVesselWasModified.Fire(part.vessel);
+                //GameEvents.onVesselWasModified.Fire(part.vessel);
                 //part.DragCubes.Procedural = true;
             }
 
         }
 
-        int dragCubeNeedsRerender = 0;
+        bool wasFlaggedForDragCubeForceUpdate = false;
+
+        int dragCubeNeedsRerender = -1;
         public void FixedUpdate()
         {
             /* FlightIntegrator resets our dragcube after loading, so we need to rerender it. We cannot do it on the first frame because it would
@@ -1766,15 +1887,20 @@ namespace ProceduralParts
                 {
                     --dragCubeNeedsRerender;
                 }
-                else
+                else if (dragCubeNeedsRerender == 0)
                 {
                     //Debug.Log("dragCube needs to re-render");
                     OnPartColliderChanged();
-                    dragCubeNeedsRerender = 0;
+                    dragCubeNeedsRerender = -1;
 
                     isEnabled = enabled = false; // normally this is done OnStart
 
                 }
+            }
+            if (wasFlaggedForDragCubeForceUpdate)
+            {
+                wasFlaggedForDragCubeForceUpdate = false;
+                GameEvents.onVesselWasModified.Fire(part.vessel);
             }
         }
 

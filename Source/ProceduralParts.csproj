@@ -14,6 +14,7 @@
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
+    <BaseIntermediateOutputPath>..\..\Build\ProceduralParts\obj</BaseIntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -50,7 +51,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <Optimize>true</Optimize>
     <DebugType>full</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>anycpu</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -58,20 +59,17 @@
     <Reference Include="System">
       <Private>False</Private>
     </Reference>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\Build\ProceduralParts\Release\Assembly-CSharp.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>..\..\Build\ProceduralParts\Release\UnityEngine.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System.Core">
       <Private>False</Private>
     </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\..\..\..\..\..\Games\KSP_win_1.3.1\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>..\..\..\..\..\..\Games\KSP_win_1.3.1\KSP_x64_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>..\..\Build\ProceduralParts\Release\UnityEngine.UI.dll</HintPath>
-      <Private>False</Private>
+      <HintPath>..\..\..\..\..\..\Games\KSP_win_1.3.1\KSP_x64_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -81,6 +79,7 @@
     <Compile Include="ProceduralHeatshield.cs" />
     <Compile Include="ProceduralShapeBezierCone.cs" />
     <Compile Include="ProceduralShapePill.cs" />
+    <Compile Include="ProceduralShapePolygon.cs" />
     <Compile Include="ProceduralSRB.cs" />
     <Compile Include="ProceduralShapeCone.cs" />
     <Compile Include="ProceduralShapeCylinder.cs" />
@@ -99,7 +98,8 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>C:\utils\pdb2mdb\pdb2mdb.exe ProceduralParts.dll</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>

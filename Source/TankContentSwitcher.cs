@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace ProceduralParts
 {
@@ -21,8 +22,19 @@ namespace ProceduralParts
     /// The class also accepts the message ChangeVolume(float volume) if attached to a dynamic resizing part
     /// such as ProceeduralTanks.
     /// </summary>
-    public class TankContentSwitcher : PartModule, IPartMassModifier, ICostMultiplier
+    public class TankContentSwitcher : PartModule, IPartMassModifier, ICostMultiplier, IEndDragHandler
     {
+        private bool displayDirty = false;
+        private UIPartActionWindow window;
+
+        #region IEndDragHandler implementation
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (this.displayDirty)
+                this.window.displayDirty = true;
+        }
+        #endregion
+
 		#region IPartMassModifier implementation
 
 		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
@@ -44,6 +56,7 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             base.OnAwake();
+            this.window = part.FindActionWindow();
             //PartMessageService.Register(this);
             //this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
@@ -157,7 +170,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(PartVolumeChanged), scenes:~GameSceneFilter.Flight)]
         //public void ChangeVolume(string volumeName, float volume)
 		[KSPEvent(guiActive = false, active = true)]
-		public void OnPartVolumeChanged(BaseEventData data)
+		public void OnPartVolumeChanged(BaseEventDetails data)
         {
 			string volumeName = data.Get<string> ("volName");
 			double volume = data.Get<double> ("newTotalVolume");
@@ -350,7 +363,7 @@ namespace ProceduralParts
         //public event PartMassChanged MassChanged;
 		public void MassChanged (float mass)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<float> ("mass", mass);
 
 			part.SendEvent ("OnPartMassChanged", data, 0);
@@ -368,7 +381,7 @@ namespace ProceduralParts
         //public event PartResourceMaxAmountChanged MaxAmountChanged;
 		public void MaxAmountChanged (Part part, PartResource resource, double amount)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<PartResource> ("resource", resource);
 			data.Set<double> ("amount", amount);
 			part.SendEvent ("OnResourceMaxChanged", data, 0);
@@ -378,7 +391,7 @@ namespace ProceduralParts
         //public event PartResourceInitialAmountChanged InitialAmountChanged;
 		public void InitialAmountChanged (Part part, PartResource resource, double amount)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<PartResource> ("resource", resource);
 			data.Set<double> ("amount", amount);
 			part.SendEvent ("OnResourceInitialChanged", data, 0);
@@ -419,7 +432,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
         //public void ResourceChanged(PartResource resource, double amount)
 		[KSPEvent(guiActive = false, active = true)]
-		public void OnPartResourceInitialAmountChanged(BaseEventData data)
+		public void OnPartResourceInitialAmountChanged(BaseEventDetails data)
         {
 
 
@@ -486,6 +499,14 @@ namespace ProceduralParts
                 InitialAmountChanged(part, partRes, partRes.amount);
             }
 
+            //UIPartActionWindow window = part.FindActionWindow();
+            if (this.window != null)
+            {
+                if (!this.window.dragging)
+                    this.window.displayDirty = true;
+                else
+                    this.displayDirty = true;
+            }
             return true;
         }
 
@@ -545,9 +566,9 @@ namespace ProceduralParts
                 part.AddResource(node);
             }
 
-            UIPartActionWindow window = part.FindActionWindow();
-            if (window != null)
-                window.displayDirty = true;
+            //UIPartActionWindow window = part.FindActionWindow();
+            if (this.window != null)
+                this.window.displayDirty = true;
 
             ResourceListChanged(part);
         }
@@ -564,7 +585,7 @@ namespace ProceduralParts
         [PartMessageListener(typeof(PartResourcesChanged))]
         public void ResourcesModified()
         {
-            BaseEventData data = new BaseEventData(BaseEventData.Sender.USER);
+            BaseEventDetails data = new BaseEventDetails(BaseEventDetails.Sender.USER);
             data.Set("part", part);
             part.SendEvent("OnResourcesModified", data, 0);
         }
@@ -572,9 +593,9 @@ namespace ProceduralParts
         private float oldmass;
 
         [PartMessageListener(typeof(PartMassChanged))]
-        public void MassModified(BaseEventData data)
+        public void MassModified(BaseEventDetails data)
         {
-            BaseEventData data = new BaseEventData(BaseEventData.Sender.USER);
+            BaseEventDetails data = new BaseEventDetails(BaseEventDetails.Sender.USER);
             data.Set("part", part);
             data.Set<float>("oldmass", oldmass);
             part.SendEvent("OnMassModified", data, 0);

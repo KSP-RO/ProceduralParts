@@ -36,7 +36,7 @@ namespace ProceduralParts
         //public event PartMassChanged MassChanged;
 		public void MassChanged (float mass)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<float> ("mass", mass);
 
 			part.SendEvent ("OnPartMassChanged", data, 0);
@@ -49,7 +49,7 @@ namespace ProceduralParts
 
 		public void MaxAmountChanged (Part part, PartResource resource, double amount)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<PartResource> ("resource", resource);
 			data.Set<double> ("amount", amount);
 			part.SendEvent ("OnResourceMaxChanged", data, 0);
@@ -59,7 +59,7 @@ namespace ProceduralParts
 		//public event PartResourceInitialAmountChanged InitialAmountChanged;
 		public void InitialAmountChanged (Part part, PartResource resource, double amount)
 		{
-			var data = new BaseEventData (BaseEventData.Sender.USER);
+			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
 			data.Set<PartResource> ("resource", resource);
 			data.Set<double> ("amount", amount);
 			part.SendEvent ("OnResourceInitialChanged", data, 0);
@@ -281,7 +281,7 @@ namespace ProceduralParts
         }
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fairing"),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.01f, useSI=true, unit = "m", sigFigs = 4)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.01f, useSI=true, unit = "m", sigFigs = 5)]
         public float fairingThickness = 0.05f;
         private float oldFairingThickness;
 
@@ -342,7 +342,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(PartAttachNodeSizeChanged))]
         //public void PartAttachNodeSizeChanged(AttachNode node, float minDia, float area) 
 		[KSPEvent(guiActive = false, active = true)]
-		public void PartAttachNodeSizeChanged(BaseEventData data) 
+		public void PartAttachNodeSizeChanged(BaseEventDetails data) 
         {
 			AttachNode node = data.Get<AttachNode> ("node");
             if (node.id != topNodeId)
@@ -422,26 +422,26 @@ namespace ProceduralParts
                     //int tri = 0;
                     for (int i = 0; i < vertCount; ++i)
                     {
-                        m.verticies[topInnerStart + i] = topInner[i];
-                        m.verticies[topOuterStart + i] = topOuter[i];
-                        m.verticies[sideTopStart + i] = sideTop[i];
-                        m.verticies[sideBottomStart + i] = sideBottom[i];
-                        m.verticies[bottomInnerStart + i] = bottomInner[i];
-                        m.verticies[bottomOuterStart + i] = bottomOuter[i];
-                        m.verticies[innerSideTopStart + i] = innerSideTop[i];
-                        m.verticies[innerSideBottomStart + i] = innerSideBottom[i];
+                        m.vertices[topInnerStart + i] = topInner[i];
+                        m.vertices[topOuterStart + i] = topOuter[i];
+                        m.vertices[sideTopStart + i] = sideTop[i];
+                        m.vertices[sideBottomStart + i] = sideBottom[i];
+                        m.vertices[bottomInnerStart + i] = bottomInner[i];
+                        m.vertices[bottomOuterStart + i] = bottomOuter[i];
+                        m.vertices[innerSideTopStart + i] = innerSideTop[i];
+                        m.vertices[innerSideBottomStart + i] = innerSideBottom[i];
 
                         m.normals[topInnerStart + i] = new Vector3(0.0f, 1.0f, 0.0f);
                         m.normals[topOuterStart + i] = new Vector3(0.0f, 1.0f, 0.0f);
 
-                        m.normals[sideTopStart + i] = m.verticies[sideTopStart + i].xz().normalized;
-                        m.normals[sideBottomStart + i] = m.verticies[sideBottomStart + i].xz().normalized;
+                        m.normals[sideTopStart + i] = m.vertices[sideTopStart + i].xz().normalized;
+                        m.normals[sideBottomStart + i] = m.vertices[sideBottomStart + i].xz().normalized;
 
                         m.normals[bottomInnerStart + i] = new Vector3(0.0f, -1.0f, 0.0f);
                         m.normals[bottomOuterStart + i] = new Vector3(0.0f, -1.0f, 0.0f);
 
-                        m.normals[innerSideTopStart + i] = -m.verticies[innerSideTopStart + i].xz().normalized;
-                        m.normals[innerSideBottomStart + i] = -m.verticies[innerSideBottomStart + i].xz().normalized;
+                        m.normals[innerSideTopStart + i] = -m.vertices[innerSideTopStart + i].xz().normalized;
+                        m.normals[innerSideBottomStart + i] = -m.vertices[innerSideBottomStart + i].xz().normalized;
 
                         m.uv[topInnerStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 0.0f);
                         m.uv[topOuterStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 1.0f);
@@ -455,14 +455,14 @@ namespace ProceduralParts
                         m.uv[innerSideTopStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 0.0f);
                         m.uv[innerSideBottomStart + i] = new Vector2(Mathf.InverseLerp(0, vertCount - 1, i), 1.0f);
 
-                        m.tangents[topInnerStart + i] = Vector3.Cross(m.normals[topInnerStart + i], m.verticies[topInnerStart + i]).xz().normalized.toVec4(-1);
-                        m.tangents[topOuterStart + i] = Vector3.Cross(m.normals[topOuterStart + i], m.verticies[topOuterStart + i]).xz().normalized.toVec4(-1);
+                        m.tangents[topInnerStart + i] = Vector3.Cross(m.normals[topInnerStart + i], m.vertices[topInnerStart + i]).xz().normalized.toVec4(-1);
+                        m.tangents[topOuterStart + i] = Vector3.Cross(m.normals[topOuterStart + i], m.vertices[topOuterStart + i]).xz().normalized.toVec4(-1);
 
                         m.tangents[sideTopStart + i] = Vector3.Cross(m.normals[sideTopStart + i], new Vector3(0, 1, 0)).normalized.toVec4(-1);
                         m.tangents[sideBottomStart + i] = Vector3.Cross(m.normals[sideTopStart + i], new Vector3(0, 1, 0)).normalized.toVec4(-1);
 
-                        m.tangents[bottomInnerStart + i] = Vector3.Cross(m.normals[bottomInnerStart + i], m.verticies[topInnerStart + i]).xz().normalized.toVec4(-1);
-                        m.tangents[bottomOuterStart + i] = Vector3.Cross(m.normals[bottomOuterStart + i], m.verticies[topOuterStart + i]).xz().normalized.toVec4(-1);
+                        m.tangents[bottomInnerStart + i] = Vector3.Cross(m.normals[bottomInnerStart + i], m.vertices[topInnerStart + i]).xz().normalized.toVec4(-1);
+                        m.tangents[bottomOuterStart + i] = Vector3.Cross(m.normals[bottomOuterStart + i], m.vertices[topOuterStart + i]).xz().normalized.toVec4(-1);
 
                         m.tangents[innerSideTopStart + i] = Vector3.Cross(m.normals[innerSideTopStart + i], new Vector3(0, 1, 0)).normalized.toVec4(-1);
                         m.tangents[innerSideBottomStart + i] = Vector3.Cross(m.normals[innerSideTopStart + i], new Vector3(0, 1, 0)).normalized.toVec4(-1);

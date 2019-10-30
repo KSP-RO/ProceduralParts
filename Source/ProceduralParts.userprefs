@@ -1,0 +1,30 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Release" />
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.Workbench ActiveDocument="ProceduralPart.cs">
+    <Files>
+      <File FileName="ProceduralAbstractSoRShape.cs" Line="1" Column="1" />
+      <File FileName="ProceduralShapeBezierCone.cs" Line="521" Column="13" />
+      <File FileName="ProceduralShapePill.cs" Line="207" Column="13" />
+      <File FileName="ProceduralSRB.cs" Line="575" Column="22" />
+      <File FileName="ProceduralPart.cs" Line="1793" Column="49" />
+      <File FileName="EngineWrapper.cs" Line="237" Column="16" />
+      <File FileName="ProceduralAbstractShape.cs" Line="145" Column="21" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="ProceduralParts" expanded="True">
+            <Node name="ProceduralParts" expanded="True">
+              <Node name="References" expanded="True" />
+              <Node name="ProceduralPart.cs" selected="True" />
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+</Properties>

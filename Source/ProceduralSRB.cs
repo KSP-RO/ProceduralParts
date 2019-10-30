@@ -135,7 +135,7 @@ namespace ProceduralParts
         //[PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
         //public void PartResourceChanged(PartResource resource, double amount)
         [KSPEvent(guiActive = false, active = true)]
-        public void OnPartResourceInitialAmountChanged(BaseEventData data)
+        public void OnPartResourceInitialAmountChanged(BaseEventDetails data)
         {
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
@@ -150,19 +150,29 @@ namespace ProceduralParts
 
         //[PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes: GameSceneFilter.AnyEditor)]
         //public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+        public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+        {
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<AttachNode> ("node", node);
+            data.Set<float> ("minDia", minDia);
+            data.Set<float> ("area", area);
+            part.SendEvent ("OnPartAttachNodeSizeChanged", data, 0);
+        }
+
         [KSPEvent(guiActive = false, active = true)]
-        public void ChangeAttachNodeSize(BaseEventData data)
+        public void OnPartAttachNodeSizeChanged(BaseEventDetails data)
         {
             if (!HighLogic.LoadedSceneIsEditor)
                 return;
             AttachNode node = data.Get<AttachNode>("node");
             float minDia = data.Get<float>("minDia");
             // ReSharper disable once CompareOfFloatsByEqualityOperator
-            if (node.id != bottomAttachNodeName || minDia == attachedEndSize)
-                return;
 
-            attachedEndSize = minDia;
-            UpdateMaxThrust();
+            if (minDia != attachedEndSize)
+                attachedEndSize = minDia;
+
+            if (node.id == bottomAttachNodeName)
+                UpdateMaxThrust();
         }
 
         [KSPField]
@@ -205,6 +215,7 @@ namespace ProceduralParts
         public string thrustVectorTransformName;
         private Transform thrustTransform;
         private Transform bellTransform;
+        private Transform bellRootTransform;
 
         private EngineWrapper _engineWrapper;
         private EngineWrapper Engine
@@ -301,7 +312,7 @@ namespace ProceduralParts
 
         private void InitializeBells()
         {
-            //print("*PP* InitializeBells");
+            Debug.Log("*PSRB* InitializeBells");
             // Initialize the configs.
             if (srbConfigs == null)
                 LoadSRBConfigs();
@@ -311,7 +322,7 @@ namespace ProceduralParts
             switch (srbConfigs.Count)
             {
                 case 0:
-                    Debug.LogError("*PT*  No SRB bells configured");
+                    Debug.LogError("*PSRB*  No SRB bells configured");
                     return;
                 case 1:
                     field.guiActiveEditor = false;
@@ -324,6 +335,9 @@ namespace ProceduralParts
             }
 
             bellTransform = part.FindModelTransform(srbBellName);
+            bellRootTransform = part.FindModelTransform(srbBellName + "root");
+            if (bellRootTransform == null)
+                bellRootTransform = bellTransform;
             thrustTransform = bellTransform.Find(thrustVectorTransformName);
 
 
@@ -332,7 +346,7 @@ namespace ProceduralParts
                 conf.model = part.FindModelTransform(conf.modelName);
                 if (conf.model == null)
                 {
-                    Debug.LogError("*PT* Unable to find model transform for SRB bell name: " + conf.modelName);
+                    Debug.LogError("*PSRB* Unable to find model transform for SRB bell name: " + conf.modelName);
                     srbConfigs.Remove(conf.modelName);
                     continue;
                 }
@@ -341,7 +355,7 @@ namespace ProceduralParts
                 conf.srbAttach = conf.model.Find(conf.srbAttachName);
                 if (conf.srbAttach == null)
                 {
-                    Debug.LogError("*PT* Unable to find srbAttach for SRB bell name: " + conf.modelName);
+                    Debug.LogError("*PSRB* Unable to find srbAttach for SRB bell name: " + conf.modelName);
                     srbConfigs.Remove(conf.modelName);
                     continue;
                 }
@@ -362,11 +376,11 @@ namespace ProceduralParts
             if (part.Modules.Contains("ModuleEngineConfigs"))
             {
                 // ReSharper disable once InconsistentNaming
-                var mEC = part.Modules["ModuleEngineConfigs"];
-                ModularEnginesChangeThrust = (Action<float>)Delegate.CreateDelegate(typeof(Action<float>), mEC, "ChangeThrust");
+                var MEC = part.Modules["ModuleEngineConfigs"];
+                ModularEnginesChangeThrust = (Action<float>)Delegate.CreateDelegate(typeof(Action<float>), MEC, "ChangeThrust");
                 try
                 {
-                    ModularEnginesChangeEngineType = (Action<string>)Delegate.CreateDelegate(typeof(Action<string>), mEC, "ChangeEngineType");
+                    ModularEnginesChangeEngineType = (Action<string>)Delegate.CreateDelegate(typeof(Action<string>), MEC, "ChangeEngineType");
                 }
                 catch
                 {
@@ -435,6 +449,8 @@ namespace ProceduralParts
 
                 SetBellRotation();
             }
+            else
+                Debug.Log("ProceduralSRB.InitializeBells() Unable to find ProceduralPart component! (null) for " + part.name);
 
             // Move thrust transform to the end of the bell
             thrustTransform.position = selectedBell.srbAttach.position;
@@ -535,7 +551,7 @@ namespace ProceduralParts
         private Action<string> ModularEnginesChangeEngineType;
 
         [KSPField(isPersistant = true, guiName = "Thrust", guiActive = false, guiActiveEditor = true, guiFormat = "F3", guiUnits = "N"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = float.PositiveInfinity, incrementLarge = 100f, incrementSmall = 10, incrementSlide = 1f, sigFigs = 3, unit = "kN", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = float.PositiveInfinity, incrementLarge = 100f, incrementSmall = 10, incrementSlide = 1f, sigFigs = 5, unit = "kN", useSI = true)]
         public float thrust = 250;
         private float oldThrust;
 
@@ -554,7 +570,7 @@ namespace ProceduralParts
         public string thrustME;
 
         [KSPField(isPersistant = true, guiName = "Deflection", guiActive = false, guiActiveEditor = true, guiFormat = "F3", guiUnits = "°"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = -25f, maxValue = 25f, incrementLarge = 5f, incrementSmall = 1f, incrementSlide = 0.1f, sigFigs = 2, unit = "°")]
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = -25f, maxValue = 25f, incrementLarge = 5f, incrementSmall = 1f, incrementSlide = 0.1f, sigFigs = 5, unit = "°")]
         public float thrustDeflection = 0;
         private float oldThrustDeflection;
 
@@ -565,7 +581,7 @@ namespace ProceduralParts
 
         // ReSharper disable once InconsistentNaming
         [KSPField]
-        public float thrust1m = 0;
+        public float thrust1m = 1;
 
         private float maxThrust = float.PositiveInfinity;
         private float attachedEndSize = float.PositiveInfinity;
@@ -599,7 +615,7 @@ namespace ProceduralParts
                 {
                     float isp0 = Engine.atmosphereCurve.Evaluate(0);
                     float minBurnTime = (float)Math.Ceiling(isp0 * solidFuel.maxAmount * solidFuel.info.density * Engine.g / maxThrust);
-
+                    Debug.Log("UsingME = " + UsingME.ToString() + ", minBurnTime = " + minBurnTime.ToString() + ", maxThrust = " + maxThrust.ToString());
                     ((UI_FloatEdit)Fields["burnTimeME"].uiControlEditor).minValue = minBurnTime;
 
                     // Keep the thrust constant, change the current burn time to match
@@ -645,6 +661,7 @@ namespace ProceduralParts
 
         private void UpdateThrustDependentCalcs()
         {
+            Debug.Log("ProceduralSRB.UpdateThrustDependentCalcs();");
             PartResource solidFuel = part.Resources["SolidFuel"];
 
             double solidFuelMassG;
@@ -659,7 +676,7 @@ namespace ProceduralParts
             {
                 //float burnTime0 = burnTimeME = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
                 //float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
-
+                Debug.Log("Not using MEC ChangeThrust, thrust = " + thrust.ToString());
                 fuelRate = thrust / (atmosphereCurve.Evaluate(0f) * Engine.g);
                 if (solidFuel != null)
                 {
@@ -671,7 +688,9 @@ namespace ProceduralParts
             }
             else
             {
+                Debug.Log("ME thrust calculation");
                 thrust = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
+                Debug.Log("thrust = " + thrust.ToString() + "; maxThrust = " + maxThrust.ToString());
                 if (thrust > maxThrust)
                 {
                     burnTimeME = (float)Math.Ceiling(atmosphereCurve.Evaluate(0) * solidFuelMassG / maxThrust);
@@ -771,18 +790,30 @@ namespace ProceduralParts
         [KSPField]
         public bool useOldHeatEquation = false;
 
-        internal const float DraperPoint = 525f;
+        internal const double DraperPoint = 798; 
 
 
         private void AnimateHeat()
         {
-            // The emmissive module is too much effort to get working, just do it the easy way.
-            float num = Mathf.Clamp01(((float)part.temperature - DraperPoint) / ((float)part.maxTemp - DraperPoint));
-            if (float.IsNaN(num))
+            // The emissive module is too much effort to get working, just do it the easy way.
+            double num = Clamp01((part.temperature - DraperPoint) / (part.maxTemp / DraperPoint));
+
+            if (double.IsNaN(num))
                 num = 0f;
 
             Material mat = selectedBell.model.GetComponent<Renderer>().sharedMaterial;
-            mat.SetColor("_EmissiveColor", new Color(num * num, 0, 0));
+            mat.SetColor("_EmissiveColor", new Color((float)(num * num), 0, 0));
+        }
+
+        private double Clamp01(double x)
+        {
+            if (x < 0) {
+                return 0;
+            }
+            if (x > 1) {
+                return 1;
+            }
+            return x;
         }
 
         #endregion
