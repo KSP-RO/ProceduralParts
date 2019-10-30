@@ -544,7 +544,7 @@ namespace ProceduralParts
             Attachment attachment;
 
             // as the position might be after some rotation and translation, it might not be exactly +/- 0.5
-            if (Mathf.Abs(Mathf.Abs(position.y) - 0.5f) < 1e-5f)
+            if (Mathf.Abs(Mathf.Abs(position.y) - Mathf.Abs(position.magnitude)) < 1e-5f)
             {
                 attachment = AddNormalizedCapAttachment(follower, position);
             }
