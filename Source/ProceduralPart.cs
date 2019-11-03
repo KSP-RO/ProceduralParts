@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using KSPAPIExtensions;
-//using KSPAPIExtensions.PartMessage;
 using System.Reflection;
 
 namespace ProceduralParts
@@ -14,33 +12,18 @@ namespace ProceduralParts
 
     public class ProceduralPart : PartModule, IPartCostModifier
     {
+        public static readonly string ModTag = "[ProceduralParts]";
         #region TestFlight
-        protected static bool tfChecked = false;
-        protected static bool tfFound = false;
         public static Type tfInterface = null;
         public static BindingFlags tfBindingFlags = BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.Static;
 
         public void UpdateTFInterops()
         {
-            // Grab a pointer to the TestFlight interface if it's installed
-            if (!tfChecked)
+            if (tfInterface is Type)
             {
-                tfInterface = Type.GetType("TestFlightCore.TestFlightInterface, TestFlightCore", false);
-                if (tfInterface != null)
-                    tfFound = true;
-            }
-            // update TestFlight if it's installed
-            if (tfFound)
-            {
-                try
-                {
-                    tfInterface.InvokeMember("AddInteropValue", tfBindingFlags, null, null, new System.Object[] { this.part, "shapeName", shapeName, "ProceduralParts" });
-                    if (shape != null)
-                        shape.UpdateTFInterops();
-                }
-                catch
-                {
-                }
+                tfInterface.InvokeMember("AddInteropValue", tfBindingFlags, null, null, new System.Object[] { this.part, "shapeName", shapeName, "ProceduralParts" });
+                if (shape != null)
+                    shape.UpdateTFInterops();
             }
         }
         #endregion
@@ -48,21 +31,27 @@ namespace ProceduralParts
         #region Initialization
 
         public static bool installedFAR = false;
+        public static bool staticallyInitialized = false;
+        public static void StaticInit()
+        {
+            if (staticallyInitialized) return;
+
+            if (AssemblyLoader.loadedAssemblies.FirstOrDefault(a => a.assembly.GetName().Name == "TestFlight") is AssemblyLoader.LoadedAssembly tfAssembly)
+                tfInterface = Type.GetType("TestFlightCore.TestFlightInterface, TestFlightCore", false);
+            installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
+            LoadTextureSets();
+            staticallyInitialized = true;
+        }
+
 
         public override void OnAwake()
         {
+            StaticInit();
 			GameEvents.onPartAttach.Add (OnPartAttach);
 			GameEvents.onPartRemove.Add (OnPartRemove);
 
-            // Check if FAR is installed
-            installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
-
             base.OnAwake();
-            //PartMessageService.Register(this);
-            //this.RegisterOnUpdateEditor(OnUpdateEditor);
 
-            if (GameSceneFilter.AnyInitializing.IsLoaded())
-                LoadTextureSets();
             InitializeTextureSet();
         }
         public void Update()
