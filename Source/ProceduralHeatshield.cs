@@ -123,7 +123,7 @@ namespace ProceduralParts
             {
                 //PPart.AddNodeOffset(topNodeId, GetNodeOffset);
                 loadedTextureSets = PPart.TextureSets.ToList();
-                loadedTextureSetNames = loadedTextureSets.Select<ProceduralPart.TextureSet, string>(x => x.name).ToArray();
+                loadedTextureSetNames = loadedTextureSets.Select<TextureSet, string>(x => x.name).ToArray();
 
                 BaseField field = Fields["textureSet"];
                 UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
@@ -217,7 +217,7 @@ namespace ProceduralParts
             }
             oldTextureSet = textureSet;
 
-            ProceduralPart.TextureSet tex = loadedTextureSets[newIdx];
+            TextureSet tex = loadedTextureSets[newIdx];
 
             // Set shaders
             if (!part.Modules.Contains("ModulePaintable"))
@@ -329,7 +329,7 @@ namespace ProceduralParts
         public string textureSet = "Original";
         private string oldTextureSet = "*****";
 
-        private List<ProceduralPart.TextureSet> loadedTextureSets;
+        private List<TextureSet> loadedTextureSets;
         private static string[] loadedTextureSetNames;
 
         private AttachNode bottomNode;

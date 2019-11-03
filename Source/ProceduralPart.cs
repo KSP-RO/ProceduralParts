@@ -13,6 +13,7 @@ namespace ProceduralParts
     public class ProceduralPart : PartModule, IPartCostModifier
     {
         public static readonly string ModTag = "[ProceduralParts]";
+
         #region TestFlight
         public static Type tfInterface = null;
         public static BindingFlags tfBindingFlags = BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.Static;
@@ -39,7 +40,7 @@ namespace ProceduralParts
             if (AssemblyLoader.loadedAssemblies.FirstOrDefault(a => a.assembly.GetName().Name == "TestFlight") is AssemblyLoader.LoadedAssembly tfAssembly)
                 tfInterface = Type.GetType("TestFlightCore.TestFlightInterface, TestFlightCore", false);
             installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
-            LoadTextureSets();
+            TextureSet.LoadTextureSets(textureSets);
             staticallyInitialized = true;
         }
 
@@ -51,8 +52,6 @@ namespace ProceduralParts
 			GameEvents.onPartRemove.Add (OnPartRemove);
 
             base.OnAwake();
-
-            InitializeTextureSet();
         }
         public void Update()
         {
@@ -136,6 +135,17 @@ namespace ProceduralParts
         {
             if (!isInitialized)
                 DoInitialize();
+
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                BaseField field = Fields[nameof(textureSet)];
+                UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
+
+                range.options = textureSets.Keys.ToArray();
+                if (textureSet == null || !textureSets.ContainsKey(textureSet))
+                    textureSet = textureSets.Keys.First();
+            }
+            base.OnStart(state);
         }
 
         private void DoInitialize()
@@ -612,7 +622,6 @@ namespace ProceduralParts
         #endregion
 
         #region Texture Sets
-
         public enum CapTextureMode
         {
             Ends, Side, GreySide, PlainWhite
@@ -627,211 +636,21 @@ namespace ProceduralParts
         private CapTextureMode CapTexture => (CapTextureMode)capTextureIndex;
         private CapTextureMode oldCapTexture = CapTextureMode.Ends;
 
-        public class TextureSet
-        {
-            public string name;
-
-            public bool autoScale;
-            public bool endsAutoScale;
-            public bool autoWidthDivide;
-            public float autoHeightSteps;
-            public Vector2 scale = new Vector2(2f, 1f);
-
-            public Texture sides;
-            public Texture sidesBump;
-            public Texture ends;
-            public Texture endsBump;
-            public string sidesName;
-            public string endsName;
-            public string sidesBumpName;
-            public string endsBumpName;
-
-            public Color sidesSpecular = new Color(0.2f, 0.2f, 0.2f);
-            public float sidesShininess = 0.4f;
-
-            public Color endsSpecular = new Color(0.2f, 0.2f, 0.2f);
-            public float endsShininess = 0.4f;
-        }
-        private static List<TextureSet> loadedTextureSets;
-        private static string[] loadedTextureSetNames;
-
-        public TextureSet[] TextureSets
-        {
-            get
-            {
-                return loadedTextureSets.ToArray();
-            }
-        }
-
-        public static void LoadTextureSets()
-        {
-            if (loadedTextureSets != null)
-                return;
-
-            loadedTextureSets = new List<TextureSet>();
-            //print("*ST* Loading texture sets");
-            foreach (ConfigNode texInfo in GameDatabase.Instance.GetConfigNodes("STRETCHYTANKTEXTURES"))
-                for (int i = 0; i < texInfo.nodes.Count; i++)
-                {
-                    TextureSet textureSet = LoadTextureSet(texInfo.nodes[i]);
-
-                    if (textureSet != null)
-                        loadedTextureSets.Add(textureSet);
-                }
-
-            if (loadedTextureSets.Count == 0)
-                Debug.LogError("*ST* No Texturesets found!");
-
-            loadedTextureSets.Sort(TextureSetNameComparison);
-
-            loadedTextureSetNames = new string[loadedTextureSets.Count];
-            for (int i = 0; i < loadedTextureSets.Count; ++i)
-                loadedTextureSetNames[i] = loadedTextureSets[i].name;
-        }
-
-        private static int TextureSetNameComparison(TextureSet s1, TextureSet s2)
-        {
-            bool s1Start = s1.sidesName.StartsWith("ProceduralParts");
-            if (s1Start != s2.sidesName.StartsWith("ProceduralParts"))
-            {
-                return s1Start ? -1 : 1;
-            }
-            return string.Compare(s1.name, s2.name, StringComparison.Ordinal);
-        }
-
-        private static TextureSet LoadTextureSet(ConfigNode node)
-        {
-            string textureSet = node.name;
-
-            // Sanity check
-            if (node.GetNode("sides") == null || node.GetNode("ends") == null)
-            {
-                Debug.LogError("*ST* Invalid Textureset " + textureSet);
-                return null;
-            }
-            if (!node.GetNode("sides").HasValue("texture") || !node.GetNode("ends").HasValue("texture"))
-            {
-                Debug.LogError("*ST* Invalid Textureset " + textureSet);
-                return null;
-            }
-
-
-            // get settings
-            TextureSet tex = new TextureSet
-            {
-                name = textureSet,
-                sidesName = node.GetNode("sides").GetValue("texture"),
-                endsName = node.GetNode("ends").GetValue("texture"),
-                sidesBumpName = "",
-                endsBumpName = ""
-            };
-            if (node.GetNode("sides").HasValue("bump"))
-                tex.sidesBumpName = node.GetNode("sides").GetValue("bump");
-            if (node.GetNode("ends").HasValue("bump"))
-                tex.endsBumpName = node.GetNode("ends").GetValue("bump");
-
-            if (node.GetNode("sides").HasValue("uScale"))
-                float.TryParse(node.GetNode("sides").GetValue("uScale"), out tex.scale.x);
-            if (node.GetNode("sides").HasValue("vScale"))
-                float.TryParse(node.GetNode("sides").GetValue("vScale"), out tex.scale.y);
-
-
-            if (node.GetNode("sides").HasValue("autoScale"))
-                bool.TryParse(node.GetNode("sides").GetValue("autoScale"), out tex.autoScale);
-            if (node.GetNode("ends").HasValue("autoScale"))
-                bool.TryParse(node.GetNode("ends").GetValue("autoScale"), out tex.endsAutoScale);
-            if (node.GetNode("sides").HasValue("autoWidthDivide"))
-                bool.TryParse(node.GetNode("sides").GetValue("autoWidthDivide"), out tex.autoWidthDivide);
-            if (node.GetNode("sides").HasValue("autoHeightSteps"))
-                float.TryParse(node.GetNode("sides").GetValue("autoHeightSteps"), out tex.autoHeightSteps);
-
-            if (node.GetNode("sides").HasValue("specular"))
-                tex.sidesSpecular = ConfigNode.ParseColor(node.GetNode("sides").GetValue("specular"));
-            if (node.GetNode("sides").HasValue("shininess"))
-                float.TryParse(node.GetNode("sides").GetValue("shininess"), out tex.sidesShininess);
-            if (node.GetNode("ends").HasValue("specular"))
-                tex.endsSpecular = ConfigNode.ParseColor(node.GetNode("ends").GetValue("specular"));
-            if (node.GetNode("ends").HasValue("shininess"))
-                float.TryParse(node.GetNode("ends").GetValue("shininess"), out tex.endsShininess);
-
-            Texture[] textures = Resources.FindObjectsOfTypeAll(typeof(Texture)) as Texture[];
-
-            if (!TryFindTexture(textures, ref tex.sidesName, out tex.sides))
-            {
-                Debug.LogError("*ST* Sides textures not found for " + textureSet);
-                return null;
-            }
-
-            if (!TryFindTexture(textures, ref tex.endsName, out tex.ends))
-            {
-                Debug.LogError("*ST* Ends textures not found for " + textureSet);
-                return null;
-            }
-
-            if (string.IsNullOrEmpty(tex.sidesBumpName))
-                tex.sidesBump = null;
-            else if (!TryFindTexture(textures, ref tex.sidesBumpName, out tex.sidesBump))
-            {
-                Debug.LogError("*ST* Side bump textures not found for " + textureSet);
-                return null;
-            }
-
-            if (string.IsNullOrEmpty(tex.endsBumpName))
-                tex.endsBump = null;
-            else if (!TryFindTexture(textures, ref tex.endsBumpName, out tex.endsBump))
-            {
-                Debug.LogError("*ST* Cap bump textures not found for " + textureSet);
-                return null;
-            }
-
-            return tex;
-        }
-
-        private static bool TryFindTexture(Texture[] textures, ref string textureName, out Texture tex)
-        {
-            tex = FindTexture(textures, textureName);
-            if (tex != null)
-                return true;
-            if (!textureName.StartsWith("StretchyTanks"))
-                return false;
-
-            string substName = "ProceduralParts" + textureName.Substring("StretchyTanks".Length);
-            tex = FindTexture(textures, substName);
-            if (tex == null)
-                return false;
-
-            textureName = substName;
-            return true;
-        }
-
-        // ReSharper disable once ParameterTypeCanBeEnumerable.Local
-        private static Texture FindTexture(Texture[] textures, string textureName)
-        {
-            return textures.FirstOrDefault(t => t.name == textureName);
-        }
-
-        private void InitializeTextureSet()
-        {
-            BaseField field = Fields["textureSet"];
-            UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
-
-            range.options = loadedTextureSetNames;
-            if (textureSet == null || !loadedTextureSetNames.Contains(textureSet))
-                textureSet = loadedTextureSetNames[0];
-        }
+        private static readonly Dictionary<string, TextureSet> textureSets = new Dictionary<string, TextureSet>();
+        public TextureSet TextureSet => textureSets[textureSet];
+        public TextureSet[] TextureSets { get => textureSets.Values.ToArray(); }
 
         [SerializeField]
         private Vector2 sideTextureScale = Vector2.one;
 
-        //[PartMessageListener(typeof(ChangeTextureScaleDelegate))]
 		[KSPEvent(guiActive = false, active = true)]
-		//public void ChangeTextureScale(string texName, Material material, Vector2 targetScale)
 		public void OnChangeTextureScale(BaseEventDetails data)
 		{
 			string meshName = data.Get<string> ("meshName");
 			Vector2 targetScale = data.Get<Vector2> ("targetScale");
             if (meshName != "sides")
                 return;
+            Debug.Log($"{ModTag} OnChangeTextureScale for {this} mesh {meshName} scale {targetScale}");
             sideTextureScale = targetScale;
             oldTextureSet = null;
             UpdateTexture();
@@ -856,28 +675,26 @@ namespace ProceduralParts
                 endsMaterial = this.EndsMaterial;
                 sidesMaterial = this.SidesMaterial;
             }
-
-            int newIdx = loadedTextureSets.FindIndex(set => set.name == textureSet);
-            if (newIdx < 0)
+            if (!textureSets.ContainsKey(textureSet))
             {
-                Debug.LogError("*ST* Unable to find texture set: " + textureSet);
+                Debug.LogError($"{ModTag} UpdateTexture() {textureSet} missing from global list!");
                 textureSet = oldTextureSet;
-                return;
             }
+
             oldTextureSet = textureSet;
             oldCapTexture = CapTexture;
 
-            TextureSet tex = loadedTextureSets[newIdx];
+            TextureSet tex = textureSets[textureSet];
 
             if (!part.Modules.Contains("ModulePaintable"))
             {
-                SetupShader(sidesMaterial, tex.sidesBump);
+                TextureSet.SetupShader(sidesMaterial, tex.sidesBump);
             }
 
             sidesMaterial.SetColor("_SpecColor", tex.sidesSpecular);
             sidesMaterial.SetFloat("_Shininess", tex.sidesShininess);
 
-            var scaleUV = GetScaleUv(tex);
+            var scaleUV = tex.GetScaleUv(sideTextureScale);
 
             sidesMaterial.mainTextureScale = scaleUV;
             sidesMaterial.mainTextureOffset = Vector2.zero;
@@ -894,85 +711,23 @@ namespace ProceduralParts
             }
         }
 
-        private static void SetupShader(Material material, Texture bumpMap)
-        {
-            if (HighLogic.LoadedScene != GameScenes.LOADING)
-            {
-                material.shader = Shader.Find(bumpMap != null ? "KSP/Bumped Specular" : "KSP/Specular");
-            } else
-            {
-                material.shader = Shader.Find("KSP/ScreenSpaceMask");
-            }
-        }
-
-        private Vector2 GetScaleUv(TextureSet tex)
-        {
-            var scaleUV = tex.scale;
-            if (tex.autoScale)
-            {
-                scaleUV.x = (float)Math.Round(scaleUV.x * sideTextureScale.x / 8f);
-                if (scaleUV.x < 1)
-                    scaleUV.x = 1;
-                if (tex.autoWidthDivide)
-                {
-                    if (tex.autoHeightSteps > 0)
-                        scaleUV.y = (float)Math.Ceiling(scaleUV.y * sideTextureScale.y / scaleUV.x * (1f / tex.autoHeightSteps)) * tex.autoHeightSteps;
-                    else
-                        scaleUV.y *= sideTextureScale.y / scaleUV.x;
-                }
-                else
-                {
-                    if (tex.autoHeightSteps > 0)
-                        scaleUV.y = (float)Math.Max(Math.Round(sideTextureScale.y / tex.autoHeightSteps), 1f) * tex.autoHeightSteps;
-                    else
-                        scaleUV.y *= sideTextureScale.y;
-                }
-            }
-
-            return scaleUV;
-        }
-
         private void SetupEndsTexture(Material endsMaterial, TextureSet tex, Vector2 scaleUV)
         {
-            if (CapTexture == CapTextureMode.Ends)
+            switch (CapTexture)
             {
-                SetEndsTextureProperties(endsMaterial, tex.ends, tex.endsBump, tex.endsSpecular, tex.endsShininess, tex.endsAutoScale, scaleUV);
-            }
-            else if (CapTexture == CapTextureMode.Side)
-            {
-                SetEndsTextureProperties(endsMaterial, tex.sides, tex.sidesBump, tex.sidesSpecular, tex.sidesShininess, tex.autoScale, scaleUV);
-            }
-            else
-            {
-                var texture = loadedTextureSets.FirstOrDefault(x => x.name == Enum.GetName(typeof(CapTextureMode), CapTexture));
-                if (texture != null)
-                {
-                    var endsScaleUV = GetScaleUv(texture);
-                    SetEndsTextureProperties(endsMaterial, texture.sides, texture.sidesBump, texture.sidesSpecular, texture.sidesShininess, texture.autoScale, endsScaleUV);
-                }
-            }
-        }
-
-        private static void SetEndsTextureProperties(Material endsMaterial, Texture texture, Texture bumpMap, Color specular, float shininess, bool autoScale, Vector2 scaleUV)
-        {
-            var endsScaleFactor = autoScale ? scaleUV.x / Mathf.PI * 2 : 0.95f;
-            var endsScale = new Vector2(endsScaleFactor, endsScaleFactor);
-            var offset = 0.5f - 0.5f * endsScaleFactor;
-            var endsOffset = new Vector2(offset, offset);
-            endsMaterial.mainTextureScale = endsScale;
-            endsMaterial.mainTextureOffset = endsOffset;
-
-            endsMaterial.SetColor("_SpecColor", specular);
-            endsMaterial.SetFloat("_Shininess", shininess);
-            endsMaterial.SetTexture("_MainTex", texture);
-
-            SetupShader(endsMaterial, bumpMap);
-
-            if (bumpMap != null)
-            {
-                endsMaterial.SetTextureScale("_BumpMap", endsScale);
-                endsMaterial.SetTextureOffset("_BumpMap", endsOffset);
-                endsMaterial.SetTexture("_BumpMap", bumpMap);
+                case CapTextureMode.Ends:
+                    TextureSet.SetTextureProperties(endsMaterial, tex.ends, tex.endsBump, tex.endsSpecular, tex.endsShininess, tex.endsAutoScale, scaleUV);
+                    break;
+                case CapTextureMode.Side:
+                    TextureSet.SetTextureProperties(endsMaterial, tex.sides, tex.sidesBump, tex.sidesSpecular, tex.sidesShininess, tex.autoScale, scaleUV);
+                    break;
+                default:
+                    if (textureSets[Enum.GetName(typeof(CapTextureMode), CapTexture)] is TextureSet texture)
+                    {
+                        var endsScaleUV = texture.GetScaleUv(sideTextureScale);
+                        TextureSet.SetTextureProperties(endsMaterial, texture.sides, texture.sidesBump, texture.sidesSpecular, texture.sidesShininess, texture.autoScale, endsScaleUV);
+                    }
+                    break;
             }
         }
 
