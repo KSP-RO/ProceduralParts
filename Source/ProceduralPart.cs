@@ -48,11 +48,9 @@ namespace ProceduralParts
         public override void OnAwake()
         {
             StaticInit();
-			GameEvents.onPartAttach.Add (OnPartAttach);
-			GameEvents.onPartRemove.Add (OnPartRemove);
-
             base.OnAwake();
         }
+
         public void Update()
         {
             if (HighLogic.LoadedSceneIsEditor)
@@ -77,31 +75,19 @@ namespace ProceduralParts
         private BoxCollider tempCollider;
         public override void OnLoad(ConfigNode node)
         {
-            // Load stuff from config files
-            try
-            {
-                if (GameSceneFilter.AnyInitializing.IsLoaded())
-                    LoadTechLimits(node);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError("OnLoad exception: " + ex);
-                throw;
-            }
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
+                LoadTechLimits(node);
 
             if (HighLogic.LoadedSceneIsFlight)
             {     
                 // Create a temporary collider for KSP so that it can set the craft on the ground properly
                 tempCollider = gameObject.AddComponent<BoxCollider>();
                 tempCollider.center = tempColliderCenter;
-                
                 tempCollider.size = tempColliderSize;
                 tempCollider.enabled = true;
                 //Debug.Log("created temp collider with size: " + tempCollider.size);
                 //Debug.Log("bounds: " + tempCollider.bounds);
             }
-            
-
         }
 
         public override void OnSave(ConfigNode node)
@@ -112,7 +98,18 @@ namespace ProceduralParts
 
         public override string GetInfo()
         {
-            OnStart(StartState.Editor);
+            if (!isInitialized)
+            {
+                isInitialized = true;
+                InitializeObjects();
+                InitializeShapes();
+                if (shape is ProceduralAbstractShape)
+                {
+                    shape.ForceNextUpdate();
+                    shape.OnUpdateEditor();
+                }
+                UpdateTexture();
+            }
 
             // Need to rescale everything to make it look good in the icon, but reenable otherwise OnStart won't get called again.
             isEnabled = enabled = true;
@@ -125,133 +122,96 @@ namespace ProceduralParts
 
         private bool isInitialized;
 
-        public override void OnInitialize()
-        {
-            if (!isInitialized)
-                DoInitialize();
-        }
-
         public override void OnStart(StartState state)
         {
-            if (!isInitialized)
-                DoInitialize();
+            Debug.Log($"{ModTag} OnStart()");
+            isInitialized = true;
+            InitializeObjects();
+            InitializeShapes();
+            InitializeNodes();
+
+            if (HighLogic.LoadedSceneIsFlight)
+            {
+                // Force the first update, then disable.
+                if (shape is ProceduralAbstractShape)
+                {
+                    Debug.Log($"{ModTag} Forcing shape Update()");
+                    shape.ForceNextUpdate();
+                    shape.OnUpdateEditor();
+                }
+                Debug.Log($"{ModTag} Updating texture");
+                UpdateTexture();
+                if (vessel is Vessel)
+                {
+                    if (vessel.rootPart == part) // drag cube re-rendering workaround. See FixedUpdate for more info
+                        TimingManager.FixedUpdateAdd(TimingManager.TimingStage.FlightIntegrator, DragCubeFixer);
+                    else
+                    {
+                        isEnabled = enabled = false;
+                        Debug.Log($"{ModTag} OnStart() disabling PartModule for non-root part {this.part}");
+                    }
+                }
+            }
 
             if (HighLogic.LoadedSceneIsEditor)
             {
-                BaseField field = Fields[nameof(textureSet)];
-                UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
+                symmetryClone = true;
 
-                range.options = textureSets.Keys.ToArray();
-                if (textureSet == null || !textureSets.ContainsKey(textureSet))
+                Debug.Log($"{ModTag} Initializing Tech Limits");
+                InitializeTechLimits();
+
+                if (!textureSets.ContainsKey(textureSet))
+                {
+                    Debug.Log($"{ModTag} Defaulting invalid TextureSet {textureSet} to {textureSets.Keys.First()}");
                     textureSet = textureSets.Keys.First();
+                }
+
+                BaseField field = Fields[nameof(textureSet)];
+                UI_ChooseOption opt = (UI_ChooseOption)field.uiControlEditor;
+                opt.options = textureSets.Keys.ToArray();
+
+                BaseField capTextureField = Fields[nameof(capTextureIndex)];
+                opt = (UI_ChooseOption)capTextureField.uiControlEditor;
+                opt.options = Enum.GetNames(typeof(CapTextureMode));
+
+                Fields[nameof(shapeName)].guiActiveEditor = availableShapes.Count > 1;
+                opt = (UI_ChooseOption)Fields[nameof(shapeName)].uiControlEditor;
+                opt.options = availableShapes.Keys.ToArray();
+
+                Fields[nameof(costDisplay)].guiActiveEditor = displayCost;
+
+                GameEvents.onPartAttach.Add(OnPartAttach);
+                GameEvents.onPartRemove.Add(OnPartRemove);
+                GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
             }
             base.OnStart(state);
-        }
-
-        private void DoInitialize()
-        {
-            isInitialized = true;
 
             if (tempCollider != null)
             {
-                // delete the temporary collider, if there is one
+                // delete the temporary collider, if there is one, probably too soon to do this
                 Component.Destroy(tempCollider);
                 tempCollider = null;
-                //Debug.Log("destroyed temporary collider");
-            }
-
-            // Update internal state
-            try
-            {
-                InitializeObjects();
-
-                if (HighLogic.LoadedSceneIsEditor)
-                    InitializeTechLimits();
-
-                InitializeShapes();
-                if (GameSceneFilter.AnyEditorOrFlight.IsLoaded())
-                    InitializeNodes();
-
-                if (!HighLogic.LoadedSceneIsEditor)
-                {
-                    // Force the first update, then disable.
-                    if (shape != null && !HighLogic.LoadedSceneIsFlight) // we just did this above so let's not do it again.
-                    {
-                        shape.ForceNextUpdate();
-                        shape.OnUpdateEditor();
-                    }
-
-                    UpdateTexture();
-                    if (vessel != null)
-                    {
-                        if (vessel.rootPart == part) // drag cube re-rendering workaround. See FixedUpdate for more info
-                            dragCubeNeedsRerender = 1;
-                        else
-                            isEnabled = enabled = false;
-                    }
-
-                }
-
-                if (HighLogic.LoadedSceneIsEditor)
-                {
-                    symmetryClone = true;
-                    var capTextureField = Fields[nameof(capTextureIndex)];
-
-                    var chooseOption = (UI_ChooseOption) capTextureField.uiControlEditor;
-                    chooseOption.options = Enum.GetNames(typeof(CapTextureMode));
-                }
-
-                if (GameSceneFilter.AnyEditor.IsLoaded())
-                    GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
-                BaseField fld = Fields["costDisplay"];
-                if (fld != null)
-                    fld.guiActiveEditor = displayCost;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError("[ProceduralParts]: OnStart: caught exception.");
-                Debug.LogException(ex);
-                isEnabled = enabled = false;
             }
         }
 
         public void OnDestroy()
         {
-            if (GameSceneFilter.AnyEditor.IsLoaded())
+            if (HighLogic.LoadedSceneIsEditor)
+            {
                 GameEvents.onEditorPartEvent.Remove(OnEditorPartEvent);
-
-			GameEvents.onPartAttach.Remove(OnPartAttach);
-			GameEvents.onPartRemove.Remove(OnPartRemove);
+                GameEvents.onPartAttach.Remove(OnPartAttach);
+                GameEvents.onPartRemove.Remove(OnPartRemove);
+            }
         }
-
 
         public void OnUpdateEditor()
         {
-            if (!isInitialized)
-                return;
+            if(needsTechInit)
+                InitializeTechLimits();
 
-            if (skipNextUpdate)
-            {
-                skipNextUpdate = false;
-                return;
-            }
-
-            try
-            {
-                if(needsTechInit)
-                    InitializeTechLimits();
-
-                UpdateTexture();
-                UpdateShape();
-            }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
-                isEnabled = enabled = false;
-            }
+            UpdateTexture();
+            UpdateShape();
         }
-
-        private bool skipNextUpdate;
 
         #endregion
 
@@ -285,6 +245,7 @@ namespace ProceduralParts
 
         private void InitializeObjects()
         {
+            Debug.Log($"{ModTag} InitializeObjects() - Transforms, Materials and Meshes");
             partModel = part.FindModelTransform(partModelName);
             
             Transform sides     = part.FindModelTransform(sidesName);
@@ -300,7 +261,6 @@ namespace ProceduralParts
                 SidesIconMesh = iconSides.GetComponent<MeshFilter>().mesh;
             if(iconEnds != null)
                 EndsIconMesh = iconEnds.GetComponent<MeshFilter>().mesh;
-
 
             SidesMaterial = sides.GetComponent<Renderer>().material;
 			EndsMaterial = ends.GetComponent<Renderer>().material;
@@ -466,23 +426,17 @@ namespace ProceduralParts
         [KSPField]
         public bool allowCurveTweaking = true;
 
-        // This should be private, only KSP is daft sometimes.
-        [SerializeField]
-        public byte[] techLimitsSerialized;
+        private readonly List<TechLimit> techLimits = new List<TechLimit>();
 
         private void LoadTechLimits(ConfigNode node)
         {
-            List<TechLimit> techLimits = new List<TechLimit>();
             foreach (ConfigNode tNode in node.GetNodes("TECHLIMIT"))
             {
                 TechLimit limit = new TechLimit();
                 limit.Load(tNode);
                 techLimits.Add(limit);
+                Debug.Log($"{ModTag} LoadTechLimits loading {limit}");
             }
-            if (techLimits.Count == 0)
-                return;
-
-            techLimitsSerialized = ObjectSerializer.Serialize(techLimits);
         }
 
         private bool needsTechInit;
@@ -490,19 +444,20 @@ namespace ProceduralParts
         private void InitializeTechLimits()
         {
             if (HighLogic.CurrentGame == null || 
-                (HighLogic.CurrentGame.Mode != Game.Modes.CAREER && HighLogic.CurrentGame.Mode != Game.Modes.SCIENCE_SANDBOX) || 
-                techLimitsSerialized == null)
+                (HighLogic.CurrentGame.Mode != Game.Modes.CAREER && HighLogic.CurrentGame.Mode != Game.Modes.SCIENCE_SANDBOX))
                 return;
 
             if (ResearchAndDevelopment.Instance == null)
             {
+                Debug.LogError($"{ModTag} InitializeTechLimits() but R&D Instance is null!");
                 needsTechInit = true;
                 return;
             }
+            techLimits.Clear();
+            techLimits.AddRange(part.partInfo.partPrefab.FindModuleImplementing<ProceduralPart>().techLimits);
+            Debug.Log($"{ModTag} InitializeTechLimits() found {techLimits.Count} limits to test");
+
             needsTechInit = false;
-  
-            List<TechLimit> techLimits;
-            ObjectSerializer.Deserialize(techLimitsSerialized, out techLimits);
 
             // ReSharper disable LocalVariableHidesMember
             float diameterMax = 0;
@@ -517,6 +472,7 @@ namespace ProceduralParts
 
             foreach (TechLimit limit in techLimits)
             {
+                Debug.Log($"{ModTag} InitializeTechLimits() testing {limit}");
                 if (ResearchAndDevelopment.GetTechnologyState(limit.name) != RDTech.State.Available)
                     continue;
 
@@ -570,7 +526,7 @@ namespace ProceduralParts
             this.allowCurveTweaking = this.allowCurveTweaking && allowCurveTweaking;
             // ReSharper restore LocalVariableHidesMember
 
-            //Debug.Log(string.Format("TechLimits applied: diameter=({0:G3}, {1:G3}) length=({2:G3}, {3:G3}) volume=({4:G3}, {5:G3}) allowCurveTweaking={6}", diameterMin, diameterMax, lengthMin, lengthMax, volumeMin, volumeMax, allowCurveTweaking));
+            Debug.Log($"{ModTag} TechLimits applied: diameter=({diameterMin: G3}, {diameterMax: G3}) length=({lengthMin: G3}, {lengthMax: G3}) volume=({volumeMin: G3}, {volumeMax: G3}) )");
 
             foreach (ProceduralAbstractShape shape in GetComponents<ProceduralAbstractShape>())
                 shape.UpdateTechConstraints();
@@ -613,10 +569,8 @@ namespace ProceduralParts
                 ConfigNode.CreateConfigFromObject(this, node);
             }
 
-            public override string ToString()
-            {
-                return string.Format("TechLimits(TechRequired={6} diameter=({0:G3}, {1:G3}) length=({2:G3}, {3:G3}) volume=({4:G3}, {5:G3}) )", diameterMin, diameterMax, lengthMin, lengthMax, volumeMin, volumeMax, name);
-            }
+            public override string ToString() =>
+                $"TechLimits(TechRequired={name} diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volume=({volumeMin:G3}, {volumeMax:G3}) )";
         }
 
         #endregion
@@ -796,6 +750,7 @@ namespace ProceduralParts
 
         private void InitializeNodes()
         {
+            Debug.Log($"{ModTag} InitializeNodes()");
             // Since symmetry clone nodes are already offset, we need to update the 
             // shape first to allow non-normalized surface attachments
             if (symmetryClone)
@@ -1340,51 +1295,24 @@ namespace ProceduralParts
 
         private void InitializeShapes()
         {
-            List<string> shapeNames = new List<string>();
+            Debug.Log($"{ModTag} InitializeShapes - Discovering available shapes and selecting for {shapeName}");
             availableShapes.Clear();
             foreach (ProceduralAbstractShape compShape in GetComponents<ProceduralAbstractShape>())
             {
-                if (!string.IsNullOrEmpty(compShape.techRequired) && ResearchAndDevelopment.GetTechnologyState(compShape.techRequired) != RDTech.State.Available)
-                    goto disableShape;
-                if (!string.IsNullOrEmpty(compShape.techObsolete) && ResearchAndDevelopment.GetTechnologyState(compShape.techObsolete) == RDTech.State.Available)
-                    goto disableShape;
-
-                availableShapes.Add(compShape.displayName, compShape);
-                shapeNames.Add(compShape.displayName);
-
-                if (string.IsNullOrEmpty(shapeName) ? (availableShapes.Count == 1) : compShape.displayName == shapeName)
+                if (compShape.IsAvailable && !compShape.IsObsolete)
                 {
-                    shape = compShape;
-                    oldShapeName = shapeName = shape.displayName;
-                    shape.isEnabled = shape.enabled = true;
-                    continue;
+                    availableShapes.Add(compShape.displayName, compShape);
                 }
-
-            disableShape:
                 compShape.isEnabled = compShape.enabled = false;
             }
-
-            BaseField field = Fields["shapeName"];
-            switch (availableShapes.Count)
-            {
-                case 0:
-                    throw new InvalidProgramException("No shapes available");
-                case 1:
-                    field.guiActiveEditor = false;
-                    break;
-                default:
-                    field.guiActiveEditor = true;
-                    UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
-                    range.options = shapeNames.ToArray();
-                    break;
-            }
-
             if (string.IsNullOrEmpty(shapeName) || !availableShapes.ContainsKey(shapeName))
             {
-                oldShapeName = shapeName = shapeNames[0];
-                shape = availableShapes[shapeName];
-                shape.isEnabled = shape.enabled = true;
+                Debug.Log($"{ModTag} InitailizeShapes() Shape {shapeName} not available, defaulting to {availableShapes.Keys.First()}");
+                shapeName = availableShapes.Keys.First();
             }
+            shape = availableShapes[shapeName];
+            shape.isEnabled = shape.enabled = true;
+            oldShapeName = shapeName;
         }
 
         private void UpdateShape()
@@ -1595,11 +1523,10 @@ namespace ProceduralParts
         [KSPField]
         bool updateDragCubesInEditor = false;
 
-        //[PartMessageListener(typeof(PartColliderChanged), scenes: GameSceneFilter.AnyEditorOrFlight)]
 		[KSPEvent(guiActive = false, active = true)]
         public void OnPartColliderChanged()
         {
-            if (GameSceneFilter.Flight.IsLoaded() || (GameSceneFilter.AnyEditor.IsLoaded() && updateDragCubesInEditor))
+            if (HighLogic.LoadedSceneIsFlight || (HighLogic.LoadedSceneIsEditor && updateDragCubesInEditor))
             {
                 DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
 
@@ -1607,46 +1534,29 @@ namespace ProceduralParts
                 part.DragCubes.Cubes.Add(dragCube);
                 part.DragCubes.ResetCubeWeights();
                 part.DragCubes.ForceUpdate(true, true, false);
-                wasFlaggedForDragCubeForceUpdate = true;
-                if ((object)vessel == null)
-                    Debug.Log("ProceduralParts.OnPartColliderChanged() - VESSEL IS NULL");
+                if (vessel is null)
+                    Debug.LogError($"{ModTag} OnPartColliderChanged() - VESSEL IS NULL");
                 //rebuilding the drag cube might mess up the thermal graph. Firing a vessel event should cause it to rebuild
                 //GameEvents.onVesselWasModified.Fire(part.vessel);
                 //part.DragCubes.Procedural = true;
             }
-
         }
 
-        bool wasFlaggedForDragCubeForceUpdate = false;
-
-        int dragCubeNeedsRerender = -1;
-        public void FixedUpdate()
+        private void DragCubeFixer()
         {
             /* FlightIntegrator resets our dragcube after loading, so we need to rerender it. We cannot do it on the first frame because it would
                 be executed before the reset. Instead we must do it on the second frame.
+                FlightIntegrator doesn't act on the first frame anymore, so we need to wait until it has done something.
+                This appears to work on Flight scene starts, but not when eg reverting to launch.
             */
-            if (GameSceneFilter.Flight.IsLoaded())
+            if (FlightIntegrator.ActiveVesselFI is FlightIntegrator FI && FI.isRunning && !FI.firstFrame)
             {
-                if (dragCubeNeedsRerender > 0)
-                {
-                    --dragCubeNeedsRerender;
-                }
-                else if (dragCubeNeedsRerender == 0)
-                {
-                    //Debug.Log("dragCube needs to re-render");
-                    OnPartColliderChanged();
-                    dragCubeNeedsRerender = -1;
-
-                    isEnabled = enabled = false; // normally this is done OnStart
-
-                }
-            }
-            if (wasFlaggedForDragCubeForceUpdate)
-            {
-                wasFlaggedForDragCubeForceUpdate = false;
+                Debug.Log($"{ModTag} DragCubeFixer rebuilding root part drag cubes");
+                OnPartColliderChanged();
                 GameEvents.onVesselWasModified.Fire(part.vessel);
+                TimingManager.FixedUpdateRemove(TimingManager.TimingStage.FlightIntegrator, DragCubeFixer);
+                isEnabled = enabled = false;
             }
         }
-
     }
 }

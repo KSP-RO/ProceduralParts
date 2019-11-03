@@ -25,12 +25,8 @@ namespace ProceduralParts
         internal const float SliderPrecision = 0.001f;
         internal const float IteratorIncrement = 1048.5f / (1024 * 1024); // a float slightly below sliderprecision
 
-        public override void OnAwake()
-        {
-            base.OnAwake();
-            //PartMessageService.Register(this);
-            //this.RegisterOnUpdateEditor(OnUpdateEditor);
-        }
+        public bool IsAvailable => string.IsNullOrEmpty(techRequired) || ResearchAndDevelopment.GetTechnologyState(techRequired) == RDTech.State.Available;
+        public bool IsObsolete => !string.IsNullOrEmpty(techObsolete) && ResearchAndDevelopment.GetTechnologyState(techObsolete) == RDTech.State.Available;
 
         #region Config data
         [KSPField]
@@ -44,7 +40,6 @@ namespace ProceduralParts
 
         [KSPField]
         public string volumeName = PartVolumes.Tankage.ToString();
-
 
         #endregion
 
@@ -60,33 +55,23 @@ namespace ProceduralParts
         [KSPField]
         public float resourceMultiplier = 1.0f;
         
-        /////////////////////////////////////
-        
         #endregion
 
         #region Objects
-        public ProceduralPart PPart
-        {
-            get { return _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
-        }
+        public ProceduralPart PPart { get => _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
         private ProceduralPart _pPart;
 
-        public Mesh SidesMesh
-        {
-            get { return PPart.SidesMesh; }
-        }
+        public Mesh SidesMesh { get => PPart.SidesMesh; }
 
-        public Mesh EndsMesh
-        {
-            get { return PPart.EndsMesh; }
-        }
+        public Mesh EndsMesh { get => PPart.EndsMesh; }
+
         #endregion
 
         #region Shape details
 
         public float Volume
         {
-            get { return _volume; }
+            get => _volume;
             protected set
             {
                 // ReSharper disable once CompareOfFloatsByEqualityOperator
@@ -377,10 +362,7 @@ namespace ProceduralParts
 
         #endregion
 
-        public float GetCurrentCostMult()
-        {
-            return costMultiplier;
-        }
+        public float GetCurrentCostMult() => costMultiplier;
 
         public abstract void UpdateTechConstraints();
 
