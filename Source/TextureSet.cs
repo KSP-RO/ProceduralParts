@@ -17,9 +17,9 @@ namespace ProceduralParts
         public Vector2 scale = new Vector2(2f, 1f);
 
         public Texture sides;
-        public Texture sidesBump;
+        public Texture sidesBump = null;
         public Texture ends;
-        public Texture endsBump;
+        public Texture endsBump = null;
         public string sidesName;
         public string endsName;
         public string sidesBumpName;
@@ -37,83 +37,68 @@ namespace ProceduralParts
         {
             string textureSet = node.name;
 
-            // Sanity check
-            if (node.GetNode("sides") == null || node.GetNode("ends") == null)
+            if (!(node.GetNode("sides") is ConfigNode sidesNode && node.GetNode("ends") is ConfigNode endsNode &&
+                sidesNode.HasValue("texture") && endsNode.HasValue("texture")))
             {
-                Debug.LogError("*ST* Invalid Textureset " + textureSet);
-                return null;
-            }
-            if (!node.GetNode("sides").HasValue("texture") || !node.GetNode("ends").HasValue("texture"))
-            {
-                Debug.LogError("*ST* Invalid Textureset " + textureSet);
+                Debug.LogError($"{ModTag} LoadTextureSet found invalid Textureset {node.name}");
                 return null;
             }
 
-            // get settings
             TextureSet tex = new TextureSet
             {
-                name = textureSet,
-                sidesName = node.GetNode("sides").GetValue("texture"),
-                endsName = node.GetNode("ends").GetValue("texture"),
-                sidesBumpName = "",
-                endsBumpName = ""
+                name = node.name,
+                sidesName = sidesNode.GetValue("texture"),
+                endsName = endsNode.GetValue("texture"),
+                sidesBumpName = sidesNode.HasValue("bump") ? sidesNode.GetValue("bump") : string.Empty,
+                endsBumpName = endsNode.HasValue("bump") ? endsNode.GetValue("bump") : string.Empty
             };
-            if (node.GetNode("sides").HasValue("bump"))
-                tex.sidesBumpName = node.GetNode("sides").GetValue("bump");
-            if (node.GetNode("ends").HasValue("bump"))
-                tex.endsBumpName = node.GetNode("ends").GetValue("bump");
 
-            if (node.GetNode("sides").HasValue("uScale"))
-                float.TryParse(node.GetNode("sides").GetValue("uScale"), out tex.scale.x);
-            if (node.GetNode("sides").HasValue("vScale"))
-                float.TryParse(node.GetNode("sides").GetValue("vScale"), out tex.scale.y);
+            if (sidesNode.HasValue("uScale"))
+                float.TryParse(sidesNode.GetValue("uScale"), out tex.scale.x);
+            if (sidesNode.HasValue("vScale"))
+                float.TryParse(sidesNode.GetValue("vScale"), out tex.scale.y);
 
+            if (sidesNode.HasValue("autoScale"))
+                bool.TryParse(sidesNode.GetValue("autoScale"), out tex.autoScale);
+            if (endsNode.HasValue("autoScale"))
+                bool.TryParse(endsNode.GetValue("autoScale"), out tex.endsAutoScale);
+            if (sidesNode.HasValue("autoWidthDivide"))
+                bool.TryParse(sidesNode.GetValue("autoWidthDivide"), out tex.autoWidthDivide);
+            if (sidesNode.HasValue("autoHeightSteps"))
+                float.TryParse(sidesNode.GetValue("autoHeightSteps"), out tex.autoHeightSteps);
 
-            if (node.GetNode("sides").HasValue("autoScale"))
-                bool.TryParse(node.GetNode("sides").GetValue("autoScale"), out tex.autoScale);
-            if (node.GetNode("ends").HasValue("autoScale"))
-                bool.TryParse(node.GetNode("ends").GetValue("autoScale"), out tex.endsAutoScale);
-            if (node.GetNode("sides").HasValue("autoWidthDivide"))
-                bool.TryParse(node.GetNode("sides").GetValue("autoWidthDivide"), out tex.autoWidthDivide);
-            if (node.GetNode("sides").HasValue("autoHeightSteps"))
-                float.TryParse(node.GetNode("sides").GetValue("autoHeightSteps"), out tex.autoHeightSteps);
-
-            if (node.GetNode("sides").HasValue("specular"))
-                tex.sidesSpecular = ConfigNode.ParseColor(node.GetNode("sides").GetValue("specular"));
-            if (node.GetNode("sides").HasValue("shininess"))
-                float.TryParse(node.GetNode("sides").GetValue("shininess"), out tex.sidesShininess);
-            if (node.GetNode("ends").HasValue("specular"))
-                tex.endsSpecular = ConfigNode.ParseColor(node.GetNode("ends").GetValue("specular"));
-            if (node.GetNode("ends").HasValue("shininess"))
-                float.TryParse(node.GetNode("ends").GetValue("shininess"), out tex.endsShininess);
+            if (sidesNode.HasValue("specular"))
+                tex.sidesSpecular = ConfigNode.ParseColor(sidesNode.GetValue("specular"));
+            if (sidesNode.HasValue("shininess"))
+                float.TryParse(sidesNode.GetValue("shininess"), out tex.sidesShininess);
+            if (endsNode.HasValue("specular"))
+                tex.endsSpecular = ConfigNode.ParseColor(endsNode.GetValue("specular"));
+            if (endsNode.HasValue("shininess"))
+                float.TryParse(endsNode.GetValue("shininess"), out tex.endsShininess);
 
             Texture[] textures = Resources.FindObjectsOfTypeAll(typeof(Texture)) as Texture[];
 
             if (!TryFindTexture(textures, ref tex.sidesName, out tex.sides))
             {
-                Debug.LogError("*ST* Sides textures not found for " + textureSet);
+                Debug.LogError($"{ModTag} LoadTextureSet Sides textures not found for {node.name}");
                 return null;
             }
 
             if (!TryFindTexture(textures, ref tex.endsName, out tex.ends))
             {
-                Debug.LogError("*ST* Ends textures not found for " + textureSet);
+                Debug.LogError($"{ModTag} LoadTextureSet Ends textures not found for {node.name}");
                 return null;
             }
 
-            if (string.IsNullOrEmpty(tex.sidesBumpName))
-                tex.sidesBump = null;
-            else if (!TryFindTexture(textures, ref tex.sidesBumpName, out tex.sidesBump))
+            if (!string.IsNullOrEmpty(tex.sidesBumpName) && !TryFindTexture(textures, ref tex.sidesBumpName, out tex.sidesBump))
             {
-                Debug.LogError("*ST* Side bump textures not found for " + textureSet);
+                Debug.LogError($"{ModTag} LoadTextureSet Side Bump textures not found for {node.name}");
                 return null;
             }
 
-            if (string.IsNullOrEmpty(tex.endsBumpName))
-                tex.endsBump = null;
-            else if (!TryFindTexture(textures, ref tex.endsBumpName, out tex.endsBump))
+            if (!string.IsNullOrEmpty(tex.endsBumpName) && !TryFindTexture(textures, ref tex.endsBumpName, out tex.endsBump))
             {
-                Debug.LogError("*ST* Cap bump textures not found for " + textureSet);
+                Debug.LogError($"{ModTag} LoadTextureSet Cap bump textures not found for {node.name}");
                 return null;
             }
 
@@ -146,18 +131,15 @@ namespace ProceduralParts
 
             string substName = "ProceduralParts" + textureName.Substring("StretchyTanks".Length);
             tex = FindTexture(textures, substName);
-            if (tex == null)
+            if (tex is null)
                 return false;
 
             textureName = substName;
             return true;
         }
 
-        // ReSharper disable once ParameterTypeCanBeEnumerable.Local
-        private static Texture FindTexture(Texture[] textures, string textureName)
-        {
-            return textures.FirstOrDefault(t => t.name == textureName);
-        }
+        private static Texture FindTexture(Texture[] textures, string textureName) =>
+            textures.FirstOrDefault(t => t.name == textureName);
 
         internal Vector2 GetScaleUv(Vector2 sideTextureScale)
         {
