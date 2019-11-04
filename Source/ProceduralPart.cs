@@ -44,7 +44,6 @@ namespace ProceduralParts
             staticallyInitialized = true;
         }
 
-
         public override void OnAwake()
         {
             StaticInit();
@@ -53,8 +52,7 @@ namespace ProceduralParts
 
         public void Update()
         {
-            if (HighLogic.LoadedSceneIsEditor)
-                OnUpdateEditor();
+            if (HighLogic.LoadedSceneIsEditor && needsTechInit) InitializeTechLimits();
         }
 
         public void LateUpdate()
@@ -67,7 +65,7 @@ namespace ProceduralParts
         }
 
         [KSPField(isPersistant = true)]
-        private  Vector3 tempColliderCenter;
+        private Vector3 tempColliderCenter;
 
         [KSPField(isPersistant = true)]
         private Vector3 tempColliderSize;
@@ -169,14 +167,17 @@ namespace ProceduralParts
                 BaseField field = Fields[nameof(textureSet)];
                 UI_ChooseOption opt = (UI_ChooseOption)field.uiControlEditor;
                 opt.options = textureSets.Keys.ToArray();
+                opt.onSymmetryFieldChanged = opt.onFieldChanged = new Callback<BaseField, object>(OnTextureChanged);
 
                 BaseField capTextureField = Fields[nameof(capTextureIndex)];
                 opt = (UI_ChooseOption)capTextureField.uiControlEditor;
                 opt.options = Enum.GetNames(typeof(CapTextureMode));
+                opt.onSymmetryFieldChanged = opt.onFieldChanged = new Callback<BaseField, object>(OnTextureChanged);
 
                 Fields[nameof(shapeName)].guiActiveEditor = availableShapes.Count > 1;
                 opt = (UI_ChooseOption)Fields[nameof(shapeName)].uiControlEditor;
                 opt.options = availableShapes.Keys.ToArray();
+                opt.onSymmetryFieldChanged = opt.onFieldChanged = new Callback<BaseField, object>(OnShapeSelectionChanged);
 
                 Fields[nameof(costDisplay)].guiActiveEditor = displayCost;
 
@@ -204,12 +205,15 @@ namespace ProceduralParts
             }
         }
 
-        public void OnUpdateEditor()
+        private void OnTextureChanged(BaseField f, object obj)
         {
-            if(needsTechInit)
-                InitializeTechLimits();
-
+            Debug.Log($"{ModTag} OnTextureChanged from {obj} to {f.GetValue(this)}");
             UpdateTexture();
+        }
+
+        private void OnShapeSelectionChanged(BaseField f, object obj)
+        {
+            Debug.Log($"{ModTag} OnShapeSelectionChanged from {obj} to {f.GetValue(this)}");
             UpdateShape();
         }
 
@@ -257,15 +261,14 @@ namespace ProceduralParts
             Transform iconSides = iconModelTransform.FindDecendant(sidesName);
             Transform iconEnds = iconModelTransform.FindDecendant(endsName);
 
-            if(iconSides != null)
-                SidesIconMesh = iconSides.GetComponent<MeshFilter>().mesh;
-            if(iconEnds != null)
-                EndsIconMesh = iconEnds.GetComponent<MeshFilter>().mesh;
+            SidesIconMesh = (iconSides is Transform) ? iconSides.GetComponent<MeshFilter>().mesh : null;
+            SidesIconMaterial = (iconSides is Transform) ? iconSides.GetComponent<Renderer>().material : null;
+
+            EndsIconMesh = (iconEnds is Transform) ? iconEnds.GetComponent<MeshFilter>().mesh : null;
+            EndsIconMaterial = (iconEnds is Transform) ? iconEnds.GetComponent<Renderer>().material : null;
 
             SidesMaterial = sides.GetComponent<Renderer>().material;
-			EndsMaterial = ends.GetComponent<Renderer>().material;
-			SidesIconMaterial = iconSides.GetComponent<Renderer>().material;
-			EndsIconMaterial = iconEnds.GetComponent<Renderer>().material;
+            EndsMaterial = ends.GetComponent<Renderer>().material;
 
             // Instantiate meshes. The mesh method unshares any shared meshes.
             SidesMesh = sides.GetComponent<MeshFilter>().mesh;
@@ -583,12 +586,10 @@ namespace ProceduralParts
 
         [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string textureSet = "Original";
-        private string oldTextureSet = "*****";
 
         [KSPField(guiName = "Ends Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]
         public int capTextureIndex = 0;
         private CapTextureMode CapTexture => (CapTextureMode)capTextureIndex;
-        private CapTextureMode oldCapTexture = CapTextureMode.Ends;
 
         private static readonly Dictionary<string, TextureSet> textureSets = new Dictionary<string, TextureSet>();
         public TextureSet TextureSet => textureSets[textureSet];
@@ -606,38 +607,19 @@ namespace ProceduralParts
                 return;
             Debug.Log($"{ModTag} OnChangeTextureScale for {this} mesh {meshName} scale {targetScale}");
             sideTextureScale = targetScale;
-            oldTextureSet = null;
             UpdateTexture();
         }
 
         private void UpdateTexture()
         {
-            if (textureSet == oldTextureSet && CapTexture == oldCapTexture)
-                return;
+            Material endsMaterial = (HighLogic.LoadedScene == GameScenes.LOADING) ? EndsIconMaterial : EndsMaterial;
+            Material sidesMaterial = (HighLogic.LoadedScene == GameScenes.LOADING) ? SidesIconMaterial : SidesMaterial;
 
-            Material endsMaterial;
-            Material sidesMaterial;
-
-            if (HighLogic.LoadedScene == GameScenes.LOADING)
-            {
-                // if we are in loading screen, all changes have to be made to the icon materials. Otherwise all icons will have the same texture 
-                endsMaterial = this.EndsIconMaterial;
-                sidesMaterial = this.SidesIconMaterial;
-            }
-            else
-            {
-                endsMaterial = this.EndsMaterial;
-                sidesMaterial = this.SidesMaterial;
-            }
             if (!textureSets.ContainsKey(textureSet))
             {
                 Debug.LogError($"{ModTag} UpdateTexture() {textureSet} missing from global list!");
-                textureSet = oldTextureSet;
+                textureSet = textureSets.Keys.First();
             }
-
-            oldTextureSet = textureSet;
-            oldCapTexture = CapTexture;
-
             TextureSet tex = textureSets[textureSet];
 
             if (!part.Modules.Contains("ModulePaintable"))
@@ -653,13 +635,13 @@ namespace ProceduralParts
             sidesMaterial.mainTextureScale = scaleUV;
             sidesMaterial.mainTextureOffset = Vector2.zero;
             sidesMaterial.SetTexture("_MainTex", tex.sides);
-            if (tex.sidesBump != null)
+            if (tex.sidesBump is Texture)
             {
                 sidesMaterial.SetTextureScale("_BumpMap", scaleUV);
                 sidesMaterial.SetTextureOffset("_BumpMap", Vector2.zero);
                 sidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
             }
-            if (endsMaterial != null)
+            if (endsMaterial is Material)
             {
                 SetupEndsTexture(endsMaterial, tex, scaleUV);
             }
@@ -692,20 +674,15 @@ namespace ProceduralParts
         private readonly List<object> nodeAttachments = new List<object>(4);
         private readonly Dictionary<string, Func<Vector3>> nodeOffsets = new Dictionary<string, Func<Vector3>>();
 
-        private class NodeTransformable : TransformFollower.Transformable//, IPartMessagePartProxy
+        private class NodeTransformable : TransformFollower.Transformable
         {
-            // leave as not serializable so will be null when deserialzied.
             private readonly Part part;
             private readonly AttachNode node;
-
-            // ReSharper disable once EventNeverSubscribedTo.Local
-            //[PartMessageEvent]
-            //public event PartAttachNodePositionChanged NodePositionChanged;
 
 			public void NodePositionChanged(AttachNode node, Vector3 location, Vector3 orientation, Vector3 secondaryAxis)
 			{
 				var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-				data.Set<AttachNode> ("node", node);
+                data.Set("node", node);
 				data.Set("location", location);
 				data.Set("orientation", orientation);
 				data.Set("secondaryAxis", secondaryAxis);
@@ -716,20 +693,14 @@ namespace ProceduralParts
             {
                 this.part = part;
                 this.node = node;
-                //PartMessageService.Register(this);
             }
 
-            public override bool Destroyed
-            {
-                get { return node == null; }
-            }
+            public override bool Destroyed { get => node is null; }
 
             public override void Translate(Vector3 translation)
             {
                 node.originalPosition = node.position += part.transform.InverseTransformPoint(translation + part.transform.position);
-
                 NodePositionChanged(node, node.position, node.orientation, node.secondaryAxis);
-                //Debug.LogWarning("Transforming node:" + node.id + " part:" + part.name + " translation=" + translation + " new position=" + node.position.ToString("F3") + " orientation=" + node.orientation.ToString("F3"));
             }
 
             public override void Rotate(Quaternion rotate)
@@ -737,14 +708,7 @@ namespace ProceduralParts
                 Vector3 oldOrientationWorld = part.transform.TransformPoint(node.orientation) - part.transform.position;
                 Vector3 newOrientationWorld = rotate * oldOrientationWorld;
                 node.originalOrientation = node.orientation = part.transform.InverseTransformPoint(newOrientationWorld + part.transform.position).normalized;
-
                 NodePositionChanged(node, node.position, node.orientation, node.secondaryAxis);
-                //Debug.LogWarning("Transforming node:" + node.id + " rotation=" + rotate.ToStringAngleAxis() + " new position=" + node.position.ToString("F3") + " orientation=" + node.orientation.ToString("F3"));
-            }
-
-            public Part ProxyPart
-            {
-                get { return part; }
             }
         }
 
@@ -787,14 +751,18 @@ namespace ProceduralParts
             nodeAttachments.Add(data);
         }
 
-        // ReSharper disable once InconsistentNaming
         public void AddNodeOffset(string nodeId, Func<Vector3> GetOffset)
         {
+            if (part.FindAttachNode(nodeId) is null)
+                throw new ArgumentException($"Node {nodeId} is not the ID of an attachment node");
+            nodeOffsets.Add(nodeId, GetOffset);
+            /*            
             AttachNode node = part.FindAttachNode(nodeId);
             if (node == null)
                 throw new ArgumentException("Node " + nodeId + " is not the ID of an attachment node");
 
             nodeOffsets.Add(nodeId, GetOffset);
+            */
         }
 
         #endregion
@@ -823,15 +791,8 @@ namespace ProceduralParts
             private Part child;
             private AttachNode node; // the attachment node of the child (not the one which it is attached to)
 
-            public Part Child
-            {
-                get { return child; }
-            }
-
-            public AttachNode AttachNode
-            {
-                get {return node;}
-            }
+            public Part Child { get => child; }
+            public AttachNode AttachNode { get => node; }
 
             public FreePartAttachment(Part child, AttachNode node)
             {
@@ -839,13 +800,7 @@ namespace ProceduralParts
                 this.node = node;
             }
             
-            // cylindric coordinates
-
             public ProceduralAbstractShape.ShapeCoordinates Coordinates = new ProceduralAbstractShape.ShapeCoordinates();
-
-            //public float r;
-            //public float u;
-            //public float y;
         }
 
         private class ParentTransformable : TransformFollower.Transformable
@@ -861,10 +816,7 @@ namespace ProceduralParts
                 this.childToParent = childToParent;
             }
 
-            public override bool Destroyed
-            {
-                get { return root == null; }
-            }
+            public override bool Destroyed { get => root is null; }
 
             public override void Translate(Vector3 trans)
             {
@@ -891,21 +843,16 @@ namespace ProceduralParts
 
         private Queue<Action> toAttach = new Queue<Action>();
 
-
         public void OnEditorPartEvent(ConstructionEventType type, Part part)
         {
-            //Debug.Log("ProceduralPart.OnEditorPartEvent");
             switch (type)
             {
                 case ConstructionEventType.PartRootSelected:
                     Debug.Log("[ProceduralPart.OnEditorPartEvent] ConstructionEventType.PartRootSelected");
-                    //StartCoroutine(RebuildPartAttachments());
                     Part[] children = childAttach.Select<FreePartAttachment, Part>(x => x.Child).ToArray();
 
                     foreach (Part attachment in children)
-                
                     {
-                    
                         PartChildDetached(attachment);
                     }
 
@@ -921,9 +868,8 @@ namespace ProceduralParts
                     else
                         PartParentChanged(transform.parent.GetComponent<Part>());
 
-                    Debug.Log("[ProceduralPart.OnEditorPartEvent] Finished PartRootSelected");
-                    
-                break;
+                    Debug.Log($"{ModTag} OnEditorPartEvent: Finished PartRootSelected");
+                    break;
 
                 case ConstructionEventType.PartOffset:
                     Debug.Log("[ProceduralPart.OnEditorPartEvent] ConstructionEventType.PartOffset");
@@ -932,28 +878,14 @@ namespace ProceduralParts
                         if (ca.Child == part || ca.Child.isSymmetryCounterPart(part))
                         {
                             Vector3 position = ca.Child.transform.TransformPoint(ca.AttachNode.position);
-                            //ca.node.nodeType
-                            //shape.GetCylindricCoordinates(part.transform.localPosition, out ca.u, out ca.y, out ca.r);
                             shape.GetCylindricCoordinates(transform.InverseTransformPoint(position), ca.Coordinates);
-
-                            //Debug.Log("y: " + ca.y);
-                            //Debug.Log("u: " + ca.u);
-                            //Debug.Log("r: " + ca.r);
-                            //RemovePartAttachment(pa);
-                            //childAttachments.Remove(pa);
-                            //PartChildAttached(part);
-                            
-                            
-                            //break;
                         }
                     }
-                break;
+                    break;
             }       
         }
 
-        //[PartMessageListener(typeof(PartAttachNodePositionChanged), PartRelationship.Child, GameSceneFilter.AnyEditor)]
         [KSPEvent(guiActive = false, active = true)]
-		//public void PartAttachNodePositionChanged(AttachNode node, [UseLatest] Vector3 location, [UseLatest] Vector3 orientation, [UseLatest] Vector3 secondaryAxis)
 		public void OnPartAttachNodePositionChanged(BaseEventDetails data)
         {
 			//TODO resrict to child
@@ -1011,22 +943,12 @@ namespace ProceduralParts
 			{
 				PartChildDetached (data.target);
 			}
-		
-			//SendAsyncProxy<PartParentChanged>(this, data.target, new object[] { null });
-			//SendAsyncProxy<PartChildDetached>(this, data.target.parent, data.target);
-			//
-			//if (data.target.attachMode == AttachModes.SRF_ATTACH)
-			//	data.target.srfAttachNode.attachedPart = null;
-
 		}
 
-        //[PartMessageListener(typeof(PartChildAttached), scenes: GameSceneFilter.AnyEditor)]
         public void PartChildAttached(Part child)
         {
 			if (HighLogic.LoadedScene != GameScenes.EDITOR)
 				return;
-
-			//Debug.Log ("PartChildAttached");
 
 			AttachNode node = child.FindAttachNodeByPart(part);
 
@@ -1035,35 +957,8 @@ namespace ProceduralParts
                 toAttach.Enqueue(() => PartChildAttached(child));
                 return;
             }
-            //Debug.Log("PartChildAttached");
-            
-            //if (node == null)
-            //{
-            //    Debug.LogError("*ST* unable to find child node for child: " + child.transform);
-			//	//toAttach.Enqueue(() => PartChildAttached(child));
-            //    return;
-            //}
-			//else
-			//	Debug.LogError("*ST* found: " + child.transform);
 
             Vector3 position = child.transform.TransformPoint(node.position);
-
-            // Handle node offsets
-            //if (child.attachMode != AttachModes.SRF_ATTACH)
-            //{
-            //    AttachNode ourNode = part.findAttachNodeByPart(child);
-            //    if (ourNode == null)
-            //    {
-            //        Debug.LogError("*ST* unable to find our node for child: " + child.transform);
-            //        return;
-            //    }
-            //    // ReSharper disable once InconsistentNaming
-            //    Func<Vector3> Offset;
-            //    if (nodeOffsets.TryGetValue(ourNode.id, out Offset))
-            //        position -= Offset();
-            //}
-
-            //Debug.LogWarning("Attaching to parent: " + part + " child: " + child.transform.name);
             FreePartAttachment newAttachment = new FreePartAttachment(child, node);
 
             switch (child.attachMode)
@@ -1283,15 +1178,11 @@ namespace ProceduralParts
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Shape"), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string shapeName;
-        private string oldShapeName = "****";
 
         private ProceduralAbstractShape shape;
         private readonly Dictionary<string, ProceduralAbstractShape> availableShapes = new Dictionary<string, ProceduralAbstractShape>();
 
-        public ProceduralAbstractShape CurrentShape
-        {
-            get { return shape; }
-        }
+        public ProceduralAbstractShape CurrentShape { get => shape; }
 
         private void InitializeShapes()
         {
@@ -1312,23 +1203,18 @@ namespace ProceduralParts
             }
             shape = availableShapes[shapeName];
             shape.isEnabled = shape.enabled = true;
-            oldShapeName = shapeName;
         }
 
         private void UpdateShape()
         {
-            if (shapeName == oldShapeName)
-                return;
-
-            ProceduralAbstractShape newShape;
-            if (!availableShapes.TryGetValue(shapeName, out newShape))
+            if (!availableShapes.ContainsKey(shapeName))
             {
-                Debug.LogError("*ST* Unable to find compShape: " + shapeName);
-                shapeName = oldShapeName;
-                return;
+                Debug.LogError($"{ModTag} UpdateShape requested {shapeName} but that is not available!  Defaulting to {availableShapes.Keys.First()}");
+                shapeName = availableShapes.Keys.First();
             }
+            ProceduralAbstractShape newShape = availableShapes[shapeName];
 
-            if (shape != null)
+            if (shape is ProceduralAbstractShape)
             {
                 shape.isEnabled = shape.enabled = false;
 
@@ -1358,8 +1244,6 @@ namespace ProceduralParts
             shape = newShape;
             shape.isEnabled = shape.enabled = true;
 
-            oldShapeName = shapeName;
-
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
 
@@ -1388,10 +1272,7 @@ namespace ProceduralParts
         [KSPField]
         public bool displayCost = true;
 
-		public ModifierChangeWhen GetModuleCostChangeWhen ()
-		{
-			return ModifierChangeWhen.FIXED;
-		}
+		public ModifierChangeWhen GetModuleCostChangeWhen () => ModifierChangeWhen.FIXED;
 
 		public float GetModuleCost(float stdCost, ModifierStagingSituation sit)
         {
@@ -1482,7 +1363,6 @@ namespace ProceduralParts
         #endregion
 
        
-        //[PartMessageListener(typeof(PartModelChanged), scenes: ~GameSceneFilter.Flight)]
         [KSPEvent(guiActive = false, active = true)]
 		public void OnPartModelChanged()
         {
