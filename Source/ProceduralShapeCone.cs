@@ -85,89 +85,7 @@ namespace ProceduralParts
         public override void OnStart(StartState state)
         {
             UpdateTechConstraints();
-
-        }
-
-        protected void MaintainParameterRelations()
-        {
-            if(bottomDiameter >= topDiameter)
-                MaintainParameterRelations(ref bottomDiameter, ref oldBottomDiameter, ref topDiameter, ref oldTopDiameter, coneTopMode);
-            else
-                MaintainParameterRelations(ref topDiameter, ref oldTopDiameter, ref bottomDiameter, ref oldBottomDiameter, coneBottomMode);
-
-        }
-
-        private void MaintainParameterRelations(ref float bigEnd, ref float oldBigEnd, ref float smallEnd, ref float oldSmallEnd, ConeEndMode smallEndMode)
-        {
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            // Ensure the bigger end is not smaller than the min diameter
-            if (bigEnd < PPart.diameterMin)
-                bigEnd = PPart.diameterMin;
-
-            // Aspect ratio stuff
-            if (PPart.aspectMin == 0 && float.IsPositiveInfinity(PPart.aspectMax))
-                return;
-
-            float aspect = bigEnd / length;
-
-            if (!MathUtils.TestClamp(ref aspect, PPart.aspectMin, PPart.aspectMax))
-                return;
-
-            if (bigEnd != oldBigEnd)
-            {
-                // Big end can push the length
-                try
-                {
-                    length = MathUtils.RoundTo(bigEnd / aspect, 0.001f);
-
-                    // The aspect is within range if false, we can safely return
-                    if (!MathUtils.TestClamp(ref length, PPart.lengthMin, PPart.lengthMax))
-                        return;
-
-                    // If the aspect is fixed, then the length is dependent on the diameter anyhow
-                    // so just return (we can still limit the total length if we want)
-                    if (PPart.aspectMin == PPart.aspectMax)
-                        return;
-
-                    // Bottom has gone out of range, push back.
-                    bigEnd = MathUtils.RoundTo(aspect * length, 0.001f);
-                }
-                finally
-                {
-                    oldLength = length;
-                }
-            }
-            else if (length != oldLength)
-            {
-                try
-                {
-                    // Length can push the big end
-                    bigEnd = MathUtils.RoundTo(aspect * length, 0.001f);
-
-                    // The aspect is within range if true
-                    if (!MathUtils.TestClamp(ref bigEnd, PPart.diameterMin, PPart.diameterMax))
-                    {
-                        // need to push back on the length
-                        length = MathUtils.RoundTo(bigEnd / aspect, 0.001f);
-                    }
-
-                    // Delta the small end by the same amount.
-                    if(smallEndMode != ConeEndMode.Constant) 
-                    {
-                        smallEnd += bigEnd - oldBigEnd;
-
-                        if (smallEndMode == ConeEndMode.LimitMin && smallEnd < PPart.diameterMin)
-                            smallEnd = PPart.diameterMin;
-                    }
-                }
-                finally
-                {
-                    oldBigEnd = bigEnd;
-                    oldSmallEnd = smallEnd;
-                }
-            }
-            // The small end is ignored for aspects.
-            // ReSharper restore CompareOfFloatsByEqualityOperator
+            base.OnStart(state);
         }
 
         protected override void UpdateShape(bool force)
@@ -181,12 +99,10 @@ namespace ProceduralParts
             // Maxmin the volume.
             if (HighLogic.LoadedSceneIsEditor)
             {
-                MaintainParameterRelations();
-
                 var volume = CalculateVolume();
                 var oldVolume = volume;
 
-                if (MathUtils.TestClamp(ref volume, PPart.volumeMin, PPart.volumeMax))
+                if (MathUtils.TestClamp(ref volume, 0, PPart.volumeMax))
                 {
                     refreshRequired = true;
                     var excessVol = oldVolume - volume;
@@ -256,7 +172,7 @@ namespace ProceduralParts
                 return;
 
             // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (PPart.lengthMin == PPart.lengthMax || PPart.aspectMin == PPart.aspectMax)
+            if (PPart.lengthMin == PPart.lengthMax)
                 Fields["length"].guiActiveEditor = false;
             else
             {

@@ -126,6 +126,7 @@ namespace ProceduralParts
             isInitialized = true;
             InitializeObjects();
             InitializeShapes();
+            InitializeTechLimits();
             InitializeNodes();
 
             if (HighLogic.LoadedSceneIsFlight)
@@ -376,23 +377,6 @@ namespace ProceduralParts
         [KSPField]
         public float volumeMax = 0;
 
-        [KSPField]
-        public float volumeMin = 0.001f;
-
-        /// <summary>
-        /// Minimum aspect ratio - min ratio of length / diameter.
-        /// For cones, the biggest end is the one for the diameter. 
-        /// </summary>
-        [KSPField]
-        public float aspectMin = 0;
-
-        /// <summary>
-        /// Maximum aspect ratio - max ratio of length / diameter.
-        /// For cones, the biggest end is the one for the diameter. 
-        /// </summary>
-        [KSPField]
-        public float aspectMax = 0;
-
         /// <summary>
         /// Set to false if user is not allowed to tweak the fillet / curve Id.
         /// </summary>
@@ -417,16 +401,6 @@ namespace ProceduralParts
 
         private void InitializeTechLimits()
         {
-            if (HighLogic.CurrentGame == null || 
-                (HighLogic.CurrentGame.Mode != Game.Modes.CAREER && HighLogic.CurrentGame.Mode != Game.Modes.SCIENCE_SANDBOX))
-                return;
-
-            if (ResearchAndDevelopment.Instance == null)
-            {
-                Debug.LogError($"{ModTag} InitializeTechLimits() but R&D Instance is null!");
-                needsTechInit = true;
-                return;
-            }
             techLimits.Clear();
             techLimits.AddRange(part.partInfo.partPrefab.FindModuleImplementing<ProceduralPart>().techLimits);
             Debug.Log($"{ModTag} InitializeTechLimits() found {techLimits.Count} limits to test");
@@ -440,24 +414,35 @@ namespace ProceduralParts
                 lengthMax = this.lengthMax,
                 lengthMin = this.lengthMin,
                 volumeMax = this.volumeMax,
-                volumeMin = this.volumeMin,
-                aspectMin = this.aspectMin,
-                aspectMax = this.aspectMax,
-                allowCurveTweaking = false
+                allowCurveTweaking = true
             };
 
-            foreach (TechLimit limit in techLimits)
+            if (HighLogic.CurrentGame is Game && 
+                (HighLogic.CurrentGame.Mode == Game.Modes.CAREER || HighLogic.CurrentGame.Mode == Game.Modes.SCIENCE_SANDBOX))
             {
-                Debug.Log($"{ModTag} InitializeTechLimits() testing {limit}");
-                if (ResearchAndDevelopment.GetTechnologyState(limit.name) != RDTech.State.Available)
-                    continue;
+                if (ResearchAndDevelopment.Instance is null)
+                {
+                    Debug.LogError($"{ModTag} InitializeTechLimits() but R&D Instance is null!");
+                    needsTechInit = true;
+                    return;
+                }
 
-                currentLimit.ApplyLimit(limit);
+                foreach (TechLimit limit in techLimits)
+                {
+                    Debug.Log($"{ModTag} InitializeTechLimits() testing {limit}");
+                    if (ResearchAndDevelopment.GetTechnologyState(limit.name) != RDTech.State.Available)
+                        continue;
+
+                    currentLimit.ApplyLimit(limit);
+                }
+            } else
+            {
+                Debug.Log($"{ModTag} Skipping Tech Limits because Game is {HighLogic.CurrentGame?.Mode})");
             }
             currentLimit.Validate();
             SetFromLimit(currentLimit);
 
-            Debug.Log($"{ModTag} TechLimits applied: diameter=({diameterMin: G3}, {diameterMax: G3}) length=({lengthMin: G3}, {lengthMax: G3}) volume=({volumeMin: G3}, {volumeMax: G3}) )");
+            Debug.Log($"{ModTag} TechLimits applied: diameter=({diameterMin: G3}, {diameterMax: G3}) length=({lengthMin: G3}, {lengthMax: G3}) volumeMax={volumeMax: G3} )");
 
             foreach (ProceduralAbstractShape shape in GetComponents<ProceduralAbstractShape>())
                 shape.UpdateTechConstraints();
@@ -478,12 +463,6 @@ namespace ProceduralParts
             public float lengthMax = float.NaN;
             [Persistent]
             public float volumeMax = float.NaN;
-            [Persistent]
-            public float volumeMin = float.NaN;
-            [Persistent]
-            public float aspectMax = float.NaN;
-            [Persistent]
-            public float aspectMin = float.NaN;
             [Persistent]
             public bool allowCurveTweaking = true;
 
@@ -513,12 +492,6 @@ namespace ProceduralParts
                     lengthMin = 0.01f;
                 if (volumeMax == 0)
                     volumeMax = float.PositiveInfinity;
-                if (float.IsInfinity(volumeMin))
-                    volumeMin = 0.01f;
-                if (aspectMax == 0)
-                    aspectMax = float.PositiveInfinity;
-                if (float.IsInfinity(aspectMin))
-                    aspectMin = 0.01f;
             }
 
             internal void ApplyLimit(TechLimit limit)
@@ -531,20 +504,14 @@ namespace ProceduralParts
                     lengthMin = limit.lengthMin;
                 if (limit.lengthMax > lengthMax)
                     lengthMax = limit.lengthMax;
-                if (limit.volumeMin < volumeMin)
-                    volumeMin = limit.volumeMin;
                 if (limit.volumeMax > volumeMax)
                     volumeMax = limit.volumeMax;
-                if (limit.aspectMin < aspectMin)
-                    aspectMin = limit.aspectMin;
-                if (limit.aspectMax > aspectMax)
-                    aspectMax = limit.aspectMax;
                 if (limit.allowCurveTweaking)
                     allowCurveTweaking = true;
             }
 
             public override string ToString() =>
-                $"TechLimits(TechRequired={name} diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volume=({volumeMin:G3}, {volumeMax:G3}) )";
+                $"TechLimits(TechRequired={name} diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volumeMax={volumeMax:G3} )";
         }
 
         private void SetFromLimit(TechLimit limit)
@@ -554,9 +521,6 @@ namespace ProceduralParts
             lengthMax = limit.lengthMax;
             lengthMin = limit.lengthMin;
             volumeMax = limit.volumeMax;
-            volumeMin = limit.volumeMin;
-            aspectMax = limit.aspectMax;
-            aspectMin = limit.aspectMin;
             allowCurveTweaking = limit.allowCurveTweaking;
         }
 

@@ -245,7 +245,7 @@ namespace ProceduralParts
         private float ClampToVolumeRestrictions(float volume)
         {
             var oldVolume = volume;
-            volume = Mathf.Clamp(volume, PPart.volumeMin, PPart.volumeMax);
+            volume = Mathf.Min(volume, PPart.volumeMax);
             if (volume != oldVolume)
             {
                 var excessVol = oldVolume - volume;

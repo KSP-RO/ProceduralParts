@@ -7,6 +7,7 @@ namespace ProceduralParts
 
     public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
     {
+        private static readonly string ModTag = "[ProceduralShapeCylinder]";
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float diameter = 1.25f;
@@ -38,10 +39,6 @@ namespace ProceduralParts
                 if (volume > PPart.volumeMax)
                 {
                     volume = PPart.volumeMax;
-                }
-                else if (volume < PPart.volumeMin)
-                {
-                    volume = PPart.volumeMin;
                 }
                 else
                     goto nochange;

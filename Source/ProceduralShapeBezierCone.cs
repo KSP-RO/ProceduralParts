@@ -92,8 +92,6 @@ namespace ProceduralParts
 
             if (HighLogic.LoadedSceneIsEditor)
             {
-                MaintainParameterRelations();
-
                 UpdateVolumeRange();
             }
             else
@@ -118,12 +116,7 @@ namespace ProceduralParts
             var clampedVolume = volume;
 
             var inc = 0f;
-            if (volume < PPart.volumeMin)
-            {
-                clampedVolume = PPart.volumeMin;
-                inc = IteratorIncrement;
-            }
-            else if (volume > PPart.volumeMax)
+            if (volume > PPart.volumeMax)
             {
                 clampedVolume = PPart.volumeMax;
                 inc = -IteratorIncrement;
@@ -162,7 +155,7 @@ namespace ProceduralParts
         {
             var oldToTweak = toTweak;
             var i = 1;
-            while (volume < PPart.volumeMin && inc > 0 || volume > PPart.volumeMax && inc < 0)
+            while (volume > PPart.volumeMax && inc < 0)
             {
                 toTweak = TruncateForSlider(oldToTweak + i * inc, inc);
                 volume = CalcVolume();

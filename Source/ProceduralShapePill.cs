@@ -116,11 +116,7 @@ namespace ProceduralParts
                     var volume = CalcVolume();
                     float inc = 0;
 
-                    if (volume < PPart.volumeMin)
-                    {
-                        inc = -IteratorIncrement;
-                    }
-                    else if (volume > PPart.volumeMax)
+                    if (volume > PPart.volumeMax)
                     {
                         inc = IteratorIncrement;
                     }
@@ -130,7 +126,7 @@ namespace ProceduralParts
                         refreshRequired = true;
                         var tempFillet = fillet;
                         var i = 1;
-                        while (volume < PPart.volumeMin && inc < 0 || volume > PPart.volumeMax && inc > 0)
+                        while (volume > PPart.volumeMax)
                         {
                             fillet = TruncateForSlider(tempFillet + i * inc, inc);
                             volume = CalcVolume();
@@ -251,10 +247,6 @@ namespace ProceduralParts
             if (volume > PPart.volumeMax)
             {
                 volume = PPart.volumeMax;
-            }
-            else if (volume < PPart.volumeMin)
-            {
-                volume = PPart.volumeMin;
             }
             return volume;
         }
