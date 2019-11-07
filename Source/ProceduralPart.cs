@@ -349,63 +349,33 @@ namespace ProceduralParts
 
         #region Maximum dimensions and shape constraints
 
-        /// <summary>
-        /// Maximum radial diameter in meters
-        /// </summary>
         [KSPField]
-        public float diameterMax = float.PositiveInfinity;
+        public float diameterMax = 0;
 
-        /// <summary>
-        /// Minimum radial diameter in meters
-        /// </summary>
         [KSPField]
         public float diameterMin = 0.01f;
 
-        /// <summary>
-        /// The 'large step' for diameter sliders.
-        /// </summary>
         [KSPField]
         public float diameterLargeStep = 1.25f;
 
-        /// <summary>
-        /// The 'small step' for diameter sliders.
-        /// </summary>
         [KSPField]
         public float diameterSmallStep = 0.125f;
 
-        /// <summary>
-        /// Maximum length in meters
-        /// </summary>
         [KSPField]
-        public float lengthMax = float.PositiveInfinity;
+        public float lengthMax = 0;
 
-        /// <summary>
-        /// Minimum length in meters
-        /// </summary>
         [KSPField]
         public float lengthMin = 0.01f;
 
-        /// <summary>
-        /// Large length step size
-        /// </summary>
         [KSPField]
         public float lengthLargeStep = 1.0f;
 
-        /// <summary>
-        /// Small length step size
-        /// </summary>
         [KSPField]
         public float lengthSmallStep = 0.125f;
 
-        /// <summary>
-        /// Maximum volume in meters
-        /// </summary>
         [KSPField]
-        public float volumeMax = float.PositiveInfinity;
+        public float volumeMax = 0;
 
-        /// <summary>
-        /// Minimum volume in meters
-        /// </summary>
         [KSPField]
         public float volumeMin = 0.001f;
 
@@ -414,14 +384,14 @@ namespace ProceduralParts
         /// For cones, the biggest end is the one for the diameter. 
         /// </summary>
         [KSPField]
-        public float aspectMin;
+        public float aspectMin = 0;
 
         /// <summary>
-        /// Minimum aspect ratio - min ratio of length / diameter.
+        /// Maximum aspect ratio - max ratio of length / diameter.
         /// For cones, the biggest end is the one for the diameter. 
         /// </summary>
         [KSPField]
-        public float aspectMax = float.PositiveInfinity;
+        public float aspectMax = 0;
 
         /// <summary>
         /// Set to false if user is not allowed to tweak the fillet / curve Id.
@@ -443,6 +413,7 @@ namespace ProceduralParts
         }
 
         private bool needsTechInit;
+        public TechLimit currentLimit;
 
         private void InitializeTechLimits()
         {
@@ -462,16 +433,18 @@ namespace ProceduralParts
 
             needsTechInit = false;
 
-            // ReSharper disable LocalVariableHidesMember
-            float diameterMax = 0;
-            float diameterMin = float.PositiveInfinity;
-            float lengthMax = 0;
-            float lengthMin = float.PositiveInfinity;
-            float volumeMax = 0;
-            float volumeMin = float.PositiveInfinity;
-            float aspectMin = 0;
-            float aspectMax = float.PositiveInfinity;
-            bool allowCurveTweaking = false;
+            currentLimit = new TechLimit
+            {
+                diameterMax = this.diameterMax,
+                diameterMin = this.diameterMin,
+                lengthMax = this.lengthMax,
+                lengthMin = this.lengthMin,
+                volumeMax = this.volumeMax,
+                volumeMin = this.volumeMin,
+                aspectMin = this.aspectMin,
+                aspectMax = this.aspectMax,
+                allowCurveTweaking = false
+            };
 
             foreach (TechLimit limit in techLimits)
             {
@@ -479,55 +452,10 @@ namespace ProceduralParts
                 if (ResearchAndDevelopment.GetTechnologyState(limit.name) != RDTech.State.Available)
                     continue;
 
-                if (limit.diameterMin < diameterMin)
-                    diameterMin = limit.diameterMin;
-                if (limit.diameterMax > diameterMax)
-                    diameterMax = limit.diameterMax;
-                if (limit.lengthMin < lengthMin)
-                    lengthMin = limit.lengthMin;
-                if (limit.lengthMax > lengthMax)
-                    lengthMax = limit.lengthMax;
-                if (limit.volumeMin < volumeMin)
-                    volumeMin = limit.volumeMin;
-                if (limit.volumeMax > volumeMax)
-                    volumeMax = limit.volumeMax;
-                if (limit.aspectMin < aspectMin)
-                    aspectMin = limit.aspectMin;
-                if (limit.aspectMax > aspectMax)
-                    aspectMax = limit.aspectMax;
-                if (limit.allowCurveTweaking)
-                    allowCurveTweaking = true;
+                currentLimit.ApplyLimit(limit);
             }
-
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (diameterMax == 0)
-                diameterMax = float.PositiveInfinity;
-            if (float.IsInfinity(diameterMin))
-                diameterMin = 0.01f;
-            if (lengthMax == 0)
-                lengthMax = float.PositiveInfinity;
-            if (float.IsInfinity(lengthMin))
-                lengthMin = 0.01f;
-            if (volumeMax == 0)
-                volumeMax = float.PositiveInfinity;
-            if (float.IsInfinity(volumeMin))
-                volumeMin = 0.01f;
-            if (aspectMax == 0)
-                aspectMax = float.PositiveInfinity;
-            if (float.IsInfinity(aspectMin))
-                aspectMin = 0.01f;
-            // ReSharper restore CompareOfFloatsByEqualityOperator
-
-            this.diameterMax = Mathf.Min(this.diameterMax, diameterMax);
-            this.diameterMin = Mathf.Max(this.diameterMin, diameterMin);
-            this.lengthMax = Mathf.Min(this.lengthMax, lengthMax);
-            this.lengthMin = Mathf.Max(this.lengthMin, lengthMin);
-            this.volumeMax = Mathf.Min(this.volumeMax, volumeMax);
-            this.volumeMin = Mathf.Max(this.volumeMin, volumeMin);
-            this.aspectMax = Mathf.Min(this.aspectMax, aspectMax);
-            this.aspectMin = Mathf.Max(this.aspectMin, aspectMin);
-            this.allowCurveTweaking = this.allowCurveTweaking && allowCurveTweaking;
-            // ReSharper restore LocalVariableHidesMember
+            currentLimit.Validate();
+            SetFromLimit(currentLimit);
 
             Debug.Log($"{ModTag} TechLimits applied: diameter=({diameterMin: G3}, {diameterMax: G3}) length=({lengthMin: G3}, {lengthMax: G3}) volume=({volumeMin: G3}, {volumeMax: G3}) )");
 
@@ -567,13 +495,69 @@ namespace ProceduralParts
                     name = node.GetValue("TechRequired");
                 }
             }
+
             public void Save(ConfigNode node)
             {
                 ConfigNode.CreateConfigFromObject(this, node);
             }
 
+            internal void Validate()
+            {
+                if (diameterMax == 0)
+                    diameterMax = float.PositiveInfinity;
+                if (float.IsInfinity(diameterMin))
+                    diameterMin = 0.01f;
+                if (lengthMax == 0)
+                    lengthMax = float.PositiveInfinity;
+                if (float.IsInfinity(lengthMin))
+                    lengthMin = 0.01f;
+                if (volumeMax == 0)
+                    volumeMax = float.PositiveInfinity;
+                if (float.IsInfinity(volumeMin))
+                    volumeMin = 0.01f;
+                if (aspectMax == 0)
+                    aspectMax = float.PositiveInfinity;
+                if (float.IsInfinity(aspectMin))
+                    aspectMin = 0.01f;
+            }
+
+            internal void ApplyLimit(TechLimit limit)
+            {
+                if (limit.diameterMin < diameterMin)
+                    diameterMin = limit.diameterMin;
+                if (limit.diameterMax > diameterMax)
+                    diameterMax = limit.diameterMax;
+                if (limit.lengthMin < lengthMin)
+                    lengthMin = limit.lengthMin;
+                if (limit.lengthMax > lengthMax)
+                    lengthMax = limit.lengthMax;
+                if (limit.volumeMin < volumeMin)
+                    volumeMin = limit.volumeMin;
+                if (limit.volumeMax > volumeMax)
+                    volumeMax = limit.volumeMax;
+                if (limit.aspectMin < aspectMin)
+                    aspectMin = limit.aspectMin;
+                if (limit.aspectMax > aspectMax)
+                    aspectMax = limit.aspectMax;
+                if (limit.allowCurveTweaking)
+                    allowCurveTweaking = true;
+            }
+
             public override string ToString() =>
                 $"TechLimits(TechRequired={name} diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volume=({volumeMin:G3}, {volumeMax:G3}) )";
+        }
+
+        private void SetFromLimit(TechLimit limit)
+        {
+            diameterMax = limit.diameterMax;
+            diameterMin = limit.diameterMin;
+            lengthMax = limit.lengthMax;
+            lengthMin = limit.lengthMin;
+            volumeMax = limit.volumeMax;
+            volumeMin = limit.volumeMin;
+            aspectMax = limit.aspectMax;
+            aspectMin = limit.aspectMin;
+            allowCurveTweaking = limit.allowCurveTweaking;
         }
 
         #endregion
@@ -1274,15 +1258,37 @@ namespace ProceduralParts
 
 		public ModifierChangeWhen GetModuleCostChangeWhen () => ModifierChangeWhen.FIXED;
 
-		public float GetModuleCost(float stdCost, ModifierStagingSituation sit)
+        private bool ContainsMFT(Part p)
+        {
+            foreach (PartModule pm in p.Modules)
+            {
+                if (pm.name.Equals("ModuleFuelTanks")) return true;
+            }
+            return false;
+        }
+
+        private void GetResourceCosts(Part p, out float maxCost, out float actualCost)
+        {
+            maxCost = actualCost = 0;
+            foreach (PartResource r in p.Resources)
+            {
+                if (PartResourceLibrary.Instance.GetDefinition(r.resourceName) is PartResourceDefinition d)
+                {
+                    maxCost += (float)(r.maxAmount * d.unitCost);
+                    actualCost += (float)(r.amount * d.unitCost);
+                }
+            }
+        }
+
+        public float GetModuleCost(float stdCost, ModifierStagingSituation sit)
         {
             if (HighLogic.LoadedScene == GameScenes.EDITOR)
             {
                 //Debug.Log("stdCost: " + stdCost);
                 float cost = baseCost;
-                if ((object)shape != null)
+                if (shape is ProceduralAbstractShape)
                     cost += shape.GetCurrentCostMult() * shape.Volume * costPerkL;
-                //Debug.Log(cost);
+
                 foreach (PartModule pm in part.Modules)
                 {
                     if(pm is ICostMultiplier)
@@ -1293,70 +1299,33 @@ namespace ProceduralParts
                 float dryCost=0;
                 float actualCost=0;
 
-                bool containsMFT = false;
-
-                try
-                {
-                    for (int i = 0; i < part.Modules.Count; i++)
-                    {
-                        if (part.Modules[i].name == "ModuleFuelTanks")
-                        {
-                            containsMFT = true;
-                            break;
-                        }
-                    }
-                }
-                catch
-                {
-                    Debug.Log("Caught error searching for ModuleFuelTanks");
-                }
-
-                if (!containsMFT && (object)PartResourceLibrary.Instance != null)
+                if (!ContainsMFT(part) && PartResourceLibrary.Instance != null)
                 {
                     if (!costsIncludeResources)
                     {
                         dryCost = cost;
                         actualCost = cost;
-                        foreach (PartResource r in part.Resources)
-                        {
-                            PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
-                            if ((object)d != null)
-                            {
-                                cost += (float)(r.maxAmount * d.unitCost);
-                                actualCost += (float)(r.amount * d.unitCost);      
-                            }
-                        }
+                        GetResourceCosts(part, out float resMaxCost, out float resActualCost);
+                        cost += resMaxCost;
+                        actualCost += resActualCost;
                     }
                     else
                     {
-                        float minimumCosts = 0;
-
-                        foreach (PartResource r in part.Resources)
-                        {
-                            PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
-                            if ((object)d != null)
-                            {
-                                minimumCosts += (float)(r.maxAmount * d.unitCost);
-                            }
-                        }
+                        GetResourceCosts(part, out float resMaxCost, out float _);
+                        float minimumCosts = resMaxCost;
                         cost = Mathf.Max(minimumCosts, cost);
+
                         dryCost = cost;
                         actualCost = cost;
 
-                        foreach (PartResource r in part.Resources)
-                        {
-                            PartResourceDefinition d = PartResourceLibrary.Instance.GetDefinition(r.resourceName);
-                            if ((object)d != null)
-                            {
-                                dryCost -= (float)(r.maxAmount * d.unitCost);
-                                actualCost -= (float)((r.maxAmount - r.amount) * d.unitCost);
-                            }
-                        }
+                        GetResourceCosts(part, out resMaxCost, out float resActualCost);
+                        dryCost -= resMaxCost;
+                        actualCost -= (resMaxCost - resActualCost);
                     }
                 }
                 moduleCost = cost;
                 
-                costDisplay = String.Format("Dry: {0:N0} Wet: {1:N0}", dryCost, actualCost);
+                costDisplay = $"Dry: {dryCost:N0} Wet: {actualCost:N0}";
             }
             return moduleCost;
         }
