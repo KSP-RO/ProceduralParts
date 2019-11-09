@@ -1,4 +1,6 @@
 ============= Changelog for ProceduralParts  =========
+===  1.3.20 ===
+Recompiled for KSP 1.8.1
 
 ===  1.3.19  ===
 Fix reroot surface attachment
