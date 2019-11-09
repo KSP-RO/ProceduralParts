@@ -57,8 +57,6 @@ namespace ProceduralParts
         {
             base.OnAwake();
             this.window = part.FindActionWindow();
-            //PartMessageService.Register(this);
-            //this.RegisterOnUpdateEditor(OnUpdateEditor);
         }
 
         public void Update()
@@ -72,18 +70,12 @@ namespace ProceduralParts
             if (!GameSceneFilter.AnyInitializing.IsLoaded())
                 return;
         
-            tankTypeOptions = new List<TankTypeOption>();
             foreach (ConfigNode optNode in node.GetNodes("TANK_TYPE_OPTION"))
             {
                 TankTypeOption option = new TankTypeOption();
                 option.Load(optNode);
                 tankTypeOptions.Add(option);
             }
-
-            // Unity for some daft reason, and not as according to it's own documentation, won't clone 
-            // serializable member fields. Lets DIY.
-            tankTypeOptionsSerialized = ObjectSerializer.Serialize(tankTypeOptions);
-
 
             try
             {
@@ -92,7 +84,6 @@ namespace ProceduralParts
                     tankVolumeName = PartVolumes.Tankage.ToString();
                 }
             }
-            // ReSharper disable once EmptyGeneralCatchClause
             catch { }
         }
 
@@ -102,16 +93,13 @@ namespace ProceduralParts
             node.SetValue("isEnabled", "True");
         }
 
-        public override void OnInitialize()
-        {
-            if (!isInitialized)
-                DoInitialize();
-        }
-
         public override void OnStart(StartState state)
         {
             if (!isInitialized)
                 DoInitialize();
+
+            InitializeTankType();
+
         }
 
         private void DoInitialize()
@@ -206,11 +194,7 @@ namespace ProceduralParts
             else
                 return 0; // tank type has not been initialized yet
         }
-        private List<TankTypeOption> tankTypeOptions;
-
-        // This should be private, but there's a bug in KSP.
-        [SerializeField]
-        public byte[] tankTypeOptionsSerialized;
+        private List<TankTypeOption> tankTypeOptions = new List<TankTypeOption>();
 
         [Serializable]
         public class TankTypeOption : IConfigNode
@@ -288,17 +272,16 @@ namespace ProceduralParts
 
         private void InitializeTankType()
         {
-            // Have to DIY to get the part options deserialized
-            if (tankTypeOptionsSerialized != null)
-                ObjectSerializer.Deserialize(tankTypeOptionsSerialized, out tankTypeOptions);
+            tankTypeOptions.Clear();
+            tankTypeOptions.AddRange(part.partInfo.partPrefab.FindModuleImplementing<TankContentSwitcher>().tankTypeOptions);
 
             if(HighLogic.CurrentGame.Mode == Game.Modes.CAREER || HighLogic.CurrentGame.Mode == Game.Modes.SCIENCE_SANDBOX)
             {
                 tankTypeOptions = tankTypeOptions.Where(to => string.IsNullOrEmpty(to.techRequired) || ResearchAndDevelopment.GetTechnologyState(to.techRequired) == RDTech.State.Available).ToList();
             }
 
-            Fields["volumeDisplay"].guiActiveEditor = tankVolumeName != null; 
-            Fields["massDisplay"].guiActiveEditor = tankVolumeName != null;
+            Fields[nameof(volumeDisplay)].guiActiveEditor = !string.IsNullOrEmpty(tankVolumeName);
+            Fields[nameof(massDisplay)].guiActiveEditor = !string.IsNullOrEmpty(tankVolumeName);
 
             if (tankTypeOptions == null || tankTypeOptions.Count == 0)
             {
@@ -306,11 +289,9 @@ namespace ProceduralParts
                 return;
             }
 
-            BaseField field = Fields["tankType"];
-            UI_ChooseOption options = (UI_ChooseOption)field.uiControlEditor;
-
+            BaseField field = Fields[nameof(tankType)];
+            UI_ChooseOption options = field.uiControlEditor as UI_ChooseOption;
             options.options = tankTypeOptions.ConvertAll(opt => opt.name).ToArray();
-
             field.guiActiveEditor = (tankTypeOptions.Count > 1);
 
             if (string.IsNullOrEmpty(tankType))
