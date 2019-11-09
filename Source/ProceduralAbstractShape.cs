@@ -92,8 +92,15 @@ namespace ProceduralParts
 
         // Events. These will get bound up automatically
 
-        //[PartMessageEvent]
-        //public event PartVolumeChanged ChangeVolume;
+        public virtual void OnShapeDimensionChanged(BaseField f, object obj)
+        {
+            AdjustDimensionBounds();
+            UpdateShape();
+            UpdateInterops();
+        }
+
+        public abstract float CalculateVolume();
+        public abstract void AdjustDimensionBounds();
 
 		public void ChangeVolume(string volName, double newVolume)
 		{
@@ -102,12 +109,6 @@ namespace ProceduralParts
 			data.Set<double> ("newTotalVolume", newVolume);
 			part.SendEvent ("OnPartVolumeChanged", data, 0);
 		}
-
-        //[PartMessageEvent]
-        //public event ChangeTextureScaleDelegate ChangeTextureScale;
-
-        //[PartMessageEvent]
-        //public event PartAttachNodeSizeChanged ChangeAttachNodeSize;
 
 		public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
 		{
@@ -118,16 +119,10 @@ namespace ProceduralParts
 			part.SendEvent ("OnPartAttachNodeSizeChanged", data, 0);
 		}
 
-        //[PartMessageEvent]
-        //public event PartModelChanged ModelChanged;
-
 		private void ModelChanged()
 		{
 			part.SendEvent ("OnPartModelChanged", null, 0);
 		}
-
-        //[PartMessageEvent]
-        //public event PartColliderChanged ColliderChanged;
 
 		private void ColliderChanged()
 		{
@@ -143,7 +138,6 @@ namespace ProceduralParts
 			data.Set<Material> ("material", material);
 			data.Set<Vector2> ("targetScale", targetScale);
 			part.SendEvent ("OnChangeTextureScale", data, 0);
-
         }
         
         protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area)
@@ -174,16 +168,6 @@ namespace ProceduralParts
             node.SetValue("isEnabled", "True");
         }
 
-        public override void OnUpdate()
-        {
-            OnUpdateEditor();
-        }
-        public void Update()
-        {
-            if (HighLogic.LoadedSceneIsEditor)
-                OnUpdateEditor();
-        }
-
         public void UpdateInterops()
         {
             if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
@@ -196,34 +180,8 @@ namespace ProceduralParts
         }
 
         public abstract void UpdateTFInterops();
-
-        public void OnUpdateEditor()
-        {
-            try
-            {
-                bool wasForce = forceNextUpdate;
-                forceNextUpdate = false;
-
-                UpdateShape(wasForce);
-
-                if (wasForce)
-                {
-                    ChangeVolume(volumeName, Volume);
-                    if (HighLogic.LoadedSceneIsEditor)
-                        GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
-                }
-
-                if (HighLogic.LoadedScene == GameScenes.LOADING)
-                    FixEditorIconScale();
-            }
-            catch (Exception ex)
-            {
-                print(ex);
-                enabled = false;
-            }
-        }
-
-        private void FixEditorIconScale()
+        
+        internal void FixEditorIconScale()
         {
             var meshBounds = CalculateBounds(part.partInfo.iconPrefab.gameObject);
             if (meshBounds.extents == Vector3.zero)
@@ -245,7 +203,7 @@ namespace ProceduralParts
         {
             var renderers = go.GetComponentsInChildren<Renderer>(true).ToList();
 
-            if (renderers.Count == 0) return default(Bounds);
+            if (renderers.Count == 0) return default;
 
             var boundsList = new List<Bounds>();
 
@@ -301,7 +259,7 @@ namespace ProceduralParts
         /// <summary>
         /// Called to update the compShape.
         /// </summary>
-        protected abstract void UpdateShape(bool force);
+        internal abstract void UpdateShape(bool force=true);
 
         #endregion
 
@@ -371,17 +329,6 @@ namespace ProceduralParts
             var window = FindObjectsOfType<UIPartActionWindow>().FirstOrDefault(w => w.part == part);
             if (window != null)
                 window.displayDirty = true;
-        }
-
-        protected float TruncateForSlider(float value, float incrementDirection)
-        {
-            var truncateFunc = GetTruncateFunc(incrementDirection);
-            return truncateFunc.Invoke(value, SliderPrecision);
-        }
-
-        protected Func<float, float, float> GetTruncateFunc(float incrementDirection)
-        {
-            return incrementDirection < 0 ? (Func<float, float, float>)MathUtils.Floor : MathUtils.Ceiling;
         }
     }
 }

@@ -2,176 +2,154 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using KSPAPIExtensions;
 
 namespace ProceduralParts
 {
-
     public class ProceduralShapeBezierCone : ProceduralShapeCone
     {
+        private static readonly string ModTag = "[ProceduralShapeBezierCone]";
 
-        private class ShapePreset
-        {
-            public string name;
-            public float[] curve;
-        }
+        #region Config parameters
 
-        private static readonly List<ShapePreset> shapePresets = new List<ShapePreset>
+        private static readonly Dictionary<string, float[]> shapePresets = new Dictionary<string, float[]>
         {
-            new ShapePreset { name="Straight", curve=new[] { 0.3f, 0.3f, 0.7f, 0.7f } },
-            new ShapePreset { name="Round #1", curve=new[] { 0.4f, 0.001f, 1.0f, 0.6f } },
-            new ShapePreset { name="Round #2", curve=new[] { 0.5f, 0.001f, 0.8f, 0.7f } },
-            new ShapePreset { name="Round #3", curve=new[] { 1.0f, 0.0f, 1f, 0.5f} },
-            new ShapePreset { name="Peaked #1", curve=new[] { 0.4f, 0.2f, 0.8f, 0.6f } },
-            new ShapePreset { name="Peaked #2", curve=new[] { 0.3f, 0.2f, 1.0f, 0.5f } },
-            new ShapePreset { name="Sharp #1", curve=new[] { 0.1f, 0.001f, 0.7f, 2f/3f } },
-            new ShapePreset { name="Sharp #2", curve=new[] { 1f/3f, 0.3f, 1.0f, 0.9f } },
-            new ShapePreset { name="Waisted", curve=new[] { 0f, 0.5f, 1.0f, 0.5f } },
+            { "Straight", new[] { 0.3f, 0.3f, 0.7f, 0.7f } },
+            { "Round #1", new[] { 0.4f, 0.001f, 1.0f, 0.6f } },
+            { "Round #2", new[] { 0.5f, 0.001f, 0.8f, 0.7f } },
+            { "Round #3", new[] { 1.0f, 0.0f, 1f, 0.5f} },
+            { "Peaked #1", new[] { 0.4f, 0.2f, 0.8f, 0.6f } },
+            { "Peaked #2", new[] { 0.3f, 0.2f, 1.0f, 0.5f } },
+            { "Sharp #1", new[] { 0.1f, 0.001f, 0.7f, 2f/3f } },
+            { "Sharp #2", new[] { 1f/3f, 0.3f, 1.0f, 0.9f } },
+            { "Waisted", new[] { 0f, 0.5f, 1.0f, 0.5f } },
         };
 
         private static readonly string[] oldShapeNames =
         {
-            "Straight",
-            "Round #1",
-            "Round #2",
-            "Peaked #1",
-            "Peaked #2",
-            "Sharp #1",
-            "Sharp #2"
+            "Straight", "Round #1", "Round #2", "Peaked #1", "Peaked #2", "Sharp #1", "Sharp #2"
         };
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Curve"),
          UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedShape;
-        private string oldSelectedShape;
 
-        public override void OnStart(StartState state)
-        {
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
+        #endregion
 
-            if (!PPart.allowCurveTweaking)
-                Fields["selectedShape"].guiActiveEditor = false;
-            else
-            {
-                UI_ChooseOption selectedShapeEdit = (UI_ChooseOption)Fields["selectedShape"].uiControlEditor;
-                selectedShapeEdit.options = (from p in shapePresets select p.name).ToArray();
-            }
-            base.OnStart(state);
-        }
+        #region Initialization
 
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
+            if (selectedShape is null)
+                selectedShape = LegacyFixup(node);
+        }
 
-            if (node.values.Contains("curveIdx") && selectedShape == null) 
+        public override void OnStart(StartState state)
+        {
+            InitializeSelectedShape();
+            base.OnStart(state);
+
+            Fields[nameof(selectedShape)].guiActiveEditor = PPart.allowCurveTweaking;
+            UI_ChooseOption opt = Fields[nameof(selectedShape)].uiControlEditor as UI_ChooseOption;
+            opt.options = shapePresets.Keys.ToArray();
+            opt.onSymmetryFieldChanged = opt.onFieldChanged = new Callback<BaseField, object>(OnShapeSelectionChanged);
+        }
+
+        private void InitializeSelectedShape()
+        {
+            if (string.IsNullOrEmpty(selectedShape) || !shapePresets.ContainsKey(selectedShape))
+            {
+                Debug.Log($"{ModTag} InitializeSelectedShape() Shape {selectedShape} not available, defaulting to {shapePresets.Keys.First()}");
+                selectedShape = shapePresets.Keys.First();
+            }
+        }
+
+        private string LegacyFixup(ConfigNode node)
+        {
+            string ret = selectedShape;
+            if (node.values.Contains("curveIdx") && selectedShape == null)
             {
                 try
                 {
                     int curveIdx = int.Parse(node.GetValue("curveIdx"));
-                    selectedShape = oldShapeNames[curveIdx];
+                    ret = oldShapeNames[curveIdx];
                 }
-                // ReSharper disable once EmptyGeneralCatchClause
-                catch { }
+                catch
+                {
+                }
             }
-
-            if (selectedShape == null || !(from s in shapePresets where s.name == selectedShape select s).Any())
-            {
-                // Default to round#1
-                selectedShape = shapePresets[1].name;
-            }
+            return ret;
         }
 
-        protected override void UpdateShape(bool force)
+        #endregion
+
+        #region Update handlers
+
+        public void OnShapeSelectionChanged(BaseField f, object obj)
         {
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (!force && oldTopDiameter == topDiameter && oldBottomDiameter == bottomDiameter && oldLength == length &&
-                selectedShape == oldSelectedShape)
-                return;
-            // ReSharper restore CompareOfFloatsByEqualityOperator
-
-            if (HighLogic.LoadedSceneIsEditor)
+            if (CalculateVolume() > PPart.volumeMax)
             {
-                UpdateVolumeRange();
+                UI_FloatEdit edt = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
+                length = edt.minValue;
+                AdjustDimensionBounds();
+                length = Mathf.Max(length, edt.maxValue);
             }
-            else
-            {
-                Volume = CalcVolume();
-            }
+            OnShapeDimensionChanged(f, obj);
+            RefreshPartEditorWindow();
+        }
 
+        internal override void UpdateShape(bool force = true)
+        {
+            Volume = CalculateVolume();
             WriteBezier();
-
-            oldTopDiameter = topDiameter; oldBottomDiameter = bottomDiameter; oldLength = length;
-            oldSelectedShape = selectedShape;
-            UpdateInterops();
         }
 
-        #region Control point calculation and volume limits
-
-        private Vector2 p0, p1, p2, p3;
-
-        private void UpdateVolumeRange()
+        public override void AdjustDimensionBounds()
         {
-            var volume = CalcVolume();
-            var clampedVolume = volume;
+            if (float.IsPositiveInfinity(PPart.volumeMax)) return;
 
-            var inc = 0f;
-            if (volume > PPart.volumeMax)
-            {
-                clampedVolume = PPart.volumeMax;
-                inc = -IteratorIncrement;
-            }
+            float maxBottomDiameter = bottomDiameter, maxTopDiameter = topDiameter, lenMax = length;
+            IterateVolumeLimits(ref maxTopDiameter, ref maxBottomDiameter, ref lenMax, IteratorIncrement);
 
-            if (inc != 0)
-            {
-                ClampToLimits(volume, clampedVolume, inc);
-                RefreshPartEditorWindow();
-            }
-
-            Volume = CalcVolume();
-            // ReSharper restore CompareOfFloatsByEqualityOperator
+            (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxTopDiameter;
+            (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxBottomDiameter;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = lenMax;
         }
 
-        private void ClampToLimits(float volume, float clampedVolume, float inc)
+        // IteratorIncrement is approximately 1/1000.
+        // For any sizable volume limit, simple iteration will be very slow.
+        // Instead, search by variable increment.  Minimal harm in setting scale default high, because
+        // early passes will terminate on first loop.
+        private void IterateVolumeLimits(ref float top, ref float bottom, ref float len, float inc, int scale=6)
         {
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (bottomDiameter != oldBottomDiameter)
+            float originalTop = top, originalBottom = bottom, originalLen = len;
+            if (inc <= 0) return;
+            while (scale-- >= 0)
             {
-                IterateLimitVolume(ref bottomDiameter, volume, inc);
-            }
-            else if (topDiameter != oldTopDiameter)
-            {
-                IterateLimitVolume(ref topDiameter, volume, inc);
-            }
-            else
-            {
-                // The volume is directly proportional to the length
-                length *= clampedVolume / volume;
-                length = TruncateForSlider(length, inc);
-            }
-        }
-
-        private void IterateLimitVolume(ref float toTweak, float volume, float inc)
-        {
-            var oldToTweak = toTweak;
-            var i = 1;
-            while (volume > PPart.volumeMax && inc < 0)
-            {
-                toTweak = TruncateForSlider(oldToTweak + i * inc, inc);
-                volume = CalcVolume();
-                i++;
+                float curInc = inc * Mathf.Pow(10, scale);
+                while (CalculateVolume(len + curInc, originalTop, originalBottom) < PPart.volumeMax && len < PPart.lengthMax)
+                {
+                    len += curInc;
+                }
+                while (CalculateVolume(originalLen, top + curInc, originalBottom) < PPart.volumeMax && top < PPart.diameterMax)
+                {
+                    top += curInc;
+                }
+                while (CalculateVolume(originalLen, originalTop, bottom + curInc) < PPart.volumeMax && bottom < PPart.diameterMax)
+                {
+                    bottom += curInc;
+                }
             }
         }
 
-        private float CalcVolume()
+        public override float CalculateVolume(float length, float topDiameter, float bottomDiameter)
         {
             // So we have a rotated bezier curve from bottom to top.
             // There are four control points, the bottom (p0) and the top ones (p3) are obvious
             p0 = new Vector2(bottomDiameter, -length / 2f);
             p3 = new Vector2(topDiameter, length / 2f);
-
-            float[] shape = (from s in shapePresets where s.name == selectedShape select s.curve).FirstOrDefault();
-            if(shape == null)
+            float[] shape = shapePresets[selectedShape];
+            if (shape is null)
                 throw new InvalidProgramException();
 
             // Pretty obvious below what the shape points mean
@@ -192,56 +170,21 @@ namespace ProceduralParts
             // geometric centroid about y axis = Moment about y / Area of curve
             // so area under curve ends up factoring out.
 
-
-#if false
-            // Here's the formula for area under the curve:
-            // http://tug.org/TUGboat/tb33-1/tb103jackowski.pdf
-
-            // I checked the maths myself, it does work out
-            // using green's theorem: http://mathworld.wolfram.com/GreensTheorem.html
-            // area = int x y' dt, t=0..1   
-            // x = B(t) = (1-t)^3 p0_x + t(1-t)^2 p1_x + t^2(1-t) p2_x + t^3 p3_x
-            // y = B'(t) = (1-t)^2 (p1_y-p0_y) + t(1-t) (p2_y-p1_y) + t^2 (p3_y-p2_y)
-
-            float area = ((p1.y-p0.y)*(10*p0.x+6*p1.x+3*p2.x+p3.x)
-                         +(p2.y-p1.y)*(4*p0.x+6*p1.x+6*p2.x+4*p3.x)
-                         +(p3.y-p2.y)*(1*p0.x+3*p1.x+6*p2.x+10*p3.x))/20;
-
-            // Of course it's not required anyhow.
-#endif
-
-            // Moment about y.
-            // M_y = integrate x^2 y' dt, x=0..1
-
-            // Skipping the several pages of maths workings....
-            // If you want to repeat the maths for this one, be my guest! 
-            // Don't shove it through alpha - it doesn't factorize it out very well.
-            // I've got a spreadsheet that does most of the heavy lifting.
-
-            // (x1 r^3 + 3 x2 r^2 s + 3 x3 r s^2 + x4 s^3)^2 
-            // (y1 r^3 + 3 y2 r^2 s + 3 y3 r s^2 + y4 s^3) 
-            // (3 z1 r^2 + 6 z2 r s + 3 z3 s^2)
-
             // factor 1/2 taken out. The 1/4 is because the pN.x are diameters not radii.
             // ReSharper disable once InconsistentNaming
             float M_y  = 1f/4f* ((p1.y-p0.y)*(1f/3f * p0.x*p0.x + 1f/4f * p0.x*p1.x + 1f/14f* p0.x*p2.x + 3f/28f* p1.x*p1.x+ 3f/28f * p1.x*p2.x + 1f/84f * p0.x*p3.x + 3f/70f * p2.x*p2.x + 1f/35f* p1.x*p3.x + 1f/28f* p2.x*p3.x + 1f/84f* p3.x*p3.x) +
                                  (p2.y-p1.y)*(1f/12f* p0.x*p0.x + 1f/7f * p0.x*p1.x + 1f/14f* p0.x*p2.x + 3f/28f* p1.x*p1.x+ 6f/35f * p1.x*p2.x + 2f/105f* p0.x*p3.x + 3f/28f * p2.x*p2.x + 1f/14f* p1.x*p3.x + 1f/7f * p2.x*p3.x + 1f/12f* p3.x*p3.x) +
                                  (p3.y-p2.y)*(1f/84f* p0.x*p0.x + 1f/28f* p0.x*p1.x + 1f/35f* p0.x*p2.x + 3f/70f* p1.x*p1.x+ 3f/28f * p1.x*p2.x + 1f/84f * p0.x*p3.x + 3f/28f * p2.x*p2.x + 1f/14f* p1.x*p3.x + 1f/4f * p2.x*p3.x + 1f/3f * p3.x*p3.x));
 
-            // therefore the centroid for x:
-
-            // Back to pappus: (factor 1/2 * 2 taken out)
             return Mathf.PI * M_y;
-
-            // Some regexp to store:
-            // Replace from spreadsheet (regexp): 
-            // ([xy])_([0-4]) -> p$2.$1 
-            // (p[0-3].[xy])\^2 -> $1*$1    
-            // (?<=[^a-zA-Z])([0-9]+) -> $1f
         }
 
-        // ReSharper disable once UnusedMember.Local
-        private Vector3 CalcMomentOfInertiaNoDensity() 
+        #endregion
+
+        #region Control point calculation
+        private Vector2 p0, p1, p2, p3;
+
+        private Vector3 CalcMomentOfInertiaNoDensity()
         {
             // This is the closed form for I_y 
             // 
@@ -324,18 +267,7 @@ namespace ProceduralParts
             return new Vector3(Iy / 2f, Iy, Iy / 2f);
         }
 
-        // ReSharper disable once UnusedMember.Local
-        private Vector3 CalcCoMOffset()
-        {
-            // d y-bar = dV y
-            // dV = pi x^2 dy = pi x^2 y' ds
-            // y-bar = pi integrate x^2 y y' ds
-
-            // This is going to turn into another monster...
-
-            return default(Vector3);
-        }
-
+        private Vector3 CalcCoMOffset() => default;    // Nope.  Just nope.
 
         #endregion
 
@@ -552,5 +484,6 @@ namespace ProceduralParts
         }
 
         #endregion
+
     }
 }

@@ -1,32 +1,24 @@
 ﻿using KSPAPIExtensions;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 namespace ProceduralParts
 {
     class ProceduralShapePolygon : ProceduralAbstractShape
     {
+        #region Config parameters
+
         [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), UI_FloatRange(minValue = 3, maxValue = 12, stepIncrement = 1, scene = UI_Scene.Editor)]
         public float cornerCount = 8;
-        private int oldCornerCount;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float diameter = 1f;
-        private float oldInnerDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
-        private float oldLength;
-        private float Length
-        {
-            get => length;
-            set => length = value;
-        }
 
         [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Circumdiameter", guiFormat = "F3", guiUnits = "\u2009m")]
         public float OuterDiameter = 0;
@@ -37,13 +29,17 @@ namespace ProceduralParts
         [KSPField]
         public string BottomNodeName = "bottom";
 
+        #endregion
+
+        #region Utility Properties
+
+        private float Length => length;
         private int CornerCount => (int)cornerCount;
         private float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
         private float EdgeToEdgeAngle => Mathf.PI - CornerCenterCornerAngle;
         private float StartAngle => 0.5f * Mathf.PI - CornerCenterCornerAngle / 2f;
         private int SideTriangles => CornerCount * 2;
         private int TrianglesPerCap => CornerCount - 2;
-
         private float NormHalfSideLength => NormSideLength / 2;
         private float NormSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
         private const float NormInnerRadius = 0.5f;
@@ -65,10 +61,50 @@ namespace ProceduralParts
         private float ConvertToEditorDiameter(float innerDiameter) => CornerCount % 2 == 0 ? innerDiameter : GetHeightFromInnerDiameter(innerDiameter);
         private float GetHeightFromInnerDiameter(float innerDiameter) => innerDiameter * ((1 + 1 / OuterToInnerFactor) / 2);
 
+        #endregion
+
+        #region Initialization
+
         public override void OnStart(StartState state)
         {
             UpdateTechConstraints();
+            base.OnStart(state);
+
+            Fields[nameof(cornerCount)].uiControlEditor.onSymmetryFieldChanged =
+                Fields[nameof(cornerCount)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
+
+            Fields[nameof(diameter)].uiControlEditor.onSymmetryFieldChanged =
+                Fields[nameof(diameter)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
+
+            Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
+                Fields[nameof(length)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
         }
+
+        public override void UpdateTechConstraints()
+        {
+            Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
+            UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
+            lengthEdit.maxValue = PPart.lengthMax;
+            lengthEdit.minValue = PPart.lengthMin;
+            lengthEdit.incrementLarge = PPart.lengthLargeStep;
+            lengthEdit.incrementSmall = PPart.lengthSmallStep;
+            length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
+
+            Fields[nameof(diameter)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
+            UI_FloatEdit diameterEdit = Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit;
+            diameterEdit.maxValue = PPart.diameterMax;
+            diameterEdit.minValue = PPart.diameterMin;
+            diameterEdit.incrementLarge = PPart.diameterLargeStep;
+            diameterEdit.incrementSmall = PPart.diameterSmallStep;
+            diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
+        }
+
+        #endregion
+
+        #region Coordinate Utilities
 
         public override Vector3 FromCylindricCoordinates(ShapeCoordinates coords)
         {
@@ -161,52 +197,41 @@ namespace ProceduralParts
                 direction.magnitude / InnerRadius; // RELATIVE_TO_SHAPE_RADIUS
         }
 
-        public override void UpdateTechConstraints()
+        #endregion
+
+        #region Update handlers
+
+        internal override void UpdateShape(bool force = true)
         {
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
-
-            if (PPart.lengthMin == PPart.lengthMax)
-                Fields[nameof(length)].guiActiveEditor = false;
-            else
-            {
-                var lengthEdit = (UI_FloatEdit)Fields[nameof(length)].uiControlEditor;
-                lengthEdit.maxValue = PPart.lengthMax;
-                lengthEdit.minValue = PPart.lengthMin;
-                lengthEdit.incrementLarge = PPart.lengthLargeStep;
-                lengthEdit.incrementSmall = PPart.lengthSmallStep;
-                Length = Mathf.Clamp(Length, PPart.lengthMin, PPart.lengthMax);
-            }
-
-            if (PPart.diameterMin == PPart.diameterMax)
-                Fields[nameof(diameter)].guiActiveEditor = false;
-            else
-            {
-                var diameterEdit = (UI_FloatEdit)Fields[nameof(diameter)].uiControlEditor;
-                diameterEdit.maxValue = PPart.diameterMax;
-                diameterEdit.minValue = PPart.diameterMin;
-                diameterEdit.incrementLarge = PPart.diameterLargeStep;
-                diameterEdit.incrementSmall = PPart.diameterSmallStep;
-                diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
-            }
-        }
-
-        public override void UpdateTFInterops()
-        {
-        }
-
-        protected override void UpdateShape(bool force)
-        {
-            if (!force && InnerDiameter == oldInnerDiameter && Length == oldLength && CornerCount == oldCornerCount)
-            {
-                return;
-            }
-            RecalculateVolume();
+            Volume = CalculateVolume();
             UpdateAttachments();
             GenerateMeshes();
             UpdateProps();
             UpdateFields();
             RaiseModelAndColliderChanged();
+        }
+
+        public override void AdjustDimensionBounds()
+        {
+            if (float.IsPositiveInfinity(PPart.volumeMax)) return;
+
+            if (CalculateVolume(Area, PPart.lengthMax) > PPart.volumeMax)
+            {
+                (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = PPart.volumeMax / Area;
+            }
+            //  if (CalculateVolume(AreaFromMaxDiameter, length) > PPart.volumeMax)
+            //  {
+            //      float maxArea = PPart.volumeMax / length;
+            //      //Derive diameter from max area given cornercount, etc.
+            //      (Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit).maxValue = maxDiameter;
+            //  }
+        }
+
+        public override void UpdateTFInterops()
+        {
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", diameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam2", diameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
 
         private void GenerateMeshes()
@@ -225,56 +250,23 @@ namespace ProceduralParts
 
         private void UpdateFields()
         {
-            oldLength = Length;
-            oldInnerDiameter = InnerDiameter;
-            oldCornerCount = CornerCount;
             OuterDiameter = InnerDiameter / OuterToInnerFactor;
         }
 
-        private void RecalculateVolume()
-        {
-            var volume = VolumeCalculated;
-
-            if (HighLogic.LoadedSceneIsEditor)
-            {
-                volume = ClampToVolumeRestrictions(volume);
-            }
-            Volume = volume;
-        }
-
-        private float ClampToVolumeRestrictions(float volume)
-        {
-            var oldVolume = volume;
-            volume = Mathf.Min(volume, PPart.volumeMax);
-            if (volume != oldVolume)
-            {
-                var excessVol = oldVolume - volume;
-                if (oldInnerDiameter != InnerDiameter)
-                {
-                    var requiredInnerDiameter = Mathf.Sqrt(volume / Length / CornerCount / NormHalfSideLength / NormInnerRadius);
-                    diameter = TruncateForSlider(ConvertToEditorDiameter(requiredInnerDiameter), -excessVol);
-                }
-                else
-                {
-                    var requiredLength = volume / Area;
-                    Length = TruncateForSlider(requiredLength, -excessVol);
-                }
-                volume = VolumeCalculated;
-                RefreshPartEditorWindow();
-            }
-
-            return volume;
-        }
+        public override float CalculateVolume() => VolumeCalculated;
+        private float CalculateVolume(float area, float length) => area * length;
 
         private void UpdateProps()
         {
             foreach (var pm in GetComponents<PartModule>())
             {
-                var prop = pm as IProp;
-                if (null != prop)
-                    prop.UpdateProp();
+                if (pm is IProp prop) prop.UpdateProp();
             }
         }
+
+        #endregion
+
+        #region Meshes
 
         private void GenerateColliderMesh()
         {
@@ -432,6 +424,10 @@ namespace ProceduralParts
                 CreateCapCornerVertices(mesh, y, offset, cornerNumber);
             }
         }
+        
+        #endregion
+
+        #region Attachments
 
         public override object AddAttachment(TransformFollower transformFollower, bool normalized)
         {
@@ -679,5 +675,7 @@ namespace ProceduralParts
             attachment.follower.transform.localPosition = pos;
             attachment.follower.ForceUpdate();
         }
+
+        #endregion
     }
 }

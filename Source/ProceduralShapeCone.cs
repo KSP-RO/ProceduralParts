@@ -1,28 +1,25 @@
 ﻿using System;
 using UnityEngine;
-using KSPAPIExtensions;
 
 namespace ProceduralParts
 {
-
     public class ProceduralShapeCone : ProceduralAbstractSoRShape
     {
+        private static readonly string ModTag = "[ProceduralShapeCone]";
+
         #region Config parameters
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3", guiUnits="m"),
 		 UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float topDiameter = 1.25f;
-        protected float oldTopDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3", guiUnits = "m"),
 		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float bottomDiameter = 1.25f;
-        protected float oldBottomDiameter;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
 		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
-        protected float oldLength;
 
         #endregion
 
@@ -61,86 +58,97 @@ namespace ProceduralParts
 
         #endregion
 
-        #region Implementation
+        #region Initialization
 
         public override void OnLoad(ConfigNode node)
         {
-            base.OnLoad(node);
-
             try
             {
+                base.OnLoad(node);
                 coneTopMode = (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneTopMode"), true);
-            }
-            // ReSharper disable once EmptyGeneralCatchClause
-            catch { }
-
-            try
-            {
                 coneBottomMode = (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneBottomMode"), true);
             }
-            // ReSharper disable once EmptyGeneralCatchClause
-            catch { }
+            catch 
+            {
+                Debug.Log($"{ModTag} Invalid coneTopMove or coneBottomMode set for {this} in {node}");
+                coneTopMode = coneBottomMode = ConeEndMode.CanZero;
+            }
         }
 
         public override void OnStart(StartState state)
         {
             UpdateTechConstraints();
             base.OnStart(state);
+
+            Fields[nameof(topDiameter)].uiControlEditor.onSymmetryFieldChanged =
+                Fields[nameof(topDiameter)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
+
+            Fields[nameof(bottomDiameter)].uiControlEditor.onSymmetryFieldChanged =
+                Fields[nameof(bottomDiameter)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
+
+            Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
+                Fields[nameof(length)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
         }
 
-        protected override void UpdateShape(bool force)
+        public override void UpdateTechConstraints()
         {
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (!force && oldTopDiameter == topDiameter && oldBottomDiameter == bottomDiameter && oldLength == length)
-                return;
+            Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
+            UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
+            lengthEdit.maxValue = PPart.lengthMax;
+            lengthEdit.minValue = PPart.lengthMin;
+            lengthEdit.incrementLarge = PPart.lengthLargeStep;
+            lengthEdit.incrementSmall = PPart.lengthSmallStep;
+            length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
 
-            var refreshRequired = false;
-
-            // Maxmin the volume.
-            if (HighLogic.LoadedSceneIsEditor)
+            if (PPart.diameterMin == PPart.diameterMax || (coneTopMode == ConeEndMode.Constant && coneBottomMode == ConeEndMode.Constant))
             {
-                var volume = CalculateVolume();
-                var oldVolume = volume;
-
-                if (MathUtils.TestClamp(ref volume, 0, PPart.volumeMax))
-                {
-                    refreshRequired = true;
-                    var excessVol = oldVolume - volume;
-
-                    if (oldBottomDiameter != bottomDiameter)
-                    {
-                        // this becomes solving the quadratic on bottomDiameter
-                        float a = length * Mathf.PI;
-                        float b = length * Mathf.PI * topDiameter;
-                        float c = length * Mathf.PI * topDiameter * topDiameter - volume * 12f;
-
-                        float det = Mathf.Sqrt(b * b - 4 * a * c);
-                        bottomDiameter = TruncateForSlider((det - b) / (2f * a), -excessVol);
-                    }
-                    else if (oldTopDiameter != topDiameter)
-                    {
-                        // this becomes solving the quadratic on topDiameter
-                        float a = length * Mathf.PI;
-                        float b = length * Mathf.PI * bottomDiameter;
-                        float c = length * Mathf.PI * bottomDiameter * bottomDiameter - volume * 12f;
-
-                        float det = Mathf.Sqrt(b * b - 4 * a * c);
-                        topDiameter = TruncateForSlider((det - b) / (2f * a), -excessVol);
-                    }
-                    else
-                    {
-                        length = TruncateForSlider(volume * 12f / (Mathf.PI * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)), -excessVol);
-                    }
-                    volume = CalculateVolume();
-                }
-                Volume = volume;
+                Fields[nameof(topDiameter)].guiActiveEditor = false;
+                Fields[nameof(bottomDiameter)].guiActiveEditor = false;
             }
             else
             {
-                Volume = CalculateVolume();
-            }
+                if (coneTopMode == ConeEndMode.Constant)
+                {
+                    Fields[nameof(topDiameter)].guiActiveEditor = false;
+                    Fields[nameof(bottomDiameter)].guiName = "Diameter";
+                }
+                else
+                {
+                    UI_FloatEdit topDiameterEdit = Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit;
+                    topDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+                    topDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+                    topDiameterEdit.maxValue = PPart.diameterMax;
+                    topDiameterEdit.minValue = (coneTopMode == ConeEndMode.CanZero && coneBottomMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
+                    topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
+                }
 
-            // Perpendicular.
+                if (coneBottomMode == ConeEndMode.Constant)
+                {
+                    Fields[nameof(bottomDiameter)].guiActiveEditor = false;
+                    Fields[nameof(topDiameter)].guiName = "Diameter";
+                }
+                else
+                {
+                    UI_FloatEdit bottomDiameterEdit = Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit;
+                    bottomDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+                    bottomDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+                    bottomDiameterEdit.maxValue = PPart.diameterMax;
+                    bottomDiameterEdit.minValue = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
+                    bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Update handlers
+
+        internal override void UpdateShape(bool force = true)
+        {
+            Volume = CalculateVolume();
             Vector2 norm = new Vector2(length, (bottomDiameter - topDiameter) / 2f);
             norm.Normalize();
 
@@ -148,82 +156,57 @@ namespace ProceduralParts
                 new ProfilePoint(bottomDiameter, -0.5f * length, 0f, norm),
                 new ProfilePoint(topDiameter, 0.5f * length, 1f, norm)
                 );
-
-            oldTopDiameter = topDiameter;
-            oldBottomDiameter = bottomDiameter;
-            oldLength = length;
-            // ReSharper restore CompareOfFloatsByEqualityOperator
-            if (refreshRequired)
-            {
-                RefreshPartEditorWindow();
-            }
-            UpdateInterops();
         }
 
-        private float CalculateVolume()
+        public override void AdjustDimensionBounds()
+        {
+            if (float.IsPositiveInfinity(PPart.volumeMax)) return;
+
+            // V = (PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
+            // V = (PI * L * diamQuad / 12
+            // L = 12 * V / (PI * diamQuad)
+            // diamQuad = 12 * V / (PI * L)
+
+            float diamQuad = (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter);
+            float maxTopDiameter = PPart.diameterMax;
+            float maxBottomDiameter = PPart.diameterMax;
+            float maxLength = PPart.lengthMax;
+
+            // Solutions for top and bottom diameter are the symmetric.
+            if (CalculateVolume(length, topDiameter, PPart.diameterMax) > PPart.volumeMax)
+            {
+                float maxDiamQuad = PPart.volumeMax * 12 / (Mathf.PI * length);
+                float a = 1f;
+                float b = topDiameter;
+                float c = topDiameter * topDiameter - maxDiamQuad;
+                // = top^2 + (top*bot) + (bottom^2)
+                // top^2 + (top*bot) + (bottom^2-maxdiamquad) = 0
+                // -b +/- sqrt(b^2-4ac)/2a
+                float det = Mathf.Sqrt((b * b) - (4 * a * c));
+                maxBottomDiameter = (det - b) / (a * 2);
+            }
+            if (CalculateVolume(length, PPart.diameterMax, bottomDiameter) > PPart.volumeMax)
+            {
+                float maxDiamQuad = PPart.volumeMax * 12 / (Mathf.PI * length);
+                float a = 1f;
+                float b = bottomDiameter;
+                float c = bottomDiameter * bottomDiameter - maxDiamQuad;
+                float det = Mathf.Sqrt((b * b) - (4 * a * c));
+                maxTopDiameter = (det - b) / (a * 2);
+            }
+            if (CalculateVolume(PPart.diameterMax, topDiameter, bottomDiameter) > PPart.volumeMax)
+            {
+                maxLength = 12 * PPart.volumeMax / (Mathf.PI * diamQuad);
+            }
+            (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxTopDiameter;
+            (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxBottomDiameter;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = maxLength;
+        }
+
+        public override float CalculateVolume() => CalculateVolume(length, topDiameter, bottomDiameter);
+        public virtual float CalculateVolume(float length, float topDiameter, float bottomDiameter)
         {
             return (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
-        }
-        #endregion
-
-        public override void UpdateTechConstraints()
-        {
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
-
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (PPart.lengthMin == PPart.lengthMax)
-                Fields["length"].guiActiveEditor = false;
-            else
-            {
-                UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
-                lengthEdit.maxValue = PPart.lengthMax;
-                lengthEdit.minValue = PPart.lengthMin;
-                lengthEdit.incrementLarge = PPart.lengthLargeStep;
-                lengthEdit.incrementSmall = PPart.lengthSmallStep;
-                length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
-            }
-
-            if (PPart.diameterMin == PPart.diameterMax || (coneTopMode == ConeEndMode.Constant && coneBottomMode == ConeEndMode.Constant))
-            {
-                Fields["topDiameter"].guiActiveEditor = false;
-                Fields["bottomDiameter"].guiActiveEditor = false;
-                return;
-            }
-            // ReSharper restore CompareOfFloatsByEqualityOperator
-
-            if (coneTopMode == ConeEndMode.Constant)
-            {
-                // Top diameter is constant
-                Fields["topDiameter"].guiActiveEditor = false;
-                Fields["bottomDiameter"].guiName = "Diameter";
-            }
-            else
-            {
-                UI_FloatEdit topDiameterEdit = (UI_FloatEdit)Fields["topDiameter"].uiControlEditor;
-                topDiameterEdit.incrementLarge = PPart.diameterLargeStep;
-                topDiameterEdit.incrementSmall = PPart.diameterSmallStep;
-                topDiameterEdit.maxValue = PPart.diameterMax;
-                topDiameterEdit.minValue = (coneTopMode == ConeEndMode.CanZero && coneBottomMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
-                topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
-            }
-
-            if (coneBottomMode == ConeEndMode.Constant)
-            {
-                // Bottom diameter is constant
-                Fields["bottomDiameter"].guiActiveEditor = false;
-                Fields["topDiameter"].guiName = "Diameter";
-            }
-            else
-            {
-                UI_FloatEdit bottomDiameterEdit = (UI_FloatEdit)Fields["bottomDiameter"].uiControlEditor;
-                bottomDiameterEdit.incrementLarge = PPart.diameterLargeStep;
-                bottomDiameterEdit.incrementSmall = PPart.diameterSmallStep;
-                bottomDiameterEdit.maxValue = PPart.diameterMax;
-                bottomDiameterEdit.minValue = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
-                bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
-            }
-            
         }
 
         public override void UpdateTFInterops()
@@ -232,6 +215,7 @@ namespace ProceduralParts
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam2", bottomDiameter, "ProceduralParts" });
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
-    }
 
+        #endregion
+    }
 }

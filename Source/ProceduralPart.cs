@@ -7,9 +7,6 @@ using System.Reflection;
 
 namespace ProceduralParts
 {
-    //[PartMessageDelegate]
-    //public delegate void ChangeTextureScaleDelegate(string name, [UseLatest] Material material, [UseLatest] Vector2 targetScale);
-
     public class ProceduralPart : PartModule, IPartCostModifier
     {
         public static readonly string ModTag = "[ProceduralParts]";
@@ -48,6 +45,7 @@ namespace ProceduralParts
         {
             StaticInit();
             base.OnAwake();
+            Debug.Log($"{ModTag} {this}.OnAwake()");
         }
 
         public void Update()
@@ -103,8 +101,9 @@ namespace ProceduralParts
                 InitializeShapes();
                 if (shape is ProceduralAbstractShape)
                 {
-                    shape.ForceNextUpdate();
-                    shape.OnUpdateEditor();
+                    shape.UpdateShape();
+                    if (HighLogic.LoadedScene == GameScenes.LOADING)
+                        shape.FixEditorIconScale();
                 }
                 UpdateTexture();
             }
@@ -128,43 +127,35 @@ namespace ProceduralParts
             InitializeShapes();
             InitializeTechLimits();
             InitializeNodes();
-
-            if (HighLogic.LoadedSceneIsFlight)
-            {
-                // Force the first update, then disable.
-                if (shape is ProceduralAbstractShape)
-                {
-                    Debug.Log($"{ModTag} Forcing shape Update()");
-                    shape.ForceNextUpdate();
-                    shape.OnUpdateEditor();
-                }
-                Debug.Log($"{ModTag} Updating texture");
-                UpdateTexture();
-                if (vessel is Vessel)
-                {
-                    if (vessel.rootPart == part) // drag cube re-rendering workaround. See FixedUpdate for more info
-                        TimingManager.FixedUpdateAdd(TimingManager.TimingStage.FlightIntegrator, DragCubeFixer);
-                    else
-                    {
-                        isEnabled = enabled = false;
-                        Debug.Log($"{ModTag} OnStart() disabling PartModule for non-root part {this.part}");
-                    }
-                }
-            }
-
             if (HighLogic.LoadedSceneIsEditor)
             {
                 symmetryClone = true;
-
-                Debug.Log($"{ModTag} Initializing Tech Limits");
-                InitializeTechLimits();
-
                 if (!textureSets.ContainsKey(textureSet))
                 {
                     Debug.Log($"{ModTag} Defaulting invalid TextureSet {textureSet} to {textureSets.Keys.First()}");
                     textureSet = textureSets.Keys.First();
                 }
+            }
 
+            if (shape is ProceduralAbstractShape)
+                shape.UpdateShape();
+
+            Debug.Log($"{ModTag} {this} has TextureSet {textureSet}");
+            UpdateTexture();
+
+            if (HighLogic.LoadedSceneIsFlight && vessel is Vessel)
+            {
+                if (vessel.rootPart == part) // drag cube re-rendering workaround. See FixedUpdate for more info
+                    TimingManager.FixedUpdateAdd(TimingManager.TimingStage.FlightIntegrator, DragCubeFixer);
+                else
+                {
+                    isEnabled = enabled = false;
+                    Debug.Log($"{ModTag} OnStart() disabling PartModule for non-root part {this.part}");
+                }
+            }
+
+            if (HighLogic.LoadedSceneIsEditor)
+            {
                 BaseField field = Fields[nameof(textureSet)];
                 UI_ChooseOption opt = (UI_ChooseOption)field.uiControlEditor;
                 opt.options = textureSets.Keys.ToArray();
@@ -208,14 +199,13 @@ namespace ProceduralParts
 
         private void OnTextureChanged(BaseField f, object obj)
         {
-            Debug.Log($"{ModTag} OnTextureChanged from {obj} to {f.GetValue(this)}");
             UpdateTexture();
         }
 
         private void OnShapeSelectionChanged(BaseField f, object obj)
         {
-            Debug.Log($"{ModTag} OnShapeSelectionChanged from {obj} to {f.GetValue(this)}");
             UpdateShape();
+            UpdateTexture();
         }
 
         #endregion
@@ -403,10 +393,8 @@ namespace ProceduralParts
         {
             techLimits.Clear();
             techLimits.AddRange(part.partInfo.partPrefab.FindModuleImplementing<ProceduralPart>().techLimits);
-            Debug.Log($"{ModTag} InitializeTechLimits() found {techLimits.Count} limits to test");
-
+            
             needsTechInit = false;
-
             currentLimit = new TechLimit
             {
                 diameterMax = this.diameterMax,
@@ -429,11 +417,8 @@ namespace ProceduralParts
 
                 foreach (TechLimit limit in techLimits)
                 {
-                    Debug.Log($"{ModTag} InitializeTechLimits() testing {limit}");
-                    if (ResearchAndDevelopment.GetTechnologyState(limit.name) != RDTech.State.Available)
-                        continue;
-
-                    currentLimit.ApplyLimit(limit);
+                    if (ResearchAndDevelopment.GetTechnologyState(limit.name) == RDTech.State.Available)
+                        currentLimit.ApplyLimit(limit);
                 }
             } else
             {
@@ -442,13 +427,12 @@ namespace ProceduralParts
             currentLimit.Validate();
             SetFromLimit(currentLimit);
 
-            Debug.Log($"{ModTag} TechLimits applied: diameter=({diameterMin: G3}, {diameterMax: G3}) length=({lengthMin: G3}, {lengthMax: G3}) volumeMax={volumeMax: G3} )");
+            Debug.Log($"{ModTag} TechLimits applied: diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volumeMax={volumeMax:G3} )");
 
             foreach (ProceduralAbstractShape shape in GetComponents<ProceduralAbstractShape>())
                 shape.UpdateTechConstraints();
         }
 
-        [Serializable]
         public class TechLimit : IConfigNode
         {
             [Persistent]
@@ -553,7 +537,6 @@ namespace ProceduralParts
 			Vector2 targetScale = data.Get<Vector2> ("targetScale");
             if (meshName != "sides")
                 return;
-            Debug.Log($"{ModTag} OnChangeTextureScale for {this} mesh {meshName} scale {targetScale}");
             sideTextureScale = targetScale;
             UpdateTexture();
         }
@@ -667,8 +650,7 @@ namespace ProceduralParts
             // shape first to allow non-normalized surface attachments
             if (symmetryClone)
             {
-                shape.ForceNextUpdate();
-                shape.OnUpdateEditor();
+                shape.UpdateShape();
             }
 
             foreach (AttachNode node in part.attachNodes)
@@ -677,8 +659,7 @@ namespace ProceduralParts
                 InitializeNode(part.srfAttachNode);
 
             // Update the shape to put the nodes into their positions.
-            shape.ForceNextUpdate();
-            shape.OnUpdateEditor();
+            shape.UpdateShape();
 
             // In flight mode, discard all the transform followers because the are not required
             if (HighLogic.LoadedSceneIsFlight)
@@ -868,7 +849,6 @@ namespace ProceduralParts
 
                 }
             }
-
         }
 
 		private void OnPartAttach(GameEvents.HostTargetAction<Part, Part> data)
@@ -1192,8 +1172,11 @@ namespace ProceduralParts
             shape = newShape;
             shape.isEnabled = shape.enabled = true;
 
-            if (HighLogic.LoadedSceneIsEditor)
+            shape.UpdateShape();
+            if (HighLogic.LoadedSceneIsEditor) 
+            {
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+            }
 
             UpdateTFInterops();
         }
