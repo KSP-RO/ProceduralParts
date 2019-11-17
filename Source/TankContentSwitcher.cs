@@ -67,7 +67,7 @@ namespace ProceduralParts
 
         public override void OnLoad(ConfigNode node)
         {
-            if (!GameSceneFilter.AnyInitializing.IsLoaded())
+            if (!(HighLogic.LoadedScene == GameScenes.LOADING))
                 return;
         
             foreach (ConfigNode optNode in node.GetNodes("TANK_TYPE_OPTION"))
@@ -417,7 +417,7 @@ namespace ProceduralParts
         {
 
 
-			if (!GameSceneFilter.AnyEditor.IsLoaded ())
+			if (!HighLogic.LoadedSceneIsEditor)
 				return;
 
             if(selectedTankType == null)

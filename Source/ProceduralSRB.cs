@@ -31,9 +31,8 @@ namespace ProceduralParts
             //Debug.Log("OnLoad");
             try
             {
-                if (GameSceneFilter.AnyInitializing.IsLoaded())
+                if (HighLogic.LoadedScene == GameScenes.LOADING)
                     LoadBells(node);
-
             }
             catch (Exception ex)
             {
@@ -63,7 +62,7 @@ namespace ProceduralParts
                 InitializeBells();
                 UpdateMaxThrust();
 
-                if (GameSceneFilter.AnyEditor.IsLoaded())
+                if (HighLogic.LoadedSceneIsEditor)
                     GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
             }
             catch (Exception ex)
@@ -400,14 +399,14 @@ namespace ProceduralParts
             InitModulesFromBell();
 
             // Break out at this stage during loading scene
-            if (GameSceneFilter.AnyInitializing.IsLoaded())
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
             {
                 UpdateThrustDependentCalcs();
                 return;
             }
 
             // Update the thrust according to the equation when in editor mode, don't mess with ships in flight
-            if (GameSceneFilter.AnyEditor.IsLoaded())
+            if (HighLogic.LoadedSceneIsEditor)
                 UpdateThrustDependentCalcs();
             else
             {
@@ -437,7 +436,8 @@ namespace ProceduralParts
                 //print("*PP* Setting bell position: " + pPart.transform.TransformPoint(0, -0.5f, 0));
                 bellTransform.position = pPart.transform.TransformPoint(0, -0.5f, 0);
 
-                pPart.AddAttachment(bellTransform, true);
+                //pPart.AddAttachment(bellTransform, true);
+                Debug.LogError("ProceduralSRB line 440 adding bell left commented out by DRVeyl");
 
                 // Move the bottom attach node into position.
                 // This needs to be done in flight mode too for the joints to work correctly
@@ -445,7 +445,8 @@ namespace ProceduralParts
                 Vector3 delta = selectedBell.srbAttach.position - selectedBell.model.position;
                 bottomAttachNode.originalPosition = bottomAttachNode.position += part.transform.InverseTransformDirection(delta);
 
-                pPart.AddNodeOffset(bottomAttachNodeName, GetOffset);
+                Debug.LogError("ProceduralSRB line 450 adding node offset left commented out by DRVeyl");
+                //pPart.AddNodeOffset(bottomAttachNodeName, GetOffset);
 
                 SetBellRotation();
             }
@@ -766,7 +767,7 @@ namespace ProceduralParts
             if (bottomAttachNode.attachedPart.transform == part.transform.parent)
             {
                 part.transform.Translate(-delta, Space.World);
-                Part root = GameSceneFilter.AnyEditor.IsLoaded() ? EditorLogic.RootPart : part.vessel.rootPart;
+                Part root = HighLogic.LoadedSceneIsEditor ? EditorLogic.RootPart : part.vessel.rootPart;
                 int siblings = part.symmetryCounterparts == null ? 1 : (part.symmetryCounterparts.Count + 1);
 
                 root.transform.Translate(delta / siblings, Space.World);
