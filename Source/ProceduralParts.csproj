@@ -75,7 +75,6 @@
   <ItemGroup>
     <Compile Include="DecouplerTweaker.cs" />
     <Compile Include="ICostModifier.cs" />
-    <Compile Include="ObjectSerializer.cs" />
     <Compile Include="ProceduralHeatshield.cs" />
     <Compile Include="ProceduralShapeBezierCone.cs" />
     <Compile Include="ProceduralShapePill.cs" />
@@ -91,7 +90,6 @@
     <Compile Include="TextureSet.cs" />
     <Compile Include="TransformFollower.cs" />
     <Compile Include="VectorUtils.cs" />
-    <Compile Include="zzVersionChecker.cs" />
     <Compile Include="KSPUtils.cs" />
     <Compile Include="UnityUtils.cs" />
     <Compile Include="EngineWrapper.cs" />
