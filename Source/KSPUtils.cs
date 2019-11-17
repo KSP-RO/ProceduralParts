@@ -99,18 +99,14 @@ namespace KSPAPIExtensions
 		/// </summary>
 		/// <param name="part">The part to find the original of</param>
 		/// <returns>The original part, or the part itself if it was the original part</returns>
-        [Obsolete("This don't seem to work with the current version of KSP", false)]
 		public static Part GetSymmetryCloneOriginal(this Part part)
 		{
 			if (!part.isClone || part.symmetryCounterparts == null || part.symmetryCounterparts.Count == 0)
 				return part;
 
-			// Symmetry counterparts always are named xxxx(Clone) if they are cloned from xxxx. So the shortest name is the one.
-			int nameLength = part.transform.name.Length;
 			foreach (Part other in part.symmetryCounterparts)
 			{
-				if (other.transform.name.Length < nameLength)
-					return other;
+                if (!other.isClone) return other;
 			}
 			return part;
 		}
