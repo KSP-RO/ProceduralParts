@@ -264,13 +264,13 @@ namespace ProceduralParts
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             coords.r /= (bottomDiameter / 2);
-            coords.y /= (length / 2);
+            coords.y /= length;
         }
 
         public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             coords.r *= (bottomDiameter / 2);
-            coords.y *= (length / 2);
+            coords.y *= length;
         }
         #endregion
 

@@ -367,7 +367,7 @@ namespace ProceduralParts
 
         internal virtual void InitializeStackAttachmentNodes(float length)
         {
-            Debug.Log($"{ModTag} InitializeAttachmentNodes for {this} length {length}");
+            Debug.Log($"{ModTag} InitializeStackAttachmentNodes for {this} length {length}");
             foreach (AttachNode node in part.attachNodes)
             {
                 float direction = (node.position.y > 0) ? 1 : -1;

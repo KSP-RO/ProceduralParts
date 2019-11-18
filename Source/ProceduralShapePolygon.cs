@@ -211,13 +211,13 @@ namespace ProceduralParts
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             coords.r /= (diameter / 2);
-            coords.y /= (length / 2);
+            coords.y /= length;
         }
 
         public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             coords.r *= (diameter / 2);
-            coords.y *= (length / 2);
+            coords.y *= length;
         }
 
         private void GenerateMeshes()

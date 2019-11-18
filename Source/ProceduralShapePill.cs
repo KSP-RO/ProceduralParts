@@ -96,7 +96,11 @@ namespace ProceduralParts
 
         public override void AdjustDimensionBounds()
         {
-            if (float.IsPositiveInfinity(PPart.volumeMax)) return;
+            if (float.IsPositiveInfinity(PPart.volumeMax))
+            {
+                (Fields[nameof(fillet)].uiControlEditor as UI_FloatEdit).maxValue = Mathf.Min(diameter, length);
+                return;
+            }
 
             // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for d
             // simplify d = ((-3 pi^2 f^2+12 pi f^2) ± sqrt(3 pi) sqrt(3 pi^3 f^4-24 pi^2 f^4+48 pi f^4+24 pi^2 f^3 l-80 pi f^3 l+192 l v))/(12 pi l) 
@@ -232,13 +236,13 @@ namespace ProceduralParts
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             coords.r /= (diameter / 2);
-            coords.y /= (length / 2);
+            coords.y /= length;
         }
 
         public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             coords.r *= (diameter / 2);
-            coords.y *= (length / 2);
+            coords.y *= length;
         }
         #endregion
     }

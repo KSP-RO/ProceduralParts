@@ -179,6 +179,34 @@ namespace ProceduralParts
             return Mathf.PI * M_y;
         }
 
+        public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            CalculateVolume();  // Update the bezier curve control nodes
+            // The Bezier curve control points are NOT normalized.
+            //  p0 = new Vector2(bottomDiameter, -length / 2f);
+            //  p3 = new Vector2(topDiameter, length / 2f);
+            // But we do need to normalize the length and shift such that 0 <= t <= 1
+            float t = (coords.y / length) + (1f / 2);
+            Vector2 Bt = B(t);
+            Debug.Log($"{ModTag} Normalized {coords.y} to {t} (0=bottom, 1=top), B(t)={Bt} as (diameter, length). TopDiameter:{topDiameter} BotDiameter:{bottomDiameter} Len: {length}");
+            // For a given normalized length (t), B(t).x is the diameter of the surface cross-section at that length, and B(t).y is .. what?
+
+            coords.y /= length;
+            coords.r /= (Bt.x / 2);
+        }
+
+        public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            CalculateVolume();  // Update the bezier curve control nodes
+            float t = (coords.y + (1f / 2));    // Shift coords.y from [-0.5..0.5] to [0..1]
+            Vector2 Bt = B(t);
+            Debug.Log($"{ModTag} From normalized {coords.y}, shape unnormalized bottom {bottomDiameter} top {topDiameter} length {length},  B({t}) yields [{Bt.x:F3}, {Bt.y:F3}] as (diameter, length)");
+            // B(t).x is the diameter of the curve at t.  /2 for radius.
+
+            coords.y *= length;
+            coords.r *= Bt.x / 2;
+        }
+
         #endregion
 
         #region Control point calculation
