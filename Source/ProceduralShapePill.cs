@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using KSPAPIExtensions;
 
 namespace ProceduralParts
 {
     public class ProceduralShapePill : ProceduralAbstractSoRShape
     {
+        private static readonly string ModTag = "[ProceduralShapePill]";
+
         #region Config parameters
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
@@ -30,17 +31,22 @@ namespace ProceduralParts
             UpdateTechConstraints();
             base.OnStart(state);
 
+            Fields[nameof(diameter)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged) +
+                new Callback<BaseField, object>(ClampFillet);
+
+            Fields[nameof(length)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged) +
+                new Callback<BaseField, object>(ClampFillet);
+
+            Fields[nameof(fillet)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged) +
+                new Callback<BaseField, object>(ClampFillet);
+
             Fields[nameof(diameter)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(diameter)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(OnShapeDimensionChanged);
-
             Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(length)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(OnShapeDimensionChanged);
-
             Fields[nameof(fillet)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(fillet)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(OnShapeDimensionChanged);
+                new Callback<BaseField, object>(ClampFillet);
         }
 
         public override void UpdateTechConstraints()
@@ -79,15 +85,13 @@ namespace ProceduralParts
         private static readonly Func<float, float> sqrt = Mathf.Sqrt;
         private static readonly Func<float, float, float> pow = Mathf.Pow;
 
-        public override void OnShapeDimensionChanged(BaseField f, object obj)
+        private void ClampFillet(BaseField f, object obj)
         {
-            // Fix fillet and force PAW refresh if required
-            bool adjustFillet = fillet > Mathf.Min(diameter, length);
-            if (adjustFillet)
+            if (fillet > Mathf.Min(diameter, length))
+            {
                 fillet = Mathf.Min(diameter, length);
-            base.OnShapeDimensionChanged(f, obj);
-            if (adjustFillet)
                 RefreshPartEditorWindow();
+            }
         }
 
         public override void AdjustDimensionBounds()
@@ -207,6 +211,35 @@ namespace ProceduralParts
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
 
+        public override void TranslateAttachmentsAndNodes(BaseField f, object obj)
+        {
+            if (f.name == nameof(diameter) && obj is float oldDiameter)
+            {
+                HandleDiameterChange((float)f.GetValue(this), oldDiameter);
+            }
+            else if (f.name == nameof(fillet))
+            {
+                //HandleDiameterChange(f, obj);
+            }
+            if (f.name == nameof(length) && obj is float oldLen)
+            {
+                HandleLengthChange((float)f.GetValue(this), oldLen);
+            }
+        }
+
+        internal override void InitializeAttachmentNodes() => InitializeStackAttachmentNodes(length);
+
+        public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r /= (diameter / 2);
+            coords.y /= (length / 2);
+        }
+
+        public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r *= (diameter / 2);
+            coords.y *= (length / 2);
+        }
         #endregion
     }
 }

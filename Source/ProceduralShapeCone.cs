@@ -10,15 +10,15 @@ namespace ProceduralParts
         #region Config parameters
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3", guiUnits="m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.25f, incrementLarge = 1.25f, incrementSmall = 0.25f, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float topDiameter = 1.25f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float bottomDiameter = 1.25f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
 
         #endregion
@@ -62,16 +62,23 @@ namespace ProceduralParts
 
         public override void OnLoad(ConfigNode node)
         {
-            try
+            base.OnLoad(node);
+            if (HighLogic.LoadedSceneIsEditor)
             {
-                base.OnLoad(node);
-                coneTopMode = (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneTopMode"), true);
-                coneBottomMode = (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneBottomMode"), true);
-            }
-            catch 
-            {
-                Debug.Log($"{ModTag} Invalid coneTopMove or coneBottomMode set for {this} in {node}");
-                coneTopMode = coneBottomMode = ConeEndMode.CanZero;
+                try
+                {
+                    coneTopMode = (node.HasValue("coneTopMode")) ?
+                        (ConeEndMode) Enum.Parse(typeof(ConeEndMode), node.GetValue("coneTopMode"), true) :
+                        ConeEndMode.CanZero;
+                    coneBottomMode = (node.HasValue("coneBottomMode")) ?
+                        (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneBottomMode"), true) :
+                        ConeEndMode.CanZero;
+                }
+                catch
+                {
+                    Debug.Log($"{ModTag} Invalid coneTopMode or coneBottomMode set for {this} in {node}");
+                    coneTopMode = coneBottomMode = ConeEndMode.CanZero;
+                }
             }
         }
 
@@ -80,16 +87,13 @@ namespace ProceduralParts
             UpdateTechConstraints();
             base.OnStart(state);
 
-            Fields[nameof(topDiameter)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(topDiameter)].uiControlEditor.onFieldChanged =
+            Fields[nameof(topDiameter)].uiControlEditor.onFieldChanged =
                 new Callback<BaseField, object>(OnShapeDimensionChanged);
 
-            Fields[nameof(bottomDiameter)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(bottomDiameter)].uiControlEditor.onFieldChanged =
+            Fields[nameof(bottomDiameter)].uiControlEditor.onFieldChanged =
                 new Callback<BaseField, object>(OnShapeDimensionChanged);
 
-            Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(length)].uiControlEditor.onFieldChanged =
+            Fields[nameof(length)].uiControlEditor.onFieldChanged =
                 new Callback<BaseField, object>(OnShapeDimensionChanged);
         }
 
@@ -216,6 +220,59 @@ namespace ProceduralParts
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
 
+        public override void TranslateAttachmentsAndNodes(BaseField f, object obj)
+        {
+            if (f.name == nameof(topDiameter))
+            {
+                HandleDiameterChange(f, obj);
+            }
+            else if (f.name == nameof(bottomDiameter))
+            {
+                HandleDiameterChange(f, obj);
+            }
+            if (f.name == nameof(length) && obj is float oldLen)
+            {
+                HandleLengthChange((float)f.GetValue(this), oldLen);
+            }
+        }
+
+        private void HandleDiameterChange(BaseField f, object obj)
+        {
+            if ((f.name == nameof(topDiameter) || f.name == nameof(bottomDiameter)) && obj is float)
+            {
+                // Nothing to do for stack-attached nodes.
+                float oldTopDiameter = (f.name == nameof(topDiameter)) ? (float)obj : topDiameter;
+                float oldBottomDiameter = (f.name == nameof(bottomDiameter)) ? (float)obj : bottomDiameter;
+                foreach (Part p in part.children)
+                {
+                    if (p.FindAttachNodeByPart(part) is AttachNode node && node.nodeType == AttachNode.NodeType.Surface)
+                    {
+                        GetAttachmentNodeLocation(node, out Vector3 worldSpace, out Vector3 localToHere, out ShapeCoordinates coord);
+                        float y_from_bottom = coord.y + (length / 2);
+                        float oldDiameterAtY = Mathf.Lerp(oldBottomDiameter, oldTopDiameter, y_from_bottom / length);
+                        float newDiameterAtY = Mathf.Lerp(bottomDiameter, topDiameter, y_from_bottom / length);
+                        float ratio = newDiameterAtY / oldDiameterAtY;
+                        coord.r *= ratio;
+                        MoveAttachmentNode(node, coord);
+                    }
+                }
+            }
+        }
+
+        internal override void InitializeAttachmentNodes() => InitializeStackAttachmentNodes(length);
+
+        public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r /= (bottomDiameter / 2);
+            coords.y /= (length / 2);
+        }
+
+        public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r *= (bottomDiameter / 2);
+            coords.y *= (length / 2);
+        }
         #endregion
+
     }
 }

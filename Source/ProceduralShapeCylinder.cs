@@ -1,17 +1,19 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace ProceduralParts
 {
     public class ProceduralShapeCylinder : ProceduralAbstractSoRShape
     {
+        private static readonly string ModTag = "[ProceduralShapeCylinder]";
         #region Config parameters
-        
+
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float diameter = 1.25f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
 
         #endregion
@@ -23,12 +25,10 @@ namespace ProceduralParts
             UpdateTechConstraints();
             base.OnStart(state);
 
-            Fields[nameof(diameter)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(diameter)].uiControlEditor.onFieldChanged =
+            Fields[nameof(diameter)].uiControlEditor.onFieldChanged =
                 new Callback<BaseField, object>(OnShapeDimensionChanged);
 
-            Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(length)].uiControlEditor.onFieldChanged =
+            Fields[nameof(length)].uiControlEditor.onFieldChanged =
                 new Callback<BaseField, object>(OnShapeDimensionChanged);
         }
 
@@ -100,6 +100,31 @@ namespace ProceduralParts
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", diameter, "ProceduralParts" });
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam2", diameter, "ProceduralParts" });
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
+        }
+
+        public override void TranslateAttachmentsAndNodes(BaseField f, object obj)
+        {
+            if (f.name == nameof(diameter) && obj is float oldDiameter)
+            {
+                HandleDiameterChange((float)f.GetValue(this), oldDiameter);
+            }
+            if (f.name == nameof(length) && obj is float oldLen)
+            {
+                HandleLengthChange((float)f.GetValue(this), oldLen);
+            }
+        }
+
+        internal override void InitializeAttachmentNodes() => InitializeStackAttachmentNodes(length);
+        public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r /= (diameter / 2);
+            coords.y /= (length / 2);
+        }
+
+        public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r *= (diameter / 2);
+            coords.y *= (length / 2);
         }
 
         #endregion
