@@ -1,69 +1,47 @@
 ﻿//using KSPAPIExtensions.PartMessage;
 using KSPAPIExtensions;
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
 namespace ProceduralParts
 {
-
     interface IProp
     {
         void UpdateProp();
     }
 
-    /// <summary>
-    /// For heat shields. All this does is copies the top node size to the bottom.
-    /// </summary>
     public class ProceduralHeatshield : PartModule, ICostMultiplier, IPartMassModifier, IProp
     {
-		#region IPartMassModifier implementation
+        #region IPartMassModifier implementation
 
-		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
-		{
-			return mass - defaultMass;
-		}
+        public float GetModuleMass (float defaultMass, ModifierStagingSituation sit) => mass - defaultMass;
+        public ModifierChangeWhen GetModuleMassChangeWhen () => ModifierChangeWhen.FIXED;
 
-		public ModifierChangeWhen GetModuleMassChangeWhen ()
-		{
-			return ModifierChangeWhen.FIXED;
-		}
+        #endregion
 
-		#endregion
+        public void MassChanged (float mass)
+        {
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<float> ("mass", mass);
+            part.SendEvent ("OnPartMassChanged", data, 0);
+        }
 
-        //[PartMessageEvent]
-        //public event PartMassChanged MassChanged;
-		public void MassChanged (float mass)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<float> ("mass", mass);
+        public void MaxAmountChanged (Part part, PartResource resource, double amount)
+        {
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<PartResource> ("resource", resource);
+            data.Set<double> ("amount", amount);
+            part.SendEvent ("OnResourceMaxChanged", data, 0);
+        }
 
-			part.SendEvent ("OnPartMassChanged", data, 0);
-		}
-
-        //[PartMessageEvent]
-        //public event PartResourceMaxAmountChanged MaxAmountChanged;
-        //[PartMessageEvent]
-        //public event PartResourceInitialAmountChanged InitialAmountChanged;
-
-		public void MaxAmountChanged (Part part, PartResource resource, double amount)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<PartResource> ("resource", resource);
-			data.Set<double> ("amount", amount);
-			part.SendEvent ("OnResourceMaxChanged", data, 0);
-		}
-
-		//[PartMessageEvent]
-		//public event PartResourceInitialAmountChanged InitialAmountChanged;
-		public void InitialAmountChanged (Part part, PartResource resource, double amount)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<PartResource> ("resource", resource);
-			data.Set<double> ("amount", amount);
-			part.SendEvent ("OnResourceInitialChanged", data, 0);
-		}
+        public void InitialAmountChanged (Part part, PartResource resource, double amount)
+        {
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<PartResource> ("resource", resource);
+            data.Set<double> ("amount", amount);
+            part.SendEvent ("OnResourceInitialChanged", data, 0);
+        }
 
         ProceduralPart _pPart = null;
 
@@ -74,12 +52,10 @@ namespace ProceduralParts
         {
             get
             {
+                if (_pPart is ProceduralPart) return _pPart;
                 try
                 {
-                    if (_pPart != null)
-                        return _pPart;
-                    else    
-                        _pPart = GetComponent<ProceduralPart>();
+                    _pPart = GetComponent<ProceduralPart>();
                 }
                 catch(Exception)
                 {
@@ -89,48 +65,45 @@ namespace ProceduralParts
             }
         }
 
-        public override void OnAwake()
+        public static bool installedFAR = false;
+        public static bool staticallyInitialized = false;
+        public static void StaticInit()
         {
-            base.OnAwake();
-            //PartMessageService.Register(this);
+            if (staticallyInitialized) return;
+
+            installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
+            //TextureSet.LoadTextureSets(textureSets);
+            staticallyInitialized = true;
         }
 
+        public override void OnAwake()
+        {
+            StaticInit();
+            base.OnAwake();
+        }
         public override void OnStart(StartState state)
         {
-
             if (HighLogic.LoadedSceneIsFlight)
             {
                 if (mass <= 0)
                     mass = 0.000001f;
-
                 MassChanged(mass);
-
-                //double skinThermalMassModifier = part.thermalMassModifier;
-                //double skinThicknessFactor = 0.1;
-                //Debug.Log(skinThermalMassModifier);
-                //Debug.LogWarning((double)part.mass * PhysicsGlobals.StandardSpecificHeatCapacity * skinThermalMassModifier * skinThicknessFactor);
             }
 
             InitializeObjects();
             CopyNodeSizeAndStrength();
-            //if (HighLogic.LoadedSceneIsFlight)
-            //{
-            //    PartResource resource = part.Resources["AblativeShielding"];
-            //    UpdateDissipationAndLoss(resource.maxAmount);
-            //}
 
-            if (PPart != null)
+            if (PPart is ProceduralPart)
             {
-                //PPart.AddNodeOffset(topNodeId, GetNodeOffset);
-                loadedTextureSets = PPart.TextureSets.ToList();
-                loadedTextureSetNames = loadedTextureSets.Select<TextureSet, string>(x => x.name).ToArray();
+//                loadedTextureSets = PPart.TextureSets.ToList();
+//                loadedTextureSetNames = loadedTextureSets.Select<TextureSet, string>(x => x.name).ToArray();
 
-                BaseField field = Fields["textureSet"];
-                UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
+//                BaseField field = Fields["textureSet"];
+//                UI_ChooseOption range = (UI_ChooseOption)field.uiControlEditor;
 
-                range.options = loadedTextureSetNames;
-                if (textureSet == null || !loadedTextureSetNames.Contains(textureSet))
-                    textureSet = loadedTextureSetNames[0];
+//                range.options = loadedTextureSetNames;
+//                if (textureSet == null || !loadedTextureSetNames.Contains(textureSet))
+//                    textureSet = loadedTextureSetNames[0];
 
                 UpdateTexture();
                 UpdateFairing();
@@ -139,28 +112,26 @@ namespace ProceduralParts
             else
                 Debug.LogError("Procedural Part not found");
 
-            UI_FloatEdit fairingThicknessEdit = (UI_FloatEdit)Fields["fairingThickness"].uiControlEditor;
+            UI_FloatEdit fairingThicknessEdit = Fields[nameof(fairingThickness)].uiControlEditor as UI_FloatEdit;
             fairingThicknessEdit.maxValue = this.fairingMaxThickness;
             fairingThicknessEdit.minValue = this.fairingMinThickness;
             fairingThicknessEdit.incrementLarge = 0.1f;
             fairingThicknessEdit.incrementSmall = 0.01f;
+            fairingThicknessEdit.onFieldChanged = new Callback<BaseField, object>(FairingThicknessChanged);
             fairingThickness = Mathf.Clamp(fairingThickness, fairingMinThickness, fairingMaxThickness);
         }
 
 
         private void InitializeObjects()
         {
-            //Transform fairing = part.FindModelTransform("fairing");
             Transform fairing = part.FindModelTransform("fairing");
 
             try
             {
                 foreach (MeshFilter mf in fairing.GetComponents<MeshFilter>())
                     Debug.Log("MeshFilterFound: " + mf.name);
-                //fairingMesh = fairing.GetComponent<MeshFilter>().mesh;
                 fairingMesh = fairing.GetComponent<MeshFilter>().mesh;
                 fairingMaterial = fairing.GetComponent<Renderer>().material;
-
             }
             catch(Exception e)
             {
@@ -168,13 +139,6 @@ namespace ProceduralParts
                 Debug.LogException(e);
                 useFairing = false;
             }
-
-        }
-
-        public void Update()
-        {
-            if (HighLogic.LoadedSceneIsEditor)
-                UpdateEditor();
         }
 
         public void UpdateFAR()
@@ -185,39 +149,23 @@ namespace ProceduralParts
             }
         }
 
-        private void UpdateEditor()
+        private void FairingThicknessChanged(BaseField f, object obj) 
         {
-            UpdateTexture();
-
-            if(fairingThickness != oldFairingThickness)
-            {
-                UpdateFairing();
-                oldFairingThickness = fairingThickness;
-
-                // We need to tell FAR that something has changed
-                UpdateFAR();
-
-            }
+            UpdateFairing();
+            UpdateFAR();
         }
 
         Vector2 TextureScale = Vector2.one;
 
         private void UpdateTexture()
         {
-            if (fairingMaterial == null || textureSet == oldTextureSet)
+            if (fairingMaterial == null)
                 return;
 
-            
-            int newIdx = loadedTextureSets.FindIndex(set => set.name == textureSet);
-            if (newIdx < 0)
-            {
-                Debug.LogError("*ST* Unable to find texture set: " + textureSet);
-                textureSet = oldTextureSet;
+            //TextureSet tex = loadedTextureSets[newIdx];
+            TextureSet tex = null;
+            if (tex is null)
                 return;
-            }
-            oldTextureSet = textureSet;
-
-            TextureSet tex = loadedTextureSets[newIdx];
 
             // Set shaders
             if (!part.Modules.Contains("ModulePaintable"))
@@ -283,7 +231,6 @@ namespace ProceduralParts
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fairing"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.01f, useSI=true, unit = "m", sigFigs = 5)]
         public float fairingThickness = 0.05f;
-        private float oldFairingThickness;
 
         [KSPField]
         public float fairingMinThickness = 0.01f;
@@ -293,13 +240,6 @@ namespace ProceduralParts
 
         [KSPField]
         public bool useFairing = true;
-
-		[KSPField]
-		public float lossTweak = 1.0f;
-
-		[KSPField]
-		public float dissipationTweak = 1.0f;
-
 
         [KSPField]
         public string bottomNodeId = "bottom";
@@ -327,32 +267,23 @@ namespace ProceduralParts
 
         [KSPField(guiName = "Fairing Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string textureSet = "Original";
-        private string oldTextureSet = "*****";
-
-        private List<TextureSet> loadedTextureSets;
-        private static string[] loadedTextureSetNames;
 
         private AttachNode bottomNode;
         private AttachNode topNode;
 
         private Mesh fairingMesh;
-        //private Mesh endsMesh;
         private Material fairingMaterial;
         
-        //[PartMessageListener(typeof(PartAttachNodeSizeChanged))]
-        //public void PartAttachNodeSizeChanged(AttachNode node, float minDia, float area) 
-		[KSPEvent(guiActive = false, active = true)]
-		public void PartAttachNodeSizeChanged(BaseEventDetails data) 
+        [KSPEvent(guiActive = false, active = true)]
+        public void PartAttachNodeSizeChanged(BaseEventDetails data) 
         {
-			AttachNode node = data.Get<AttachNode> ("node");
-            if (node.id != topNodeId)
-                return;
-            CopyNodeSizeAndStrength();
+            AttachNode node = data.Get<AttachNode> ("node");
+            if (node.id == topNodeId)
+                CopyNodeSizeAndStrength();
         }
 
         void UpdateFairing()
         {
-
             ProceduralPart ppart = PPart;
 
             if (useFairing && ppart != null)
@@ -487,7 +418,6 @@ namespace ProceduralParts
                         Debug.Log("no fairing mesh");
 
                 }
-                oldTextureSet = null;
                 UpdateTexture();
             }
 
@@ -524,15 +454,6 @@ namespace ProceduralParts
 
         }
 
-        //[PartMessageListener(typeof(PartResourceMaxAmountChanged))]
-        //public void PartResourceMaxAmountChanged(PartResource resource, double maxAmount)
-        //{
-        //    if (resource.name != "AblativeShielding")
-        //        return;
-        //    UpdateDissipationAndLoss(resource.maxAmount);
-        //}
-
-
         private void CopyNodeSizeAndStrength()
         {
             if (bottomNode == null)
@@ -544,106 +465,48 @@ namespace ProceduralParts
             bottomNode.breakingTorque = topNode.breakingTorque;
         }
 
-
-
-        // Thats for DRE, which is not updated yet 
-        //private void UpdateDissipationAndLoss(double ablativeResource)
-        //{
-        //    // The heat model is going to change considerably.
-        //    // Will just do an unconfigurable quick and dirty way for now.
-        //    FloatCurve loss = new FloatCurve();
-        //    loss.Add(650, 0, 0, 0);
-        //    loss.Add(1000, (float)(0.2 * lossTweak * ablativeResource));
-        //    loss.Add(3000, (float)(0.3 * lossTweak * ablativeResource), 0, 0);
-
-        //    FloatCurve dissipation = new FloatCurve();
-        //    dissipation.Add(300, 0, 0, 0);
-        //    dissipation.Add(500, (float)(80000 * dissipationTweak / ablativeResource), 0, 0);
-            
-        //    // Save it.
-        //    PartModule modHeatShield = part.Modules["ModuleHeatShield"];
-
-        //    Type type = modHeatShield.GetType();
-
-        //    type.GetField("loss").SetValue(modHeatShield, loss);
-        //    type.GetField("dissipation").SetValue(modHeatShield, dissipation);
-        //}
-
-
         public float GetCurrentCostMult()
         {
-            if (multiplyCostByDiameter != 0)
+            if (multiplyCostByDiameter != 0 && PPart is ProceduralPart && PPart.CurrentShape is ProceduralShapeBezierCone shape)
             {
-                ProceduralPart ppart = PPart;
-
-                if (ppart != null)
-                {
-                    ProceduralShapeBezierCone shape = ppart.CurrentShape as ProceduralShapeBezierCone;
-
-                    if (null != shape)
-                    {
-                        float diameter = shape.topDiameter;
-                        return diameter * multiplyCostByDiameter;                    
-                    }
-     
-                }
+                return shape.topDiameter * multiplyCostByDiameter;
             }
-           
-                
             return 1;
         }
 
         public void UpdateProp()
         {
-            ProceduralPart ppart = PPart;
-
             UpdateFairing();
-
-            if (ppart != null)
+            if (PPart != null)
             {
-                ProceduralShapeBezierCone shape = ppart.CurrentShape as ProceduralShapeBezierCone;
-
-                if (null != shape)
+                if (PPart.CurrentShape is ProceduralShapeBezierCone shape)
                 {
                     float diameter = shape.topDiameter;
                     float length = shape.length;
 
                     if (HighLogic.LoadedSceneIsEditor)
                     {
-
+                        // Cross-sectional surface area, maybe...
                         float surfaceArea = Mathf.PI * (diameter / 2) * (diameter / 2);
-
-                        PartResource pr = part.Resources[ablativeResource];
-
-                        if (null != pr)
+                        if (part.Resources[ablativeResource] is PartResource pr)
                         {
                             double ratio = pr.maxAmount != 0 ? pr.amount / pr.maxAmount : 1.0;
-                            //Debug.LogWarning("ratio: " + ratio);
-                            //Debug.LogWarning("amount: " + pr.amount);
-                            //Debug.LogWarning("max amount: " + pr.maxAmount);
                             pr.maxAmount = (double)(ablatorPerArea * surfaceArea);
                             pr.amount = Math.Min(ratio * pr.maxAmount, pr.maxAmount);
                             //ResourceListChanged();
                             MaxAmountChanged(part, pr, pr.maxAmount);
                             InitialAmountChanged(part, pr, pr.maxAmount);
-
-
                         }
-
                     }
 
                     //Debug.Log(massPerDiameter + " * " + diameter);
                     mass = massPerDiameter * diameter + massFromDiameterCurve.Evaluate(diameter);
-                    //Debug.LogWarning("changed mass: " + mass);
                     MassChanged(mass);
 
-                    //Debug.Log("CoL offset " + -length);
-
                     part.CoLOffset.y = -length;
-
                     part.CoPOffset.y = CoPoffset.Evaluate(diameter);
+                    //Debug.Log("CoL offset " + -length);
                     //Debug.Log("CoP offset: "+ part.CoPOffset.y);
-
 
                     if (HighLogic.LoadedSceneIsEditor)
                         GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
@@ -653,4 +516,4 @@ namespace ProceduralParts
             // We don't need to tell FAR, because the shape will do it for us anyway.
         }
     }// class
-}// namespace
+}
