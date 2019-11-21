@@ -203,11 +203,21 @@ namespace ProceduralParts
         {
             if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
             {
-                if(ProceduralPart.installedFAR)
+                if(ProceduralPart.installedFAR && IsSafeToSendMessageToPart())
                     part.SendMessage("GeometryPartModuleRebuildMeshData");
 
                 _pPart.UpdateTFInterops();
             }
+        }
+
+        private bool IsSafeToSendMessageToPart()
+        {
+            if (part == null) return false;
+            if (part.partTransform == null) return false;
+            if (vessel == null) return false;
+            if (vessel.vesselTransform == null) return false;
+
+            return true;
         }
 
         public abstract void UpdateTFInterops();
