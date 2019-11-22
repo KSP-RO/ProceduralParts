@@ -1,9 +1,7 @@
 ﻿using KSPAPIExtensions;
-//using KSPAPIExtensions.PartMessage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -35,99 +33,58 @@ namespace ProceduralParts
         }
         #endregion
 
-		#region IPartMassModifier implementation
+        #region IPartMassModifier implementation
 
-		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
-		{
-			return mass - defaultMass;
-		}
+        public float GetModuleMass (float defaultMass, ModifierStagingSituation sit) => mass - defaultMass;
+        public ModifierChangeWhen GetModuleMassChangeWhen() => ModifierChangeWhen.FIXED;
 
-		public ModifierChangeWhen GetModuleMassChangeWhen ()
-		{
-			return ModifierChangeWhen.FIXED;
-		}
-
-		#endregion
+        #endregion
 
         #region Callbacks
 
-        private bool isInitialized;
-        
         public override void OnAwake()
         {
             base.OnAwake();
-            this.window = part.FindActionWindow();
+            window = part.FindActionWindow();
         }
 
         public void Update()
         {
             if (HighLogic.LoadedSceneIsEditor)
-                OnUpdateEditor();
+                UpdateTankType();
         }
 
         public override void OnLoad(ConfigNode node)
         {
-            if (!(HighLogic.LoadedScene == GameScenes.LOADING))
-                return;
-        
-            foreach (ConfigNode optNode in node.GetNodes("TANK_TYPE_OPTION"))
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
             {
-                TankTypeOption option = new TankTypeOption();
-                option.Load(optNode);
-                tankTypeOptions.Add(option);
-            }
-
-            try
-            {
-                if (bool.Parse(node.GetValue("useVolume")))
+                foreach (ConfigNode optNode in node.GetNodes("TANK_TYPE_OPTION"))
                 {
-                    tankVolumeName = PartVolumes.Tankage.ToString();
+                    TankTypeOption option = new TankTypeOption();
+                    option.Load(optNode);
+                    tankTypeOptions.Add(option);
                 }
             }
-            catch { }
-        }
 
-        public override void OnSave(ConfigNode node)
-        {
-            // Force saved value for enabled to be true.
-            node.SetValue("isEnabled", "True");
+            bool useV = false;
+            if (node.TryGetValue("useVolume", ref useV) && useV)
+                tankVolumeName = PartVolumes.Tankage.ToString();
         }
 
         public override void OnStart(StartState state)
         {
-            if (!isInitialized)
-                DoInitialize();
-
-            InitializeTankType();
-
-        }
-
-        private void DoInitialize()
-        {
-            isInitialized = true;
             if (HighLogic.LoadedSceneIsFlight)
             {
-                if (tankVolumeName != null)
+                if (!string.IsNullOrEmpty(tankVolumeName))
                 {
                     MassChanged(mass);
                 }
-                isEnabled = enabled = false;
                 return;
             }
 
             InitializeTankType();
-            // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (tankVolume != 0)
                 UpdateTankType(true);
-            isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
-        }
-
-        public void OnUpdateEditor()
-        {
-            if (!isInitialized)
-                return;
-
-            UpdateTankType();
         }
 
         #endregion
@@ -137,14 +94,14 @@ namespace ProceduralParts
         /// <summary>
         /// Volume of part in kilolitres. 
         /// </summary>
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false)]
+        [KSPField(isPersistant = true)]
         public float tankVolume;
 
-        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Mass")]
+        [KSPField(guiActiveEditor = true, guiName = "Mass")]
         public string massDisplay;
 
-		[KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Volume")]
-		public string volumeDisplay;
+        [KSPField(guiActiveEditor = true, guiName = "Volume")]
+        public string volumeDisplay;
 
         [KSPField(isPersistant=true)]
         public float mass;
@@ -155,13 +112,11 @@ namespace ProceduralParts
         /// <summary>
         /// Message sent from ProceduralAbstractShape when it updates.
         /// </summary>
-        //[PartMessageListener(typeof(PartVolumeChanged), scenes:~GameSceneFilter.Flight)]
-        //public void ChangeVolume(string volumeName, float volume)
-		[KSPEvent(guiActive = false, active = true)]
-		public void OnPartVolumeChanged(BaseEventDetails data)
+        [KSPEvent(guiActive = false, active = true)]
+        public void OnPartVolumeChanged(BaseEventDetails data)
         {
-			string volumeName = data.Get<string> ("volName");
-			double volume = data.Get<double> ("newTotalVolume");
+            string volumeName = data.Get<string> ("volName");
+            double volume = data.Get<double> ("newTotalVolume");
 
             if (volumeName != tankVolumeName)
                 return;
@@ -170,8 +125,7 @@ namespace ProceduralParts
                 throw new ArgumentOutOfRangeException("volume");
 
             tankVolume = (float)volume;
-			//Debug.Log ((float)volume);
-			volumeDisplay = volume.ToStringSI(4, 3, "L");
+            volumeDisplay = volume.ToStringSI(4, 3, "L");
 
             UpdateMassAndResources(false);
             if (HighLogic.LoadedSceneIsEditor)
@@ -182,18 +136,12 @@ namespace ProceduralParts
 
         #region Tank Type
 
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Tank Type"), UI_ChooseOption(scene=UI_Scene.Editor)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Tank Type"), UI_ChooseOption(scene=UI_Scene.Editor)]
         public string tankType;
 
         private TankTypeOption selectedTankType;
-        
-        public float GetCurrentCostMult()
-        {
-            if (null != selectedTankType)
-                return selectedTankType.costMultiplier;
-            else
-                return 0; // tank type has not been initialized yet
-        }
+
+        public float GetCurrentCostMult() => selectedTankType is TankTypeOption ? selectedTankType.costMultiplier : 0;
         private List<TankTypeOption> tankTypeOptions = new List<TankTypeOption>();
 
         [Serializable]
@@ -339,44 +287,33 @@ namespace ProceduralParts
         #endregion
 
         #region Resources
-
-        //[PartMessageEvent]
-        //public event PartMassChanged MassChanged;
-		public void MassChanged (float mass)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<float> ("mass", mass);
-
-			part.SendEvent ("OnPartMassChanged", data, 0);
-		}
-
-		//[PartMessageEvent]
-        //public event PartResourceListChanged ResourceListChanged;
+        public void MassChanged (float mass)
+        {
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<float> ("mass", mass);
+            part.SendEvent ("OnPartMassChanged", data, 0);
+        }
         
-		public void ResourceListChanged (Part part)
-		{
-			part.SendEvent("OnResourceListChanged", null, 0);
-		}
+        public void ResourceListChanged (Part part)
+        {
+            part.SendEvent("OnResourceListChanged", null, 0);
+        }
 
-		//[PartMessageEvent]
-        //public event PartResourceMaxAmountChanged MaxAmountChanged;
-		public void MaxAmountChanged (Part part, PartResource resource, double amount)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<PartResource> ("resource", resource);
-			data.Set<double> ("amount", amount);
-			part.SendEvent ("OnResourceMaxChanged", data, 0);
-		}
+        public void MaxAmountChanged (Part part, PartResource resource, double amount)
+        {
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<PartResource> ("resource", resource);
+            data.Set<double> ("amount", amount);
+            part.SendEvent ("OnResourceMaxChanged", data, 0);
+        }
 
-        //[PartMessageEvent]
-        //public event PartResourceInitialAmountChanged InitialAmountChanged;
-		public void InitialAmountChanged (Part part, PartResource resource, double amount)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<PartResource> ("resource", resource);
-			data.Set<double> ("amount", amount);
-			part.SendEvent ("OnResourceInitialChanged", data, 0);
-		}
+        public void InitialAmountChanged (Part part, PartResource resource, double amount)
+        {
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<PartResource> ("resource", resource);
+            data.Set<double> ("amount", amount);
+            part.SendEvent ("OnResourceInitialChanged", data, 0);
+        }
 
         private void UpdateMassAndResources(bool typeChanged, bool keepAmount = false) // keep amount when rebuild (for saved part loading)
         {
@@ -410,20 +347,13 @@ namespace ProceduralParts
             }
         }
 
-        //[PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
-        //public void ResourceChanged(PartResource resource, double amount)
-		[KSPEvent(guiActive = false, active = true)]
-		public void OnPartResourceInitialAmountChanged(BaseEventDetails data)
+        [KSPEvent(guiActive = false, active = true)]
+        public void OnPartResourceInitialAmountChanged(BaseEventDetails data)
         {
-
-
-			if (!HighLogic.LoadedSceneIsEditor)
-				return;
-
-            if(selectedTankType == null)
+            if (!HighLogic.LoadedSceneIsEditor || selectedTankType is null)
                 return;
 
-			PartResource resource = data.Get<PartResource> ("resource");
+            PartResource resource = data.Get<PartResource> ("resource");
 
             TankResource tankResource = selectedTankType.resources.Find(r => r.name == name);
             if (tankResource == null || !tankResource.forceEmpty)
@@ -555,37 +485,6 @@ namespace ProceduralParts
         }
 
         #endregion
-
-		// TODO EPL
-		/*
-        #region Message passing for EPL
-
-        // Extraplanetary launchpads needs these messages sent.
-        // From the next update of EPL, this won't be required.
-
-        [PartMessageListener(typeof(PartResourcesChanged))]
-        public void ResourcesModified()
-        {
-            BaseEventDetails data = new BaseEventDetails(BaseEventDetails.Sender.USER);
-            data.Set("part", part);
-            part.SendEvent("OnResourcesModified", data, 0);
-        }
-
-        private float oldmass;
-
-        [PartMessageListener(typeof(PartMassChanged))]
-        public void MassModified(BaseEventDetails data)
-        {
-            BaseEventDetails data = new BaseEventDetails(BaseEventDetails.Sender.USER);
-            data.Set("part", part);
-            data.Set<float>("oldmass", oldmass);
-            part.SendEvent("OnMassModified", data, 0);
-
-            oldmass = paramMass;
-        }
-
-        #endregion
-        */
 
         public ProceduralPart PPart
         {
