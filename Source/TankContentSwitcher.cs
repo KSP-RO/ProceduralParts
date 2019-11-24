@@ -333,10 +333,7 @@ namespace ProceduralParts
 
         #endregion
 
-        public ProceduralPart PPart
-        {
-            get { return _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
-        }
+        public ProceduralPart PPart => _pPart ?? (_pPart = GetComponent<ProceduralPart>());
         private ProceduralPart _pPart;
 
         private void DirtyPAW()

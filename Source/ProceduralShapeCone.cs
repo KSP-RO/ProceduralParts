@@ -28,6 +28,7 @@ namespace ProceduralParts
         /// <summary>
         /// The mode for the cone end. This can be set for the top and bottom ends to constrain editing
         /// </summary>
+        [Serializable]
         public enum ConeEndMode
         {
             /// <summary>
@@ -63,7 +64,7 @@ namespace ProceduralParts
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
-            if (HighLogic.LoadedSceneIsEditor)
+            if (!HighLogic.LoadedSceneIsFlight)
             {
                 try
                 {
@@ -73,6 +74,7 @@ namespace ProceduralParts
                     coneBottomMode = (node.HasValue("coneBottomMode")) ?
                         (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneBottomMode"), true) :
                         ConeEndMode.CanZero;
+                    Debug.Log($"{ModTag} OnLoad() for node {node}, hasTop? {node.HasValue("coneTopMode")}, hasBot? {node.HasValue("coneBottomMode")}");
                 }
                 catch
                 {
@@ -99,6 +101,8 @@ namespace ProceduralParts
 
         public override void UpdateTechConstraints()
         {
+            Debug.Log($"{ModTag} UpdateTechContraints() found bottomMode {coneBottomMode} and topMode {coneTopMode}");
+
             Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
             UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
             lengthEdit.maxValue = PPart.lengthMax;
