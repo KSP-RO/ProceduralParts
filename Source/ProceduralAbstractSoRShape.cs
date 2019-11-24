@@ -196,7 +196,7 @@ namespace ProceduralParts
             //print("ULength=" + tankULength + " VLength=" + tankVLength);
 
             // set the texture scale.
-            RaiseChangeTextureScale("sides", PPart.SidesMaterial, new Vector2(tankULength, tankVLength));
+            RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
 
             
 
@@ -347,7 +347,7 @@ namespace ProceduralParts
             RaiseChangeAttachNodeSize(node, pt.dia, Mathf.PI * pt.dia * pt.dia * 0.25f);
 
             // TODO: separate out the meshes for each end so we can use the scale for texturing.
-            RaiseChangeTextureScale(nodeName, PPart.EndsMaterial, new Vector2(pt.dia, pt.dia));
+            RaiseChangeTextureScale(nodeName, PPart.legacyTextureHandler.EndsMaterial, new Vector2(pt.dia, pt.dia));
         }
 
         #endregion

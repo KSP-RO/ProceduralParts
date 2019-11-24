@@ -29,7 +29,7 @@ namespace ProceduralParts
             "Straight", "Round #1", "Round #2", "Peaked #1", "Peaked #2", "Sharp #1", "Sharp #2"
         };
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Curve"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Curve", groupName = ProceduralPart.PAWGroupName),
          UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedShape;
 

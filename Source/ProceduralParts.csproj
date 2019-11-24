@@ -79,6 +79,7 @@
   <ItemGroup>
     <Compile Include="DecouplerTweaker.cs" />
     <Compile Include="ICostModifier.cs" />
+    <Compile Include="LegacyTextureHandler.cs" />
     <Compile Include="ProceduralHeatshield.cs" />
     <Compile Include="ProceduralShapeBezierCone.cs" />
     <Compile Include="ProceduralShapePill.cs" />
@@ -102,9 +103,9 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>"C:\Users\Joe\source\Tools\pdb2mdb\pdb2mdb.exe" "$(TargetFileName)"
-xcopy /Y "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.6.1 Dev\GameData\ProceduralParts\Plugins\"
-xcopy /Y "$(TargetDir)$(TargetName).pdb" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.6.1 Dev\GameData\ProceduralParts\Plugins\"
-xcopy /Y "$(TargetDir)$(TargetName).dll.mdb" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.6.1 Dev\GameData\ProceduralParts\Plugins\"
+xcopy /Y "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.7.3 Dev\GameData\ProceduralParts\Plugins\"
+xcopy /Y "$(TargetDir)$(TargetName).pdb" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.7.3 Dev\GameData\ProceduralParts\Plugins\"
+xcopy /Y "$(TargetDir)$(TargetName).dll.mdb" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.7.3 Dev\GameData\ProceduralParts\Plugins\"
 </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>

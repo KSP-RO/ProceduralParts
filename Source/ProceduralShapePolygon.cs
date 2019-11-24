@@ -11,19 +11,19 @@ namespace ProceduralParts
 
         #region Config parameters
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), 
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Corners", guiUnits = "#", guiFormat = "F0", groupName = ProceduralPart.PAWGroupName), 
             UI_FloatRange(minValue = 3, maxValue = 12, stepIncrement = 1, scene = UI_Scene.Editor)]
         public float cornerCount = 8;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float diameter = 1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
-        [KSPField(isPersistant = false, guiActiveEditor = true, guiActive = false, guiName = "Circumdiameter", guiFormat = "F3", guiUnits = "\u2009m")]
+        [KSPField(isPersistant = false, guiActiveEditor = true, guiActive = false, guiName = "Circumdiameter", guiFormat = "F3", guiUnits = "\u2009m", groupName = ProceduralPart.PAWGroupName)]
         public float OuterDiameter = 0;
 
         [KSPField]
@@ -265,7 +265,7 @@ namespace ProceduralParts
             var tankULength = CornerCount * NormSideLength * InnerDiameter * 2;
             var tankVLength = Length;
 
-            RaiseChangeTextureScale("sides", PPart.SidesMaterial, new Vector2(tankULength, tankVLength));
+            RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(mesh, PPart.SidesIconMesh, SidesMesh);
         }
 
@@ -278,7 +278,7 @@ namespace ProceduralParts
             node.breakingTorque = node.breakingForce = Mathf.Max(50 * node.size * node.size, 50);
 
             RaiseChangeAttachNodeSize(node, InnerDiameter, Mathf.PI * InnerDiameter * InnerDiameter * 0.25f);
-            RaiseChangeTextureScale(nodeName, PPart.EndsMaterial, new Vector2(InnerDiameter, InnerDiameter));
+            RaiseChangeTextureScale(nodeName, PPart.legacyTextureHandler.EndsMaterial, new Vector2(InnerDiameter, InnerDiameter));
         }
 
         private static void WriteToAppropriateMesh(UncheckedMesh mesh, Mesh iconMesh, Mesh normalMesh)

@@ -10,6 +10,10 @@ namespace ProceduralParts
     public class ProceduralPart : PartModule, IPartCostModifier
     {
         public static readonly string ModTag = "[ProceduralParts]";
+        public const string PAWGroupName = "ProcParts";
+        public const string PAWGroupDisplayName = "ProceduralParts";
+
+        internal LegacyTextureHandler legacyTextureHandler;
 
         #region Initialization
 
@@ -22,7 +26,7 @@ namespace ProceduralParts
             if (AssemblyLoader.loadedAssemblies.FirstOrDefault(a => a.assembly.GetName().Name == "TestFlight") is AssemblyLoader.LoadedAssembly tfAssembly)
                 tfInterface = Type.GetType("TestFlightCore.TestFlightInterface, TestFlightCore", false);
             installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
-            TextureSet.LoadTextureSets(textureSets);
+            TextureSet.LoadTextureSets(LegacyTextureHandler.textureSets);
             staticallyInitialized = true;
         }
 
@@ -51,7 +55,7 @@ namespace ProceduralParts
                 LoadTechLimits(node);
 
             if (HighLogic.LoadedSceneIsFlight)
-            {     
+            {
                 // Create a temporary collider for KSP so that it can set the craft on the ground properly
                 tempCollider = gameObject.AddComponent<BoxCollider>();
                 tempCollider.center = tempColliderCenter;
@@ -95,11 +99,9 @@ namespace ProceduralParts
             InitializeObjects();
             InitializeShapes();
             InitializeTechLimits();
-            if (HighLogic.LoadedSceneIsEditor && !textureSets.ContainsKey(textureSet))
-            {
-                Debug.Log($"{ModTag} Defaulting invalid TextureSet {textureSet} to {textureSets.Keys.First()}");
-                textureSet = textureSets.Keys.First();
-            }
+
+            if (HighLogic.LoadedSceneIsEditor)
+                legacyTextureHandler.ValidateSelectedTexture();
 
             if (shape is ProceduralAbstractShape)
                 shape.UpdateShape();
@@ -113,16 +115,16 @@ namespace ProceduralParts
             {
                 BaseField field = Fields[nameof(textureSet)];
                 UI_ChooseOption opt = (UI_ChooseOption)field.uiControlEditor;
-                opt.options = textureSets.Keys.ToArray();
+                opt.options = LegacyTextureHandler.textureSets.Keys.ToArray();
                 opt.onSymmetryFieldChanged = opt.onFieldChanged = new Callback<BaseField, object>(OnTextureChanged);
 
                 BaseField capTextureField = Fields[nameof(capTextureIndex)];
                 opt = (UI_ChooseOption)capTextureField.uiControlEditor;
-                opt.options = Enum.GetNames(typeof(CapTextureMode));
+                opt.options = Enum.GetNames(typeof(LegacyTextureHandler.CapTextureMode));
                 opt.onSymmetryFieldChanged = opt.onFieldChanged = new Callback<BaseField, object>(OnTextureChanged);
 
                 Fields[nameof(shapeName)].guiActiveEditor = availableShapes.Count > 1;
-                opt = (UI_ChooseOption)Fields[nameof(shapeName)].uiControlEditor;
+                opt = Fields[nameof(shapeName)].uiControlEditor as UI_ChooseOption;
                 opt.options = availableShapes.Keys.ToArray();
                 // The onSymmetryFieldChanged callbacks do not have the correct previous object assigned.
                 // Since this matters, we need to handle it ourselves.
@@ -146,10 +148,10 @@ namespace ProceduralParts
         {
             foreach (AttachNode node in this.part.attachNodes)
             {
-                Vector3 selfWorld = part.transform.TransformPoint(node.position);
                 if (node.attachedPart is Part p)
                 {
                     AttachNode peer = node.FindOpposingNode();
+                    Vector3 selfWorld = part.transform.TransformPoint(node.position);
                     Vector3 peerWorld = p.transform.TransformPoint(peer.position);
                     Vector3 delta = selfWorld - peerWorld;
                     if (delta.magnitude > 0.1)
@@ -157,6 +159,7 @@ namespace ProceduralParts
                         Debug.Log($"{ModTag} FixStackAttachments for {this}: Attachment {node.id} on {node.owner} @{selfWorld} (worldspace), REALIGNING TO: {peer.id} on {peer.owner} @{peerWorld} (worldspace).  Delta: {delta}");
                         Part partToTranslate = (p.parent == part) ? p : part;   // Move child closer to parent  (translating parent also translates child!)
                         float dir = (p.parent == part) ? 1 : -1;                // delta = Towards {part}.
+                        Debug.Log($"{ModTag} Translating {partToTranslate} by {dir * delta} in worldspace");
                         partToTranslate.transform.Translate(dir * delta, Space.World);
                     }
                 }
@@ -169,14 +172,6 @@ namespace ProceduralParts
             shape.InitializeAttachmentNodes();
             UpdateTexture();
             FixStackAttachments();
-        }
-
-        private void DumpAttachments(List<AttachNode> l)
-        {
-            foreach (AttachNode node in l)
-            {
-                Debug.Log($"{ModTag} Attachment: {node} {node.id} trans {node.nodeTransform} owner {node.owner} position {node.position} offset {node.offset} attached {node.attachedPart}");
-            }
         }
 
         public void OnDestroy()
@@ -207,27 +202,16 @@ namespace ProceduralParts
 
         private void OnVariantApplied(Part p, PartVariant pv)
         {
-            if (p is Part && this.part != p)
+            if (p is Part && this.part == p)
             {
-                return;
+                // Applying a PartVariant moves the attachment nodes around.  Reinitialize them.
+                Debug.Log($"{ModTag} OnVariantApplied(Part {p}, PartVariant {pv?.Name}) from {this}/{part}");
+                shape.InitializeAttachmentNodes();
+                FixStackAttachments();
             }
-            Debug.Log($"{ModTag} OnVariantApplied(Part {p}, PartVariant {pv?.Name}) from {this}/{this.part}");
-            /*
-            if (pv is PartVariant)
-            {
-                Debug.Log($"{ModTag} PartVariant {pv.Name} ({pv.DisplayName}) colors {pv.PrimaryColor} | {pv.SecondaryColor}");
-                foreach (Material m in pv.Materials)
-                {
-                    Debug.Log(MatToStr(m));
-                }
-            }
-            Debug.Log($"{ModTag} Our materials:\n{MatToStr(SidesMaterial)}\n{MatToStr(EndsMaterial)}");
-            */
         }
 
         #endregion
-
-        public string MatToStr(Material m) => $"Material {m.name} | {m.color} | {m.mainTexture} | {m.shader}: {string.Join(",", m.shaderKeywords)}";
 
         #region Object references
 
@@ -243,15 +227,8 @@ namespace ProceduralParts
         [KSPField]
         public string collisionName = "collisionMesh";
 
-        public Material SidesMaterial { get; private set; }
-        public Material EndsMaterial { get; private set; }
-
         public Mesh SidesMesh { get; private set; }
         public Mesh EndsMesh { get; private set; }
-
-        public Material SidesIconMaterial { get; private set; }
-        public Material EndsIconMaterial { get; private set; }
-
         public Mesh SidesIconMesh { get; private set; }
         public Mesh EndsIconMesh { get; private set; }
 
@@ -259,29 +236,24 @@ namespace ProceduralParts
         {
             Debug.Log($"{ModTag} InitializeObjects() - Transforms, Materials and Meshes");
             //Transform partModel = part.FindModelTransform(partModelName);
-            
-            Transform sides     = part.FindModelTransform(sidesName);
-            Transform ends      = part.FindModelTransform(endsName);
             Transform colliderTr = part.FindModelTransform(collisionName);
+            partCollider = colliderTr.GetComponent<MeshCollider>();
+            legacyTextureHandler = new LegacyTextureHandler(part, this);
+            InitializeMeshes();
+        }
 
+        private void InitializeMeshes()
+        {
+            // Instantiate meshes. The mesh method unshares any shared meshes.
+            Transform sides = part.FindModelTransform(sidesName);
+            Transform ends = part.FindModelTransform(endsName);
             Transform iconModelTransform = part.partInfo.iconPrefab.transform.FindDecendant("model");
-
             Transform iconSides = iconModelTransform.FindDecendant(sidesName);
             Transform iconEnds = iconModelTransform.FindDecendant(endsName);
-
-            SidesIconMesh = (iconSides is Transform) ? iconSides.GetComponent<MeshFilter>().mesh : null;
-            SidesIconMaterial = (iconSides is Transform) ? iconSides.GetComponent<Renderer>().material : null;
-
-            EndsIconMesh = (iconEnds is Transform) ? iconEnds.GetComponent<MeshFilter>().mesh : null;
-            EndsIconMaterial = (iconEnds is Transform) ? iconEnds.GetComponent<Renderer>().material : null;
-
-            SidesMaterial = sides.GetComponent<Renderer>().material;
-            EndsMaterial = ends.GetComponent<Renderer>().material;
-
-            // Instantiate meshes. The mesh method unshares any shared meshes.
             SidesMesh = sides.GetComponent<MeshFilter>().mesh;
             EndsMesh = ends.GetComponent<MeshFilter>().mesh;
-            partCollider = colliderTr.GetComponent<MeshCollider>();
+            SidesIconMesh = (iconSides is Transform) ? iconSides.GetComponent<MeshFilter>().mesh : null;
+            EndsIconMesh = (iconEnds is Transform) ? iconEnds.GetComponent<MeshFilter>().mesh : null;
         }
 
         #endregion
@@ -402,7 +374,7 @@ namespace ProceduralParts
         {
             techLimits.Clear();
             techLimits.AddRange(part.partInfo.partPrefab.FindModuleImplementing<ProceduralPart>().techLimits);
-            
+
             needsTechInit = false;
             currentLimit = new TechLimit
             {
@@ -414,7 +386,7 @@ namespace ProceduralParts
                 allowCurveTweaking = true
             };
 
-            if (HighLogic.CurrentGame is Game && 
+            if (HighLogic.CurrentGame is Game &&
                 (HighLogic.CurrentGame.Mode == Game.Modes.CAREER || HighLogic.CurrentGame.Mode == Game.Modes.SCIENCE_SANDBOX))
             {
                 if (ResearchAndDevelopment.Instance is null)
@@ -519,99 +491,30 @@ namespace ProceduralParts
 
         #endregion
 
-        #region Texture Sets
-        public enum CapTextureMode
-        {
-            Ends, Side, GreySide, PlainWhite
-        }
+        #region Textures (deprecated)
 
-        [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]
+        public bool ApplyLegacyTextures() => forceLegacyTextures || !(part.GetComponent("KSPTextureSwitch") is Component);
+
+        [KSPField(guiName = "Legacy Textures", guiActive = false, guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false),
+         UI_Toggle(disabledText = "Disabled", enabledText = "Enabled", scene = UI_Scene.Editor)]
+        public bool forceLegacyTextures = false;
+
+        [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string textureSet = "Original";
 
-        [KSPField(guiName = "Ends Texture", guiActive = false, guiActiveEditor = true, isPersistant = true), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(guiName = "Ends Texture", guiActive = false, guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public int capTextureIndex = 0;
-        private CapTextureMode CapTexture => (CapTextureMode)capTextureIndex;
-
-        private static readonly Dictionary<string, TextureSet> textureSets = new Dictionary<string, TextureSet>();
-        public TextureSet TextureSet => textureSets[textureSet];
-        public TextureSet[] TextureSets { get => textureSets.Values.ToArray(); }
-
-        [SerializeField]
-        private Vector2 sideTextureScale = Vector2.one;
-
-        [KSPEvent(guiActive = false, active = true)]
-        public void OnChangeTextureScale(BaseEventDetails data)
-        {
-            string meshName = data.Get<string> ("meshName");
-            Vector2 targetScale = data.Get<Vector2> ("targetScale");
-            if (meshName != "sides")
-                return;
-            sideTextureScale = targetScale;
-            UpdateTexture();
-        }
-
         private void UpdateTexture()
         {
-            Material endsMaterial = (HighLogic.LoadedScene == GameScenes.LOADING) ? EndsIconMaterial : EndsMaterial;
-            Material sidesMaterial = (HighLogic.LoadedScene == GameScenes.LOADING) ? SidesIconMaterial : SidesMaterial;
-
-            if (!textureSets.ContainsKey(textureSet))
-            {
-                Debug.LogError($"{ModTag} UpdateTexture() {textureSet} missing from global list!");
-                textureSet = textureSets.Keys.First();
-            }
-            TextureSet tex = textureSets[textureSet];
-
-            if (!part.Modules.Contains("ModulePaintable"))
-            {
-                TextureSet.SetupShader(sidesMaterial, tex.sidesBump);
-            }
-
-            sidesMaterial.SetColor("_SpecColor", tex.sidesSpecular);
-            sidesMaterial.SetFloat("_Shininess", tex.sidesShininess);
-
-            var scaleUV = tex.GetScaleUv(sideTextureScale);
-
-            sidesMaterial.mainTextureScale = scaleUV;
-            sidesMaterial.mainTextureOffset = Vector2.zero;
-            sidesMaterial.SetTexture("_MainTex", tex.sides);
-            if (tex.sidesBump is Texture)
-            {
-                sidesMaterial.SetTextureScale("_BumpMap", scaleUV);
-                sidesMaterial.SetTextureOffset("_BumpMap", Vector2.zero);
-                sidesMaterial.SetTexture("_BumpMap", tex.sidesBump);
-            }
-            if (endsMaterial is Material)
-            {
-                SetupEndsTexture(endsMaterial, tex, scaleUV);
-            }
-        }
-
-        private void SetupEndsTexture(Material endsMaterial, TextureSet tex, Vector2 scaleUV)
-        {
-            switch (CapTexture)
-            {
-                case CapTextureMode.Ends:
-                    TextureSet.SetTextureProperties(endsMaterial, tex.ends, tex.endsBump, tex.endsSpecular, tex.endsShininess, tex.endsAutoScale, scaleUV);
-                    break;
-                case CapTextureMode.Side:
-                    TextureSet.SetTextureProperties(endsMaterial, tex.sides, tex.sidesBump, tex.sidesSpecular, tex.sidesShininess, tex.autoScale, scaleUV);
-                    break;
-                default:
-                    if (textureSets[Enum.GetName(typeof(CapTextureMode), CapTexture)] is TextureSet texture)
-                    {
-                        var endsScaleUV = texture.GetScaleUv(sideTextureScale);
-                        TextureSet.SetTextureProperties(endsMaterial, texture.sides, texture.sidesBump, texture.sidesSpecular, texture.sidesShininess, texture.autoScale, endsScaleUV);
-                    }
-                    break;
-            }
+            if (ApplyLegacyTextures())
+                legacyTextureHandler.UpdateTexture();
         }
 
         #endregion
 
         #region Tank shape
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Shape"), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Shape", groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string shapeName;
 
         private ProceduralAbstractShape shape;
