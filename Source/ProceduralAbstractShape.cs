@@ -264,12 +264,6 @@ namespace ProceduralParts
 
         #region Callbacks
 
-        public override void OnSave(ConfigNode node)
-        {
-            // Force saved value for enabled to be true.
-            node.SetValue("isEnabled", "True");
-        }
-
         public void UpdateInterops()
         {
             if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
@@ -374,6 +368,7 @@ namespace ProceduralParts
                 Vector3 translation = direction * (length / 2) * Vector3.up;
                 if (node.nodeType == AttachNode.NodeType.Stack)
                 {
+                    Debug.Log($"{ModTag} Moved {node.id} from {node.position} to {translation} = {part.transform.TransformPoint(translation)} (worldspace)");
                     if (node.nodeTransform is Transform)
                     {
                         node.nodeTransform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);

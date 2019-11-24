@@ -35,8 +35,6 @@ namespace ProceduralParts
 
         public static TextureSet LoadTextureSet(ConfigNode node)
         {
-            string textureSet = node.name;
-
             if (!(node.GetNode("sides") is ConfigNode sidesNode && node.GetNode("ends") is ConfigNode endsNode &&
                 sidesNode.HasValue("texture") && endsNode.HasValue("texture")))
             {
