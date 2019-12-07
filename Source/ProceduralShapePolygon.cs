@@ -7,7 +7,7 @@ namespace ProceduralParts
     class ProceduralShapePolygon : ProceduralAbstractShape
     {
         private static readonly string ModTag = "[ProceduralShapePolygon]";
-        internal override void InitializeAttachmentNodes() => InitializeStackAttachmentNodes(length);
+        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, diameter);
 
         #region Config parameters
 

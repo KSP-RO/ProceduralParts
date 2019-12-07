@@ -90,7 +90,7 @@ namespace ProceduralParts
             if (fillet > Mathf.Min(diameter, length))
             {
                 fillet = Mathf.Min(diameter, length);
-                RefreshPartEditorWindow();
+                MonoUtilities.RefreshContextWindows(part);
             }
         }
 
@@ -231,7 +231,7 @@ namespace ProceduralParts
             }
         }
 
-        internal override void InitializeAttachmentNodes() => InitializeStackAttachmentNodes(length);
+        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, diameter);
 
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {

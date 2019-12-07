@@ -187,6 +187,22 @@ namespace ProceduralParts
          */
         public virtual void HandleDiameterChange(float diameter, float oldDiameter)
         {
+            // Adjust our own surface attach node, and translate ourselves.
+            if (part.srfAttachNode is AttachNode srf)
+            {
+                GetAttachmentNodeLocation(srf, out Vector3 _, out Vector3 _, out ShapeCoordinates coord);
+                coord.r *= diameter / oldDiameter;
+                Vector3 newNodeLocalPos = FromCylindricCoordinates(coord);
+                Vector3 localTranslate = newNodeLocalPos - srf.position;
+                Debug.Log($"{ModTag} Moved surface attachment node from {srf.position} (local) to {newNodeLocalPos}");
+                if (srf.attachedPart is Part)
+                {
+                    // We are surface-attached, so translate ourselves.
+                    part.transform.Translate(-localTranslate, Space.Self);
+                    Debug.Log($"{ModTag} Translated ourselves by {-localTranslate}");
+                }
+                srf.position = newNodeLocalPos;
+            }
             // Nothing to do for stack-attached nodes.
             foreach (Part p in part.children)
             {
@@ -247,11 +263,7 @@ namespace ProceduralParts
             part.SendEvent ("OnChangeTextureScale", data, 0);
         }
         
-        protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area)
-        {
-            ChangeAttachNodeSize(node, minDia, area);
-        }
-
+        protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area) => ChangeAttachNodeSize(node, minDia, area);
         private void ModelChanged() => part.SendEvent("OnPartModelChanged", null, 0);
         private void ColliderChanged() => part.SendEvent("OnPartColliderChanged", null, 0);
         protected void RaiseModelAndColliderChanged()
@@ -359,6 +371,12 @@ namespace ProceduralParts
 
         internal abstract void InitializeAttachmentNodes();
 
+        internal virtual void InitializeAttachmentNodes(float length, float diameter)
+        {
+            InitializeStackAttachmentNodes(length);
+            InitializeSurfaceAttachmentNode(length, diameter);
+        }
+
         internal virtual void InitializeStackAttachmentNodes(float length)
         {
             Debug.Log($"{ModTag} InitializeStackAttachmentNodes for {this} length {length}");
@@ -367,18 +385,33 @@ namespace ProceduralParts
                 float direction = (node.position.y > 0) ? 1 : -1;
                 Vector3 translation = direction * (length / 2) * Vector3.up;
                 if (node.nodeType == AttachNode.NodeType.Stack)
-                {
-                    Debug.Log($"{ModTag} Moved {node.id} from {node.position} to {translation} = {part.transform.TransformPoint(translation)} (worldspace)");
-                    if (node.nodeTransform is Transform)
-                    {
-                        node.nodeTransform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-                        node.nodeTransform.Translate(translation, Space.Self);
-                    }
-                    else
-                    {
-                        node.originalPosition = node.position = translation;
-                    }
-                }
+                    MoveNode(node, translation);
+            }
+        }
+
+        internal virtual void InitializeSurfaceAttachmentNode(float length, float diameter)
+        {
+            Debug.Log($"{ModTag} InitializeSurfaceAttachmentNode for {this} diameter {diameter}");
+            if (part.srfAttachNode is AttachNode node)
+            {
+                ShapeCoordinates coord = new ShapeCoordinates();
+                PPart.CurrentShape.GetCylindricCoordinates(node.position, coord);
+                coord.r = diameter / 2;
+                MoveNode(node, PPart.CurrentShape.FromCylindricCoordinates(coord));
+            }
+        }
+
+        private void MoveNode(AttachNode node, Vector3 destination)
+        {
+            Debug.Log($"{ModTag} MoveNode() moved {node.id} from {node.position} to {destination} = {part.transform.TransformPoint(destination)} (worldspace)");
+            if (node.nodeTransform is Transform)
+            {
+                node.nodeTransform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                node.nodeTransform.Translate(destination, Space.Self);
+            }
+            else
+            {
+                node.originalPosition = node.position = destination;
             }
         }
 
@@ -428,12 +461,5 @@ namespace ProceduralParts
         public float GetCurrentCostMult() => costMultiplier;
 
         public abstract void UpdateTechConstraints();
-
-        protected void RefreshPartEditorWindow()
-        {
-            var window = FindObjectsOfType<UIPartActionWindow>().FirstOrDefault(w => w.part == part);
-            if (window != null)
-                window.displayDirty = true;
-        }
     }
 }

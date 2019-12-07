@@ -114,7 +114,8 @@ namespace ProceduralParts
             }
         }
 
-        internal override void InitializeAttachmentNodes() => InitializeStackAttachmentNodes(length);
+        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, diameter);
+
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             coords.r /= (diameter / 2);
