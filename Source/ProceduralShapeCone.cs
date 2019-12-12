@@ -74,7 +74,6 @@ namespace ProceduralParts
                     coneBottomMode = (node.HasValue("coneBottomMode")) ?
                         (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneBottomMode"), true) :
                         ConeEndMode.CanZero;
-                    Debug.Log($"{ModTag} OnLoad() for node {node}, hasTop? {node.HasValue("coneTopMode")}, hasBot? {node.HasValue("coneBottomMode")}");
                 }
                 catch
                 {
@@ -101,8 +100,6 @@ namespace ProceduralParts
 
         public override void UpdateTechConstraints()
         {
-            Debug.Log($"{ModTag} UpdateTechContraints() found bottomMode {coneBottomMode} and topMode {coneTopMode}");
-
             Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
             UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
             lengthEdit.maxValue = PPart.lengthMax;
@@ -257,7 +254,7 @@ namespace ProceduralParts
                         float newDiameterAtY = Mathf.Lerp(bottomDiameter, topDiameter, y_from_bottom / length);
                         float ratio = newDiameterAtY / oldDiameterAtY;
                         coord.r *= ratio;
-                        MoveAttachmentNode(node, coord);
+                        MovePartByAttachNode(node, coord);
                     }
                 }
             }

@@ -144,35 +144,45 @@ namespace ProceduralParts
             }
         }
 
+        public override void OnStartFinished(StartState state)
+        {
+            Debug.Log($"{ModTag} OnStartFinished for {this}");
+            shape.InitializeAttachmentNodes();
+            UpdateTexture();
+            FixStackAttachments();
+        }
+
         private void FixStackAttachments()
         {
             foreach (AttachNode node in this.part.attachNodes)
             {
                 if (node.attachedPart is Part p)
                 {
-                    AttachNode peer = node.FindOpposingNode();
-                    Vector3 selfWorld = part.transform.TransformPoint(node.position);
-                    Vector3 peerWorld = p.transform.TransformPoint(peer.position);
-                    Vector3 delta = selfWorld - peerWorld;
-                    if (delta.magnitude > 0.1)
+                    Vector3 selfW = part.transform.TransformPoint(Vector3.zero);
+                    Vector3 peerW = p.transform.TransformPoint(Vector3.zero);
+                    Part root = HighLogic.LoadedSceneIsFlight ? vessel.rootPart : EditorLogic.fetch.ship.Parts.First();
+                    if (node.FindOpposingNode() is AttachNode peer)
                     {
-                        Debug.Log($"{ModTag} FixStackAttachments for {this}: Attachment {node.id} on {node.owner} @{selfWorld} (worldspace), REALIGNING TO: {peer.id} on {peer.owner} @{peerWorld} (worldspace).  Delta: {delta}");
-                        Part partToTranslate = (p.parent == part) ? p : part;   // Move child closer to parent  (translating parent also translates child!)
-                        float dir = (p.parent == part) ? 1 : -1;                // delta = Towards {part}.
-                        Debug.Log($"{ModTag} Translating {partToTranslate} by {dir * delta} in worldspace");
-                        partToTranslate.transform.Translate(dir * delta, Space.World);
+                        Vector3 selfWorld = part.transform.TransformPoint(node.position);
+                        Vector3 peerWorld = p.transform.TransformPoint(peer.position);
+                        Vector3 delta = selfWorld - peerWorld;
+                        if (delta.magnitude > 0.1)
+                        {
+                            Debug.Log($"{ModTag} FixStackAttachments() for {part} @{RelativePos(selfW, root)}(rr), peer {p} @{RelativePos(peerW, root)}(rr)");
+                            Debug.Log($"{ModTag} Attachment {node.id} on {node.owner} @{selfWorld}(w), REALIGNING TO: {peer.id} on {peer.owner} @{peerWorld}(w). Delta: {delta}");
+                            Part partToTranslate = (part.parent == p) ? part : p;   // Move child closer to parent  (translating parent also translates child!)
+                            float dir = (partToTranslate == p) ? 1 : -1;            // delta = Movement of the peer, so invert if moving the parent
+                            Debug.Log($"{ModTag} (DISABLED): Translating {partToTranslate} by {RelativeDir(dir * delta, root)}(rr)");
+                            //partToTranslate.transform.Translate(dir * delta, Space.World);
+                            //partToTranslate.orgPos = partToTranslate.transform.position += (dir * delta);
+                        }
                     }
                 }
             }
         }
 
-        public override void OnStartFinished(StartState state)
-        {
-            Debug.Log($"{ModTag} OnStartFinished");
-            shape.InitializeAttachmentNodes();
-            UpdateTexture();
-            FixStackAttachments();
-        }
+        Vector3 RelativePos(Vector3 worldPos, Part origin) => origin.transform.InverseTransformPoint(worldPos);
+        Vector3 RelativeDir(Vector3 worldDir, Part origin) => origin.transform.InverseTransformDirection(worldDir);
 
         public void OnDestroy()
         {
@@ -403,7 +413,7 @@ namespace ProceduralParts
                 }
             } else
             {
-                Debug.Log($"{ModTag} Skipping Tech Limits because Game is {HighLogic.CurrentGame?.Mode})");
+                Debug.Log($"{ModTag} Skipping Tech Limits because Game is {HighLogic.CurrentGame?.Mode}");
             }
             currentLimit.Validate();
             SetFromLimit(currentLimit);
@@ -693,7 +703,7 @@ namespace ProceduralParts
         #endregion
 
         [KSPEvent(guiActive = false, active = true)]
-		public void OnPartModelChanged()
+        public void OnPartModelChanged()
         {
             if(partCollider!=null)
             {
@@ -713,7 +723,7 @@ namespace ProceduralParts
         [KSPField]
         bool updateDragCubesInEditor = false;
 
-		[KSPEvent(guiActive = false, active = true)]
+        [KSPEvent(guiActive = false, active = true)]
         public void OnPartColliderChanged()
         {
             if (HighLogic.LoadedSceneIsFlight || (HighLogic.LoadedSceneIsEditor && updateDragCubesInEditor))
@@ -745,7 +755,7 @@ namespace ProceduralParts
                 OnPartColliderChanged();
                 GameEvents.onVesselWasModified.Fire(part.vessel);
                 TimingManager.FixedUpdateRemove(TimingManager.TimingStage.FlightIntegrator, DragCubeFixer);
-                isEnabled = enabled = false;
+                //isEnabled = enabled = false;
             }
         }
 

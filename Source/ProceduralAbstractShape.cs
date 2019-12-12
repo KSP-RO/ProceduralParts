@@ -137,15 +137,7 @@ namespace ProceduralParts
                 Vector3 translation = direction * (trans / 2) * Vector3.up;
                 if (node.nodeType == AttachNode.NodeType.Stack)
                 {
-                    if (node.nodeTransform is Transform)
-                    {
-                        Debug.Log($"{ModTag} Node has transform, so Translating it.");
-                        node.nodeTransform.Translate(translation, Space.Self);
-                    }
-                    else
-                    {
-                        node.position += translation;
-                    }
+                    TranslateNode(node, translation);
                     // If the attached part is a child of ours, push it directly.
                     // If it is our parent, then we need to find the eldest grandparent and push that, and also ourselves
                     if (node.attachedPart is Part pushTarget)
@@ -173,7 +165,7 @@ namespace ProceduralParts
                     GetAttachmentNodeLocation(node, out Vector3 worldSpace, out Vector3 localToHere, out ShapeCoordinates coord);
                     float ratio = length / oldLength;
                     coord.y *= ratio;
-                    MoveAttachmentNode(node, coord);
+                    MovePartByAttachNode(node, coord);
                 }
             }
         }
@@ -201,7 +193,7 @@ namespace ProceduralParts
                     part.transform.Translate(-localTranslate, Space.Self);
                     Debug.Log($"{ModTag} Translated ourselves by {-localTranslate}");
                 }
-                srf.position = newNodeLocalPos;
+                MoveNode(srf, newNodeLocalPos);
             }
             // Nothing to do for stack-attached nodes.
             foreach (Part p in part.children)
@@ -211,7 +203,7 @@ namespace ProceduralParts
                     GetAttachmentNodeLocation(node, out Vector3 worldSpace, out Vector3 localToHere, out ShapeCoordinates coord);
                     float ratio = diameter / oldDiameter;
                     coord.r *= ratio;
-                    MoveAttachmentNode(node, coord);
+                    MovePartByAttachNode(node, coord);
                 }
             }
         }
@@ -224,7 +216,7 @@ namespace ProceduralParts
             GetCylindricCoordinates(localSpace, coord);
         }
 
-        public virtual void MoveAttachmentNode(AttachNode node, ShapeCoordinates coord)
+        public virtual void MovePartByAttachNode(AttachNode node, ShapeCoordinates coord)
         {
             Vector3 oldWorldSpace = node.owner.transform.TransformPoint(node.position);
             Vector3 target = FromCylindricCoordinates(coord);
@@ -232,16 +224,14 @@ namespace ProceduralParts
             node.owner.transform.Translate(newWorldspace - oldWorldSpace, Space.World);
         }
 
-        public Part GetEldestParent(Part p)
-        {
-            return (p.parent is null) ? p : GetEldestParent(p.parent);
-        }
+        public Part GetEldestParent(Part p) => (p.parent is null) ? p : GetEldestParent(p.parent);
 
         public void ChangeVolume(string volName, double newVolume)
         {
             var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
             data.Set<string> ("volName", volName);
             data.Set<double> ("newTotalVolume", newVolume);
+            Debug.Log($"{ModTag} Invoking OnPartVolumeChanged for {part} volName:{volName} vol:{newVolume}");
             part.SendEvent ("OnPartVolumeChanged", data, 0);
         }
 
@@ -382,6 +372,8 @@ namespace ProceduralParts
             Debug.Log($"{ModTag} InitializeStackAttachmentNodes for {this} length {length}");
             foreach (AttachNode node in part.attachNodes)
             {
+                if (node.owner != part)
+                    node.owner = part;
                 float direction = (node.position.y > 0) ? 1 : -1;
                 Vector3 translation = direction * (length / 2) * Vector3.up;
                 if (node.nodeType == AttachNode.NodeType.Stack)
@@ -394,6 +386,8 @@ namespace ProceduralParts
             Debug.Log($"{ModTag} InitializeSurfaceAttachmentNode for {this} diameter {diameter}");
             if (part.srfAttachNode is AttachNode node)
             {
+                if (node.owner != part)
+                    node.owner = part;
                 ShapeCoordinates coord = new ShapeCoordinates();
                 PPart.CurrentShape.GetCylindricCoordinates(node.position, coord);
                 coord.r = diameter / 2;
@@ -401,17 +395,22 @@ namespace ProceduralParts
             }
         }
 
+        private void TranslateNode(AttachNode node, Vector3 translation) => MoveNode(node, node.position + translation);
         private void MoveNode(AttachNode node, Vector3 destination)
         {
-            Debug.Log($"{ModTag} MoveNode() moved {node.id} from {node.position} to {destination} = {part.transform.TransformPoint(destination)} (worldspace)");
-            if (node.nodeTransform is Transform)
+            if (Vector3.Distance(node.position, destination) > 0.01f)
             {
-                node.nodeTransform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-                node.nodeTransform.Translate(destination, Space.Self);
-            }
-            else
-            {
-                node.originalPosition = node.position = destination;
+                Debug.Log($"{ModTag} MoveNode() moved {node.id} from {node.position} to {destination} = {part.transform.TransformPoint(destination)} (worldspace)");
+                if (node.nodeTransform is Transform)
+                {
+                    node.nodeTransform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                    node.nodeTransform.Translate(destination, Space.Self);
+                }
+                else
+                {
+                    node.position = destination;
+                }
+                node.originalPosition = node.position;
             }
         }
 
