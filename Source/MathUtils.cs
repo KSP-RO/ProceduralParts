@@ -6,50 +6,6 @@ namespace KSPAPIExtensions
 {
     public static class MathUtils
     {
-
-        /// <summary>
-        /// Clamp a value between the max and min values. If &lt; min it will be changed to min, if &gt; max it will be changed to max.
-        /// </summary>
-        /// <param name="value">Value to clamp</param>
-        /// <param name="min">Minimum</param>
-        /// <param name="max">Maximum</param>
-        /// <returns>true if the value has been clamped.</returns>
-        public static bool TestClamp(ref float value, float min, float max)
-        {
-            if (value < min)
-            {
-                value = min;
-                return true;
-            }
-            if (value > max)
-            {
-                value = max;
-                return true;
-            }
-            return false;
-        }
-
-        public static float Ceiling(float value, float precision)
-        {
-            return (float)Math.Ceiling(value / precision) * precision;
-        }
-
-        public static float Floor(float value, float precision)
-        {
-            return (float)Math.Floor(value / precision) * precision;
-        }
-
-        /// <summary>
-        /// Round value to the nearest. 
-        /// </summary>
-        /// <param name="value">Value to round</param>
-        /// <param name="precision">Precision, eg 0.1, 0.02, 0.005</param>
-        /// <returns>The rounded value</returns>
-        public static float RoundTo(float value, float precision)
-        {
-            return Mathf.Round(value / precision) * precision;
-        }
-
         /// <summary>
         /// Format a numeric value using SI prefexes. 
         /// 
@@ -129,14 +85,6 @@ namespace KSPAPIExtensions
         }
 
         /// <summary>
-        /// ToStringExt for floats. See doc for doubles.
-        /// </summary>
-        public static string ToStringExt(this float value, string format)
-        {
-            return ToStringExt((double)value, format);
-        }
-
-        /// <summary>
         /// Parse a string in SI format - with SI unit prefix to a double.
         /// Note - units must not be present.
         /// </summary>
@@ -203,49 +151,6 @@ namespace KSPAPIExtensions
         }
 
         /// <summary>
-        /// Parse a string in SI format - with SI unit prefix to a float.
-        /// Note - units must not be present.
-        /// </summary>
-        public static bool TryParseExt(string str, out float value)
-        {
-            double dVal;
-            if (TryParseExt(str, out dVal))
-            {
-                value = (float)dVal;
-                return true;
-            }
-            value = 0;
-            return false;
-        }
-
-        /// <summary>
-        /// Round a number to a set number of significant figures.
-        /// </summary>
-        /// <param name="d">number to round</param>
-        /// <param name="sigFigs">number of significant figures, defaults to 3</param>
-        /// <returns></returns>
-        public static float RoundSigFigs(this float d, int sigFigs = 3)
-        {
-            
-            int exponent = (int)Math.Floor(Math.Log10(Math.Abs(d))) - sigFigs;
-            float div = Mathf.Pow(10, exponent);
-            return Mathf.Round(d / div) * div;
-        }
-
-        /// <summary>
-        /// Round a number to a set number of significant figures.
-        /// </summary>
-        /// <param name="value">number to round</param>
-        /// <param name="sigFigs">number of significant figures, defaults to 3</param>
-        /// <returns></returns>
-        public static double RoundSigFigs(this double value, int sigFigs = 3)
-        {
-            int exponent = (int)Math.Floor(Math.Log10(Math.Abs(value))) - sigFigs;
-            double div = Mathf.Pow(10, exponent);
-            return Math.Round(value / div) * div;
-        }
-
-        /// <summary>
         /// Find the SI prefix for a number
         /// </summary>
         /// <param name="value">The value to find the prefix for</param>
@@ -305,24 +210,6 @@ namespace KSPAPIExtensions
         /// Round a value with respect the the given SI prefix.
         /// 
         /// eg:
-        /// SIPrefix.Mega.Round(34.456e6f, digits:1) -> 34.6e6f
-        /// 
-        /// </summary>
-        /// <param name="pfx">The SI prefix</param>
-        /// <param name="value">Value to round</param>
-        /// <param name="digits">Number of decimal places. Negatives will work (eg: -1 rounds to nearest 10)</param>
-        /// <param name="exponent">Natural exponent of value, eg: use 3 if value is km rather than m</param>
-        /// <returns></returns>
-        public static float Round(this SIPrefix pfx, float value, int digits = 3, int exponent = 0)
-        {
-            float div = Mathf.Pow(10, (int)pfx - digits + exponent);
-            return Mathf.Round(value / div) * div;
-        }
-
-        /// <summary>
-        /// Round a value with respect the the given SI prefix.
-        /// 
-        /// eg:
         /// SIPrefix.Mega.Round(34.456e6, digits:1) -> 34.6e6
         /// 
         /// </summary>
@@ -363,16 +250,6 @@ namespace KSPAPIExtensions
         {
             return mass < 1.0f ? 
                 mass.ToStringSI(sigFigs, exponent + 6, "g") : 
-                mass.ToStringSI(sigFigs, exponent, "t");
-        }
-
-        /// <summary>
-        /// Formats a mass in tons as either tons if >= 1.0, or as grams if &lt; 1.0
-        /// </summary>
-        public static string FormatMass(double mass, int sigFigs = 4, int exponent = 0)
-        {
-            return mass < 1.0f ? 
-                mass.ToStringSI(sigFigs, exponent+6, "g") : 
                 mass.ToStringSI(sigFigs, exponent, "t");
         }
     }

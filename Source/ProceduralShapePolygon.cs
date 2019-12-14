@@ -1,34 +1,29 @@
 ﻿using KSPAPIExtensions;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 namespace ProceduralParts
 {
     class ProceduralShapePolygon : ProceduralAbstractShape
     {
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Corners", guiUnits = "#", guiFormat = "F0"), UI_FloatRange(minValue = 3, maxValue = 12, stepIncrement = 1, scene = UI_Scene.Editor)]
-        public float cornerCount = 8;
-        private int oldCornerCount;
+        private static readonly string ModTag = "[ProceduralShapePolygon]";
+        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, diameter);
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
+        #region Config parameters
+
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Corners", guiUnits = "#", guiFormat = "F0", groupName = ProceduralPart.PAWGroupName), 
+            UI_FloatRange(minValue = 3, maxValue = 12, stepIncrement = 1, scene = UI_Scene.Editor)]
+        public float cornerCount = 8;
+
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float diameter = 1f;
-        private float oldInnerDiameter;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
-        private float oldLength;
-        private float Length
-        {
-            get => length;
-            set => length = value;
-        }
 
-        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Circumdiameter", guiFormat = "F3", guiUnits = "\u2009m")]
+        [KSPField(isPersistant = false, guiActiveEditor = true, guiActive = false, guiName = "Circumdiameter", guiFormat = "F3", guiUnits = "\u2009m", groupName = ProceduralPart.PAWGroupName)]
         public float OuterDiameter = 0;
 
         [KSPField]
@@ -37,13 +32,54 @@ namespace ProceduralParts
         [KSPField]
         public string BottomNodeName = "bottom";
 
+        #endregion
+
+        #region Utility Properties
+
+        internal class SimPart
+        {
+            internal float cornerCount = 8, length = 1, diameter = 1, outerDiameter = 0;
+            internal SimPart() { }
+            internal int CornerCount => (int)cornerCount;
+            internal float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
+            internal float EdgeToEdgeAngle => Mathf.PI - CornerCenterCornerAngle;
+            internal float StartAngle => 0.5f * Mathf.PI - CornerCenterCornerAngle / 2f;
+            internal int SideTriangles => CornerCount * 2;
+            internal int TrianglesPerCap => CornerCount - 2;
+            internal float NormHalfSideLength => NormSideLength / 2;
+            internal float NormSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
+            internal const float NormInnerRadius = 0.5f;
+            internal const float NormHalfHeight = 0.5f;
+
+            internal float InnerDiameter => CornerCount % 2 == 0 ? diameter : GetInnerDiameterFromHeight(diameter);
+            internal float HalfSideLength => NormHalfSideLength * InnerDiameter;
+            internal float InnerRadius => NormInnerRadius * InnerDiameter;
+            internal float OuterToInnerFactor => Mathf.Cos(CornerCenterCornerAngle / 2);
+            internal float OuterRadius => InnerRadius / OuterToInnerFactor;
+            internal float NormOuterDiameter => 1f / OuterToInnerFactor;
+            internal float HalfHeight => NormHalfHeight * length;
+            internal float Area => InnerRadius * HalfSideLength * CornerCount;
+            internal float VolumeCalculated => Area * length;
+            internal int SideVerticesPerCap => CornerCount * 2;
+            internal float NormHorizontalDiameter => CornerCount % 4 == 0 ? 1 : NormOuterDiameter;
+
+            internal float GetInnerDiameterFromHeight(float height) => height / ((1 + 1 / OuterToInnerFactor) / 2);
+            internal float ConvertToEditorDiameter(float innerDiameter) => CornerCount % 2 == 0 ? innerDiameter : GetHeightFromInnerDiameter(innerDiameter);
+            internal float GetHeightFromInnerDiameter(float innerDiameter) => innerDiameter * ((1 + 1 / OuterToInnerFactor) / 2);
+
+            internal float GetInnerDiameterFromArea(float area) => Mathf.Sqrt(area * 4 / (CornerCount * NormSideLength));
+            // Area => InnerRadius * HalfSideLength * CornerCount;
+            //      => (0.5 * innerDiameter) * (NormSideLength/2 * innerDiameter) * CornerCount
+            //      => (0.25 * innerDIameter * innerDiameter * normSideLength * cornerCount)
+        }
+
+        private float Length => length;
         private int CornerCount => (int)cornerCount;
         private float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
         private float EdgeToEdgeAngle => Mathf.PI - CornerCenterCornerAngle;
         private float StartAngle => 0.5f * Mathf.PI - CornerCenterCornerAngle / 2f;
         private int SideTriangles => CornerCount * 2;
         private int TrianglesPerCap => CornerCount - 2;
-
         private float NormHalfSideLength => NormSideLength / 2;
         private float NormSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
         private const float NormInnerRadius = 0.5f;
@@ -64,149 +100,124 @@ namespace ProceduralParts
         private float GetInnerDiameterFromHeight(float height) => height / ((1 + 1 / OuterToInnerFactor) / 2);
         private float ConvertToEditorDiameter(float innerDiameter) => CornerCount % 2 == 0 ? innerDiameter : GetHeightFromInnerDiameter(innerDiameter);
         private float GetHeightFromInnerDiameter(float innerDiameter) => innerDiameter * ((1 + 1 / OuterToInnerFactor) / 2);
+        private float GetInnerDiameterFromArea(float area) => Mathf.Sqrt(area * 4 / (CornerCount * NormSideLength));
+        // Area => InnerRadius * HalfSideLength * CornerCount;
+        //      => (0.5 * innerDiameter) * (NormSideLength/2 * innerDiameter) * CornerCount
+        //      => (0.25 * innerDIameter * innerDiameter * normSideLength * cornerCount)
+
+        #endregion
+
+        #region Initialization
 
         public override void OnStart(StartState state)
         {
             UpdateTechConstraints();
-        }
+            base.OnStart(state);
 
-        public override Vector3 FromCylindricCoordinates(ShapeCoordinates coords)
-        {
-            var position = new Vector3();
+            Fields[nameof(cornerCount)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
 
-            switch (coords.HeightMode)
-            {
-                case ShapeCoordinates.YMode.RELATIVE_TO_SHAPE:
-                    position.y = HalfHeight * coords.y;
-                    break;
+            Fields[nameof(diameter)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
 
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_CENTER:
-                    position.y = coords.y;
-                    break;
-
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_BOTTOM:
-                    position.y = coords.y - HalfHeight;
-                    break;
-
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_TOP:
-                    position.y = coords.y + HalfHeight;
-                    break;
-                default:
-                    Debug.LogError("Can not handle PartCoordinate attribute: " + coords.HeightMode);
-                    position.y = 0.0f;
-                    break;
-            }
-
-            var radius = coords.r;
-
-            if (coords.RadiusMode != ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_CENTER)
-            {
-                radius = coords.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ? InnerRadius + coords.r : InnerRadius * coords.r;
-            }
-
-            var theta = Mathf.Lerp(0, Mathf.PI * 2f, coords.u);
-
-            position.x = Mathf.Cos(theta) * radius;
-            position.z = -Mathf.Sin(theta) * radius;
-
-            return position;
-        }
-
-        public override void GetCylindricCoordinates(Vector3 position, ShapeCoordinates shapeCoordinates)
-        {
-            var direction = new Vector2(position.x, position.z);
-
-            switch (shapeCoordinates.HeightMode)
-            {
-                case ShapeCoordinates.YMode.RELATIVE_TO_SHAPE:
-                    shapeCoordinates.y = position.y / HalfHeight;
-                    if (float.IsNaN(shapeCoordinates.y))
-                        shapeCoordinates.y = 0f;
-                    break;
-
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_CENTER:
-                    shapeCoordinates.y = position.y;
-                    break;
-
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_BOTTOM:
-                    shapeCoordinates.y = position.y - -HalfHeight;
-                    break;
-
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_TOP:
-                    shapeCoordinates.y = position.y - HalfHeight;
-                    break;
-                default:
-                    Debug.LogError("Can not handle PartCoordinate attribute: " + shapeCoordinates.HeightMode);
-                    shapeCoordinates.y = 0.0f;
-                    break;
-            }
-
-
-            shapeCoordinates.r = 0;
-
-            var theta = Mathf.Atan2(-direction.y, direction.x);
-
-            shapeCoordinates.u = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
-            if (float.IsNaN(shapeCoordinates.u))
-                shapeCoordinates.u = 0f;
-
-            if (shapeCoordinates.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_CENTER)
-            {
-                shapeCoordinates.r = direction.magnitude;
-                return;
-            }
-
-            shapeCoordinates.r = shapeCoordinates.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
-                direction.magnitude - InnerRadius :
-                direction.magnitude / InnerRadius; // RELATIVE_TO_SHAPE_RADIUS
+            Fields[nameof(length)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
         }
 
         public override void UpdateTechConstraints()
         {
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
+            Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
+            UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
+            lengthEdit.maxValue = PPart.lengthMax;
+            lengthEdit.minValue = PPart.lengthMin;
+            lengthEdit.incrementLarge = PPart.lengthLargeStep;
+            lengthEdit.incrementSmall = PPart.lengthSmallStep;
+            length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
 
-            if (PPart.lengthMin == PPart.lengthMax)
-                Fields[nameof(length)].guiActiveEditor = false;
-            else
+            Fields[nameof(diameter)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
+            UI_FloatEdit diameterEdit = Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit;
+            diameterEdit.maxValue = PPart.diameterMax;
+            diameterEdit.minValue = PPart.diameterMin;
+            diameterEdit.incrementLarge = PPart.diameterLargeStep;
+            diameterEdit.incrementSmall = PPart.diameterSmallStep;
+            diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
+        }
+
+        #endregion
+
+        #region Update handlers
+
+
+        internal override void UpdateShape(bool force = true)
+        {
+            Volume = CalculateVolume();
+            OuterDiameter = InnerDiameter / OuterToInnerFactor;
+            GenerateMeshes();
+            // WriteMeshes in AbstractSoRShape typically does UpdateNodeSize, UpdateProps, RaiseModelAndColliderChanged
+            UpdateNodeSize(TopNodeName);
+            UpdateNodeSize(BottomNodeName);
+            PPart.UpdateProps();
+            RaiseModelAndColliderChanged();
+        }
+
+        public override void AdjustDimensionBounds()
+        {
+            if (float.IsPositiveInfinity(PPart.volumeMax)) return;
+
+            if (CalculateVolume(Area, PPart.lengthMax) > PPart.volumeMax)
             {
-                var lengthEdit = (UI_FloatEdit)Fields[nameof(length)].uiControlEditor;
-                lengthEdit.maxValue = PPart.lengthMax;
-                lengthEdit.minValue = PPart.lengthMin;
-                lengthEdit.incrementLarge = PPart.lengthLargeStep;
-                lengthEdit.incrementSmall = PPart.lengthSmallStep;
-                Length = Mathf.Clamp(Length, PPart.lengthMin, PPart.lengthMax);
+                (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = PPart.volumeMax / Area;
             }
-
-            if (PPart.diameterMin == PPart.diameterMax)
-                Fields[nameof(diameter)].guiActiveEditor = false;
-            else
+            SimPart sim = new SimPart
             {
-                var diameterEdit = (UI_FloatEdit)Fields[nameof(diameter)].uiControlEditor;
-                diameterEdit.maxValue = PPart.diameterMax;
-                diameterEdit.minValue = PPart.diameterMin;
-                diameterEdit.incrementLarge = PPart.diameterLargeStep;
-                diameterEdit.incrementSmall = PPart.diameterSmallStep;
-                diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
+                cornerCount = cornerCount,
+                diameter = PPart.diameterMax,
+                length = length,
+                outerDiameter = OuterDiameter
+            };
+            if (sim.VolumeCalculated > PPart.volumeMax)
+            {
+                float maxDiameter = sim.GetInnerDiameterFromArea(PPart.volumeMax / length);
+                (Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit).maxValue = maxDiameter;
             }
         }
+
+        public override float CalculateVolume() => VolumeCalculated;
+        private float CalculateVolume(float area, float length) => area * length;
 
         public override void UpdateTFInterops()
         {
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", diameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam2", diameter, "ProceduralParts" });
+            ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
 
-        protected override void UpdateShape(bool force)
+        public override void TranslateAttachmentsAndNodes(BaseField f, object obj)
         {
-            if (!force && InnerDiameter == oldInnerDiameter && Length == oldLength && CornerCount == oldCornerCount)
+            if (f.name == nameof(diameter) && obj is float oldDiameter)
             {
-                return;
+                HandleDiameterChange((float)f.GetValue(this), oldDiameter);
             }
-            RecalculateVolume();
-            UpdateAttachments();
-            GenerateMeshes();
-            UpdateProps();
-            UpdateFields();
-            RaiseModelAndColliderChanged();
+            if (f.name == nameof(length) && obj is float oldLen)
+            {
+                HandleLengthChange((float)f.GetValue(this), oldLen);
+            }
+            if (f.name == nameof(cornerCount))
+            {
+            //    HandleCornerCountChanged(f, obj);
+            }
+        }
+
+        public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r /= (diameter / 2);
+            coords.y /= length;
+        }
+
+        public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r *= (diameter / 2);
+            coords.y *= length;
         }
 
         private void GenerateMeshes()
@@ -215,66 +226,9 @@ namespace ProceduralParts
             GenerateCapMesh();
             GenerateColliderMesh();
         }
+        #endregion
 
-        private void UpdateAttachments()
-        {
-            UpdateNodeSize(TopNodeName);
-            UpdateNodeSize(BottomNodeName);
-            MoveAttachments();
-        }
-
-        private void UpdateFields()
-        {
-            oldLength = Length;
-            oldInnerDiameter = InnerDiameter;
-            oldCornerCount = CornerCount;
-            OuterDiameter = InnerDiameter / OuterToInnerFactor;
-        }
-
-        private void RecalculateVolume()
-        {
-            var volume = VolumeCalculated;
-
-            if (HighLogic.LoadedSceneIsEditor)
-            {
-                volume = ClampToVolumeRestrictions(volume);
-            }
-            Volume = volume;
-        }
-
-        private float ClampToVolumeRestrictions(float volume)
-        {
-            var oldVolume = volume;
-            volume = Mathf.Clamp(volume, PPart.volumeMin, PPart.volumeMax);
-            if (volume != oldVolume)
-            {
-                var excessVol = oldVolume - volume;
-                if (oldInnerDiameter != InnerDiameter)
-                {
-                    var requiredInnerDiameter = Mathf.Sqrt(volume / Length / CornerCount / NormHalfSideLength / NormInnerRadius);
-                    diameter = TruncateForSlider(ConvertToEditorDiameter(requiredInnerDiameter), -excessVol);
-                }
-                else
-                {
-                    var requiredLength = volume / Area;
-                    Length = TruncateForSlider(requiredLength, -excessVol);
-                }
-                volume = VolumeCalculated;
-                RefreshPartEditorWindow();
-            }
-
-            return volume;
-        }
-
-        private void UpdateProps()
-        {
-            foreach (var pm in GetComponents<PartModule>())
-            {
-                var prop = pm as IProp;
-                if (null != prop)
-                    prop.UpdateProp();
-            }
-        }
+        #region Meshes
 
         private void GenerateColliderMesh()
         {
@@ -311,7 +265,7 @@ namespace ProceduralParts
             var tankULength = CornerCount * NormSideLength * InnerDiameter * 2;
             var tankVLength = Length;
 
-            RaiseChangeTextureScale("sides", PPart.SidesMaterial, new Vector2(tankULength, tankVLength));
+            RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(mesh, PPart.SidesIconMesh, SidesMesh);
         }
 
@@ -324,7 +278,7 @@ namespace ProceduralParts
             node.breakingTorque = node.breakingForce = Mathf.Max(50 * node.size * node.size, 50);
 
             RaiseChangeAttachNodeSize(node, InnerDiameter, Mathf.PI * InnerDiameter * InnerDiameter * 0.25f);
-            RaiseChangeTextureScale(nodeName, PPart.EndsMaterial, new Vector2(InnerDiameter, InnerDiameter));
+            RaiseChangeTextureScale(nodeName, PPart.legacyTextureHandler.EndsMaterial, new Vector2(InnerDiameter, InnerDiameter));
         }
 
         private static void WriteToAppropriateMesh(UncheckedMesh mesh, Mesh iconMesh, Mesh normalMesh)
@@ -432,236 +386,14 @@ namespace ProceduralParts
                 CreateCapCornerVertices(mesh, y, offset, cornerNumber);
             }
         }
+        
+        #endregion
 
-        public override object AddAttachment(TransformFollower transformFollower, bool normalized)
-        {
-            return normalized ? AddNormalizedAttachment(transformFollower) : AddNonNormalizedAttachment(transformFollower);
-        }
-
-        private enum Location
-        {
-            Top, Bottom, Side
-        }
-
-        private class Attachment
-        {
-            public TransformFollower follower;
-            public Location location;
-            public Vector2 uv;
-
-            public LinkedListNode<Attachment> node;
-
-            public override string ToString()
-            {
-                return "Attachment(location:" + location + ", uv=" + uv.ToString("F4") + ")";
-            }
-        }
-
-        private readonly LinkedList<Attachment> topAttachments = new LinkedList<Attachment>();
-        private readonly LinkedList<Attachment> bottomAttachments = new LinkedList<Attachment>();
-        private readonly LinkedList<Attachment> sideAttachments = new LinkedList<Attachment>();
-
-        private object AddNonNormalizedAttachment(TransformFollower transformFollower)
-        {
-            var position = transformFollower.transform.localPosition;
-
-            var attachmentHeightToRadiusSquared = position.y * position.y / (position.x * position.x + position.z * position.z);
-            var tankCornerHeightToRadiusSquared = Length * Length / (InnerDiameter * InnerDiameter);
-
-            if (attachmentHeightToRadiusSquared > tankCornerHeightToRadiusSquared)
-            {
-                return AddNonNormalizedCapAttachment(transformFollower, position);
-            }
-            else
-            {
-                return AddNonNormalizedSideAttachment(transformFollower, position);
-            }
-        }
-
-        private object AddNonNormalizedSideAttachment(TransformFollower transformFollower, Vector3 position)
-        {
-            var theta = Mathf.Atan2(-position.z, position.x);
-            var uv = GetNonNormalizedSideAttachmentUv(position, theta);
-            var orientation = SideAttachOrientation(theta, out var normal);
-            var attachment = CreateAttachment(transformFollower, uv, Location.Side, orientation);
-            AddSideAttachment(attachment);
-
-            return attachment;
-        }
-
-        private Vector2 GetNonNormalizedSideAttachmentUv(Vector3 position, float theta)
-        {
-            var uv = new Vector2((Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f, position.y / Length + 0.5f);
-            if (float.IsNaN(uv[0]))
-            {
-                uv[0] = 0f;
-            }
-
-            return uv;
-        }
-
-        private Attachment AddNonNormalizedCapAttachment(TransformFollower transformFollower, Vector3 position)
-        {
-            var uv = new Vector2(position.x / InnerRadius + 0.5f, position.z / InnerRadius + 0.5f);
-            return AddCapAttachment(transformFollower, position, uv);
-        }
-
-        private Attachment AddCapAttachment(TransformFollower follower, Vector3 position, Vector2 uv)
-        {
-            if (position.y > 0)
-            {
-                return AddCapAttachment(follower, uv, Location.Top, Quaternion.LookRotation(Vector3.up, Vector3.right));
-            }
-            else
-            {
-                return AddCapAttachment(follower, uv, Location.Bottom, Quaternion.LookRotation(Vector3.down, Vector3.left));
-            }
-        }
-
-        private Attachment AddCapAttachment(TransformFollower transformFollower, Vector2 uv, Location location, Quaternion orientation)
-        {
-            var attachment = CreateAttachment(transformFollower, uv, location, orientation);
-            var attachmentList = location == Location.Top ? topAttachments : bottomAttachments;
-            attachment.node = attachmentList.AddLast(attachment);
-
-            return attachment;
-        }
-
-        private static Attachment CreateAttachment(TransformFollower transformFollower, Vector2 uv, Location location, Quaternion orientation)
-        {
-            transformFollower.SetLocalRotationReference(orientation);
-            return new Attachment
-            {
-                uv = uv,
-                follower = transformFollower,
-                location = location,
-            };
-        }
-
-        private object AddNormalizedAttachment(TransformFollower follower)
-        {
-            var position = follower.transform.localPosition;
-            Attachment attachment;
-
-            // as the position might be after some rotation and translation, it might not be exactly +/- 0.5
-            if (Mathf.Abs(Mathf.Abs(position.y) - Mathf.Abs(position.magnitude)) < 1e-5f)
-            {
-                attachment = AddNormalizedCapAttachment(follower, position);
-            }
-            else
-            {
-                attachment = AddNormalizedSideAttachment(follower, position);
-            }
-            ForceNextUpdate();
-            return attachment;
-        }
-
-        private Attachment AddNormalizedSideAttachment(TransformFollower follower, Vector3 position)
-        {
-            var uv = GetNormalizedSideAttachmentUv(follower, position);
-            var normalVector = new Vector3(position.x * 2f, 0, position.z * 2f);
-            var attachment = CreateAttachment(follower, uv, Location.Side, Quaternion.FromToRotation(Vector3.up, normalVector));
-            AddSideAttachment(attachment);
-            return attachment;
-        }
-
-        private static Vector2 GetNormalizedSideAttachmentUv(TransformFollower follower, Vector3 position)
-        {
-            var theta = Mathf.Atan2(-position.z, position.x);
-            var uv = new Vector2(GetSideAttachmentU(theta), 0.5f - position.y);
-            if (float.IsNaN(uv[0]))
-            {
-                uv[0] = 0f;
-            }
-
-            return uv;
-        }
+        #region Attachments
 
         private static float GetSideAttachmentU(float theta)
         {
             return (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
-        }
-
-        private Attachment AddNormalizedCapAttachment(TransformFollower follower, Vector3 position)
-        {
-            var uv = new Vector2(position.x + 0.5f, position.z + 0.5f);
-            return AddCapAttachment(follower, position, uv);
-        }
-
-        private void AddSideAttachment(Attachment attachment)
-        {
-            for (var node = sideAttachments.First; node != null; node = node.Next)
-                if (node.Value.uv[1] > attachment.uv[1])
-                {
-                    attachment.node = sideAttachments.AddBefore(node, attachment);
-                    return;
-                }
-            attachment.node = sideAttachments.AddLast(attachment);
-        }
-
-        public override TransformFollower RemoveAttachment(object data, bool normalize)
-        {
-            var attach = (Attachment)data;
-            switch (attach.location)
-            {
-                case Location.Top:
-                    topAttachments.Remove(attach.node);
-                    if (normalize)
-                        attach.follower.transform.localPosition = new Vector3(attach.uv[0] - 0.5f, 0.5f, attach.uv[1] - 0.5f);
-                    break;
-                case Location.Bottom:
-                    bottomAttachments.Remove(attach.node);
-                    if (normalize)
-                        attach.follower.transform.localPosition = new Vector3(attach.uv[0] - 0.5f, -0.5f, attach.uv[1] - 0.5f);
-                    break;
-                case Location.Side:
-                    sideAttachments.Remove(attach.node);
-
-                    if (normalize)
-                    {
-                        var theta = Mathf.Lerp(0, Mathf.PI * 2f, attach.uv[0]);
-                        var x = Mathf.Cos(theta);
-                        var z = -Mathf.Sin(theta);
-
-                        var normal = new Vector3(x, 0, z);
-                        attach.follower.transform.localPosition = new Vector3(normal.x * 0.5f, 0.5f - attach.uv[1], normal.z * 0.5f);
-                        attach.follower.transform.localRotation = Quaternion.FromToRotation(Vector3.up, normal);
-                    }
-                    break;
-            }
-
-            if (normalize)
-                attach.follower.ForceUpdate();
-            return attach.follower;
-        }
-
-        private void MoveAttachments()
-        {
-            foreach (var attachment in topAttachments)
-            {
-                MoveCapAttachment(attachment, HalfHeight);
-            }
-            foreach (var attachment in bottomAttachments)
-            {
-                MoveCapAttachment(attachment, -HalfHeight);
-            }
-            foreach (var attachment in sideAttachments)
-            {
-                MoveSideAttachment(attachment);
-            }
-        }
-
-        private void MoveSideAttachment(Attachment attachment)
-        {
-            var theta = Mathf.Lerp(0, Mathf.PI * 2f, attachment.uv[0]);
-            var x = Mathf.Cos(theta) * InnerRadius;
-            var z = -Mathf.Sin(theta) * InnerRadius;
-            var pos = new Vector3(x, attachment.uv[1] - 0.5f, z);
-            attachment.follower.transform.localPosition = pos;
-
-            var orientation = SideAttachOrientation(theta, out var normal);
-            attachment.follower.transform.localRotation = orientation;
-            attachment.follower.ForceUpdate();
         }
 
         private static Quaternion SideAttachOrientation(float theta, out Vector3 normal)
@@ -670,14 +402,6 @@ namespace ProceduralParts
             return Quaternion.FromToRotation(Vector3.up, normal);
         }
 
-        private void MoveCapAttachment(Attachment attachment, float yCoordinate)
-        {
-            var pos = new Vector3(
-                                (attachment.uv[0] - 0.5f) * InnerRadius,
-                                yCoordinate,
-                                (attachment.uv[1] - 0.5f) * InnerRadius);
-            attachment.follower.transform.localPosition = pos;
-            attachment.follower.ForceUpdate();
-        }
+        #endregion
     }
 }

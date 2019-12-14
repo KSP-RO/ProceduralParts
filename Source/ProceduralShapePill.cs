@@ -1,172 +1,143 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using KSPAPIExtensions;
 
 namespace ProceduralParts
 {
-    public class ProceduralShapePill
-        : ProceduralAbstractSoRShape
+    public class ProceduralShapePill : ProceduralAbstractSoRShape
     {
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m"),
+        private static readonly string ModTag = "[ProceduralShapePill]";
+
+        #region Config parameters
+
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
 		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float diameter = 1.25f;
-        private float oldDiameter;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
 		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
-        private float oldLength;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fillet", guiFormat = "F3", guiUnits = "m"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fillet", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
 		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float fillet = 1f;
-        private float oldFillet;
 
-        [KSPField]
-        public bool useEndDiameter = false;
+        #endregion
 
-        private UI_FloatEdit filletEdit;
+        #region Initialization
 
         public override void OnStart(StartState state)
         {
             UpdateTechConstraints();
+            base.OnStart(state);
+
+            Fields[nameof(diameter)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged) +
+                new Callback<BaseField, object>(ClampFillet);
+
+            Fields[nameof(length)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged) +
+                new Callback<BaseField, object>(ClampFillet);
+
+            Fields[nameof(fillet)].uiControlEditor.onFieldChanged =
+                new Callback<BaseField, object>(OnShapeDimensionChanged) +
+                new Callback<BaseField, object>(ClampFillet);
+
+            Fields[nameof(diameter)].uiControlEditor.onSymmetryFieldChanged =
+            Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
+            Fields[nameof(fillet)].uiControlEditor.onSymmetryFieldChanged =
+                new Callback<BaseField, object>(ClampFillet);
         }
+
+        public override void UpdateTechConstraints()
+        {
+            Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
+            UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
+            lengthEdit.maxValue = PPart.lengthMax;
+            lengthEdit.minValue = PPart.lengthMin;
+            lengthEdit.incrementLarge = PPart.lengthLargeStep;
+            lengthEdit.incrementSmall = PPart.lengthSmallStep;
+            length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
+
+            Fields[nameof(diameter)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
+            UI_FloatEdit diameterEdit = Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit;
+            diameterEdit.maxValue = PPart.diameterMax;
+            diameterEdit.minValue = PPart.diameterMin;
+            diameterEdit.incrementLarge = PPart.diameterLargeStep;
+            diameterEdit.incrementSmall = PPart.diameterSmallStep;
+            diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
+
+            Fields[nameof(fillet)].guiActiveEditor = PPart.allowCurveTweaking;
+            UI_FloatEdit filletEdit = Fields[nameof(fillet)].uiControlEditor as UI_FloatEdit;
+            filletEdit.maxValue = Mathf.Min(length, diameter);
+            filletEdit.minValue = 0;
+            filletEdit.incrementLarge = PPart.diameterLargeStep;
+            filletEdit.incrementSmall = PPart.diameterSmallStep;
+            fillet = Mathf.Clamp(fillet, filletEdit.minValue, filletEdit.maxValue);
+        }
+
+        #endregion
+
+        #region Update handlers
 
         // A few shortcuts to use in formulas.
         private const float Pi = Mathf.PI;
         private static readonly Func<float, float> sqrt = Mathf.Sqrt;
         private static readonly Func<float, float, float> pow = Mathf.Pow;
 
-        protected override void UpdateShape(bool forceUpdate)
+        private void ClampFillet(BaseField f, object obj)
         {
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (!forceUpdate && oldDiameter == diameter && oldLength == length && oldFillet == fillet)
+            if (fillet > Mathf.Min(diameter, length))
+            {
+                fillet = Mathf.Min(diameter, length);
+                MonoUtilities.RefreshContextWindows(part);
+            }
+        }
+
+        public override void AdjustDimensionBounds()
+        {
+            if (float.IsPositiveInfinity(PPart.volumeMax))
+            {
+                (Fields[nameof(fillet)].uiControlEditor as UI_FloatEdit).maxValue = Mathf.Min(diameter, length);
                 return;
-
-            var refreshRequired = false;
-
-            if (HighLogic.LoadedSceneIsFlight)
-            {
-                Volume = CalcVolume();
-            }
-            else if (HighLogic.LoadedSceneIsEditor)
-            {
-                if (filletEdit == null)
-                    filletEdit = (UI_FloatEdit)Fields["fillet"].uiControlEditor;
-
-                if (diameter != oldDiameter)
-                {
-                    if (useEndDiameter)
-                    {
-                        if (diameter + fillet < PPart.diameterMin)
-                            fillet = PPart.diameterMin - diameter;
-                        else if (diameter + fillet > PPart.diameterMax)
-                            fillet = PPart.diameterMax - diameter;
-                    }
-                    else
-                    {
-                        if (diameter < oldDiameter && fillet > diameter)
-                            fillet = diameter;
-                    }
-
-                    var volume = CalcVolume();
-                    var clampedVolume = GetClampedVolume(volume);
-                    var excessVol = volume - clampedVolume;
-                    if (excessVol != 0)
-                    {
-                        refreshRequired = true; 
-                        // Unfortunatly diameter is not as easily isolated, but its still possible.
-
-                        // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for d
-                        // simplify d = ((-3 pi^2 f^2+12 pi f^2) ± sqrt(3 pi) sqrt(3 pi^3 f^4-24 pi^2 f^4+48 pi f^4+24 pi^2 f^3 l-80 pi f^3 l+192 l v))/(12 pi l) 
-                        // d = (-3 (pi-4) pi f^2 ± sqrt(3 pi) sqrt(3 (pi-4)^2 pi f^4+8 pi (3 pi-10) f^3 l+192 l v)) / (12 pi l)
-
-                        float t1 = -3 * (Pi - 4f) * Pi * fillet * fillet;
-                        float t2 = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * clampedVolume);
-                        float de = (12f * Pi * length);
-
-                        // I'm pretty sure only the +ve value is required, but make the -ve possible too.
-                        diameter = (t1 + t2) / de;
-                        if (diameter < 0)
-                            diameter = (t1 - t2) / de;
-
-                        diameter = TruncateForSlider(diameter, -excessVol);
-                        volume = CalcVolume();
-                    }
-
-                    filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
-                    Volume = volume;
-                }
-                else if (fillet != oldFillet)
-                {
-                    if (useEndDiameter)
-                    {
-                        // Keep diameter + fillet within range.
-                        if (diameter + fillet < PPart.diameterMin)
-                            diameter = PPart.diameterMin - fillet;
-                        else if (diameter + fillet > PPart.diameterMax)
-                            diameter = PPart.diameterMax - fillet;
-                    }
-
-                    // Will do an iterative process for finding the value.
-                    // The equation is far too complicated plug this into alpha and you'll see what I mean:
-                    // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for f
-
-                    var volume = CalcVolume();
-                    float inc = 0;
-
-                    if (volume < PPart.volumeMin)
-                    {
-                        inc = -IteratorIncrement;
-                    }
-                    else if (volume > PPart.volumeMax)
-                    {
-                        inc = IteratorIncrement;
-                    }
-
-                    if (inc != 0)
-                    {
-                        refreshRequired = true;
-                        var tempFillet = fillet;
-                        var i = 1;
-                        while (volume < PPart.volumeMin && inc < 0 || volume > PPart.volumeMax && inc > 0)
-                        {
-                            fillet = TruncateForSlider(tempFillet + i * inc, inc);
-                            volume = CalcVolume();
-                            i++;
-                        }
-                    }
-                    Volume = volume;
-                }
-                else if(length != oldLength || forceUpdate)
-                {
-                    if (length < oldLength && fillet > length)
-                        fillet = length;
-
-                    var volume = CalcVolume();
-                    var clampedVolume = GetClampedVolume(volume);
-                    var excessVol = volume - clampedVolume;
-                    if (excessVol != 0)
-                    {
-                        refreshRequired = true;
-                        // Again using alpha, solve the volume equation below equation for l
-                        // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for l
-                        // l = (-3 (pi-4) pi d f^2+pi (3 pi-10) f^3+24 v)/(6 pi d^2) 
-                        length = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * clampedVolume) / (6f * Pi * pow(diameter, 2));
-                        length = TruncateForSlider(length, -excessVol);
-                        volume = CalcVolume();
-
-                        // We could iterate here with the fillet and push it back up if it's been pushed down
-                        // but it's altogether too much bother. User will just have to suck it up and not be
-                        // so darn agressive with short lengths. I mean, seriously... :)
-                    }
-
-                    filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
-                    Volume = volume;
-                }
             }
 
+            // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for d
+            // simplify d = ((-3 pi^2 f^2+12 pi f^2) ± sqrt(3 pi) sqrt(3 pi^3 f^4-24 pi^2 f^4+48 pi f^4+24 pi^2 f^3 l-80 pi f^3 l+192 l v))/(12 pi l) 
+            // d = (-3 (pi-4) pi f^2 ± sqrt(3 pi) sqrt(3 (pi-4)^2 pi f^4+8 pi (3 pi-10) f^3 l+192 l v)) / (12 pi l)
+            // l = (-3 (pi-4) pi d f^2+pi (3 pi-10) f^3+24 v)/(6 pi d^2) 
+
+            float t1 = -3 * (Mathf.PI - 4f) * Mathf.PI * fillet * fillet;
+            float t2 = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * PPart.volumeMax);
+            float de = (12f * Mathf.PI * length);
+
+            // I'm pretty sure only the +ve value is required, but make the -ve possible too.
+            float maxDiameter = (t1 + t2) > 0 ? (t1 + t2) / de : (t1 - t2) / de;
+            float maxLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * PPart.volumeMax) / (6f * Pi * pow(diameter, 2));
+            float maxFillet = fillet;
+            IterateVolumeLimits(length, diameter, ref maxFillet, IteratorIncrement);
+
+            (Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit).maxValue = maxDiameter;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = maxLength;
+            (Fields[nameof(fillet)].uiControlEditor as UI_FloatEdit).maxValue = maxFillet;
+        }
+
+        private void IterateVolumeLimits(float length, float diameter, ref float fillet, float inc, int scale = 6)
+        {
+            if (inc <= 0) return;
+            while (scale-- >= 0)
+            {
+                float curInc = inc * Mathf.Pow(10, scale);
+                while (CalculateVolume(length, diameter, fillet + curInc) < PPart.volumeMax && fillet < Mathf.Min(length, diameter))
+                {
+                    fillet += curInc;
+                }
+            }
+        }
+
+        internal override void UpdateShape(bool forceUpdate=true)
+        {
+            Volume = CalculateVolume();
             LinkedList<ProfilePoint> points = new LinkedList<ProfilePoint>();
 
             if (fillet == 0)
@@ -178,8 +149,8 @@ namespace ProceduralParts
             else
             {
                 float bodyLength = length - fillet;
-                float endDiameter = useEndDiameter ? diameter : (diameter - fillet);
-                float bodyDiameter = useEndDiameter ? (fillet + diameter) : diameter;
+                float endDiameter = diameter - fillet;
+                float bodyDiameter = diameter;
 
                 float filletLength = Mathf.PI * fillet * 0.5f;
                 float totLength = filletLength + bodyLength;
@@ -211,19 +182,10 @@ namespace ProceduralParts
             }
 
             WriteMeshes(points);
-
-            oldDiameter = diameter;
-            oldLength = length;
-            oldFillet = fillet;
-            // ReSharper restore CompareOfFloatsByEqualityOperator
-            if (refreshRequired)
-            {
-                RefreshPartEditorWindow();
-            }
-            UpdateInterops();
         }
 
-        private float CalcVolume()
+        public override float CalculateVolume() => CalculateVolume(length, diameter, fillet);
+        public virtual float CalculateVolume(float length, float diameter, float fillet)
         {
             // To get formula for part volume: l = length, d = diameter, f = fillet
             // body cylinder = pi * r^2 * h 
@@ -246,70 +208,42 @@ namespace ProceduralParts
             return Mathf.PI / 24f * (6f * diameter * diameter * length + 3f * (Mathf.PI - 4) * diameter * fillet * fillet + (10f - 3f * Mathf.PI) * fillet * fillet * fillet);
         }
 
-        private float GetClampedVolume(float volume)
-        {
-            if (volume > PPart.volumeMax)
-            {
-                volume = PPart.volumeMax;
-            }
-            else if (volume < PPart.volumeMin)
-            {
-                volume = PPart.volumeMin;
-            }
-            return volume;
-        }
-
-        public override void UpdateTechConstraints()
-        {
-            if (!HighLogic.LoadedSceneIsEditor)
-                return;
-            // ReSharper disable CompareOfFloatsByEqualityOperator
-            if (PPart.lengthMin == PPart.lengthMax)
-                Fields["length"].guiActiveEditor = false;
-            else
-            {
-                UI_FloatEdit lengthEdit = (UI_FloatEdit)Fields["length"].uiControlEditor;
-                lengthEdit.maxValue = PPart.lengthMax;
-                lengthEdit.minValue = PPart.lengthMin;
-                lengthEdit.incrementLarge = PPart.lengthLargeStep;
-                lengthEdit.incrementSmall = PPart.lengthSmallStep;
-                length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
-            }
-
-            UI_FloatEdit diameterEdit = (UI_FloatEdit)Fields["diameter"].uiControlEditor;
-            if (PPart.diameterMin == PPart.diameterMax)
-                Fields["diameter"].guiActiveEditor = false;
-            else
-            {
-                diameterEdit.maxValue = PPart.diameterMax;
-                diameterEdit.minValue = PPart.diameterMin;
-                diameterEdit.incrementLarge = PPart.diameterLargeStep;
-                diameterEdit.incrementSmall = PPart.diameterSmallStep;
-                diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
-            }
-
-            if (!PPart.allowCurveTweaking)
-            {
-                Fields["fillet"].guiActiveEditor = false;
-                diameterEdit.maxValue = PPart.diameterMax - fillet;
-            }
-            else
-            {
-                filletEdit = (UI_FloatEdit)Fields["fillet"].uiControlEditor;
-                filletEdit.maxValue = Mathf.Min(length, useEndDiameter ? PPart.diameterMax : diameter);
-                filletEdit.minValue = 0;
-                filletEdit.incrementLarge = PPart.diameterLargeStep;
-                filletEdit.incrementSmall = PPart.diameterSmallStep;
-                fillet = Mathf.Clamp(fillet, filletEdit.minValue, filletEdit.maxValue);
-            }
-            // ReSharper restore CompareOfFloatsByEqualityOperator    
-        }
-
         public override void UpdateTFInterops()
         {
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", diameter, "ProceduralParts" });
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam2", fillet, "ProceduralParts" });
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
+
+        public override void TranslateAttachmentsAndNodes(BaseField f, object obj)
+        {
+            if (f.name == nameof(diameter) && obj is float oldDiameter)
+            {
+                HandleDiameterChange((float)f.GetValue(this), oldDiameter);
+            }
+            else if (f.name == nameof(fillet))
+            {
+                //HandleDiameterChange(f, obj);
+            }
+            if (f.name == nameof(length) && obj is float oldLen)
+            {
+                HandleLengthChange((float)f.GetValue(this), oldLen);
+            }
+        }
+
+        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, diameter);
+
+        public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r /= (diameter / 2);
+            coords.y /= length;
+        }
+
+        public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r *= (diameter / 2);
+            coords.y *= length;
+        }
+        #endregion
     }
 }
