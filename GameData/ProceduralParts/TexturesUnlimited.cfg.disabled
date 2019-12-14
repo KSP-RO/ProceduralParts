@@ -1,163 +1,6 @@
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = Default
-    title = Default
-    author = Pap
-    recolorable = true
-    MATERIAL
-    {
-        shader = TU/Metallic
-        texture = _MainTex,         JoeTest/Textures/Default-DIFF
-        texture = _BumpMap,         JoeTest/Textures/Smooth-NRM
-        texture = _MetallicGlossMap,ProceduralParts/Textures/Metallic/Smooth-METAL
-        texture = _MaskTex,         ProceduralParts/Textures/Masks/Solid-MASK
-        keyword = TU_RECOLOR
-        vector = _DiffuseNorm,      0.5,0.5,0.5
-        vector = _MetalNorm,        0.5,0.5,0.5
-        vector = _SmoothnessNorm,   0.5,0.5,0.5
-        mesh = sides
-        mesh = ends
-    }
-    COLORS
-    {
-        mainColor = gray
-        secondColor = white
-        detailColor = white
-    }
-}
-
-KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
-{
-    name = Pap-Foil
-    title = Foil
-    author = Pap
-    recolorable = true
-    MATERIAL
-    {
-        shader = TU/Metallic
-        texture = _MainTex,         JoeTest/Textures/Foil-DIFF
-        texture = _BumpMap,         JoeTest/Textures/Foil-NRM
-        texture = _MetallicGlossMap,ProceduralParts/Textures/Metallic/Smooth-METAL
-        texture = _MaskTex,         ProceduralParts/Textures/Masks/Solid-MASK
-        keyword = TU_RECOLOR
-        vector = _DiffuseNorm,      0.5,0.5,0.5
-        vector = _MetalNorm,        0.5,0.5,0.5
-        vector = _SmoothnessNorm,   0.5,0.5,0.5
-//        excludeMesh = ends
-    }
-    COLORS
-    {
-        mainColor = gold
-        secondColor = white
-        detailColor = white
-    }
-}
-
-// Bump maps only in this section (no textures or color masks)
-
-KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
-{
-    name = Original-bump
-    title = PP-Original-bump
-    MATERIAL
-    {
-        texture = _BumpMap,         ProceduralParts/Parts/sides_NRM
-    }
-    EXTRA_INFO
-    {
-        author = Ancient Gammoner
-    }
-}
-
-KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
-{
-    name = Tiles-bump
-    title = PP-Tiles-bump
-    MATERIAL
-    {
-        texture = _BumpMap,         ProceduralParts/Parts/tiles_NRM
-    }
-    EXTRA_INFO
-    {
-        author = Swamp Ig
-    }
-}
-
-KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
-{
-    name = Stockalike-bump
-    title = PP-Stockalike-bump
-    MATERIAL
-    {
-        texture = _BumpMap,         ProceduralParts/Parts/stocksides_NRM
-    }
-    EXTRA_INFO
-    {
-        author = Ancient Gammoner
-    }
-}
-
-KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
-{
-    name = SegmentedSRB-bump
-    title = PP-SegmentedSRB-bump
-    MATERIAL
-    {
-        texture = _BumpMap,         ProceduralParts/Parts/srbsides_NRM
-    }
-    EXTRA_INFO
-    {
-        author = e-dog
-    }
-}
-
-KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
-{
-    name = Atlas-bump
-    title = PP-Atlas-bump
-    MATERIAL
-    {
-        texture = _BumpMap,         ProceduralParts/Parts/atlas_NRM
-    }
-    EXTRA_INFO
-    {
-        author = Dante80
-    }
-}
-
-KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
-{
-    name = Copernicus-bump
-    title = PP-Copernicus-bump
-    MATERIAL
-    {
-        texture = _BumpMap,         ProceduralParts/Parts/copernicus_NRM
-    }
-    EXTRA_INFO
-    {
-        author = e-dog
-    }
-}
-
-KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
-{
-    name = GoldFoil-bump
-    title = PP-GoldFoil-bump
-    MATERIAL
-    {
-        texture = _BumpMap,         ProceduralParts/Parts/foilthin_NRM
-    }
-    EXTRA_INFO
-    {
-        author = e-dog
-    }
-}
-
-// Main textures & color-masks only in this section (no bump maps)
-
-KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
-{
-    name = Original-main
+    name = Original
     title = PP-Original
     recolorable = true
     MATERIAL
@@ -171,7 +14,12 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
         vector = _DiffuseNorm,      0.5,0.5,0.5
         vector = _MetalNorm,        0.5,0.5,0.5
         vector = _SmoothnessNorm,   0.5,0.5,0.5
-        textureScale = _MainTex, 4, 1
+        PROPERTY
+        {
+            name - _MainTex
+            scale = 4, 1
+        }
+        //textureScale = _MainTex, 4, 1
         float = _Metal, 0.2
         float = _Smoothness, 0.2
     }
@@ -190,7 +38,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = Tiles-main
+    name = Tiles
     title = PP-Tiles
     recolorable = true
     MATERIAL
@@ -223,7 +71,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = Stockalike-main
+    name = Stockalike
     title = PP-Stockalike
     recolorable = true
     MATERIAL
@@ -255,7 +103,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = German-main
+    name = German
     title = PP-German
     recolorable = true
     MATERIAL
@@ -286,7 +134,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = Saturn-main
+    name = Saturn
     title = PP-Saturn
     recolorable = true
     MATERIAL
@@ -317,7 +165,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = SegmentedSRB-main
+    name = SegmentedSRB
     title = PP-SegmentedSRB
     recolorable = true
     MATERIAL
@@ -350,7 +198,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = CryogenicOrange-main
+    name = CryogenicOrange
     title = PP-CryogenicOrange
     recolorable = true
     MATERIAL
@@ -382,7 +230,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = RedstoneStripes-main
+    name = RedstoneStripes
     title = PP-RedstoneStripes
     recolorable = true
     MATERIAL
@@ -413,7 +261,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = TitanStripes-main
+    name = TitanStripes
     title = PP-TitanStripes
     recolorable = true
     MATERIAL
@@ -444,7 +292,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = WhiteSide-main
+    name = WhiteSide
     title = PP-WhiteSide
     recolorable = true
     MATERIAL
@@ -476,7 +324,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = BlueSide-main
+    name = BlueSide
     title = PP-BlueSide
     recolorable = true
     MATERIAL
@@ -507,7 +355,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = GreySide-main
+    name = GreySide
     title = PP-GreySide
     recolorable = true
     MATERIAL
@@ -538,7 +386,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = Ablative-main
+    name = Ablative
     title = PP-Ablative
     recolorable = true
     MATERIAL
@@ -570,7 +418,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = PlainWhite-main
+    name = PlainWhite
     title = PP-PlainWhite
     recolorable = true
     MATERIAL
@@ -602,7 +450,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = SoyuzGreen-main
+    name = SoyuzGreen
     title = PP-SoyuzGreen
     recolorable = true
     MATERIAL
@@ -633,7 +481,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = Atlas-main
+    name = Atlas
     title = PP-Atlas
     recolorable = true
     MATERIAL
@@ -666,7 +514,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = Copernicus-main
+    name = Copernicus
     title = PP-Copernicus
     recolorable = true
     MATERIAL
@@ -699,7 +547,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = Mu-main
+    name = Mu
     title = PP-Mu
     recolorable = true
     MATERIAL
@@ -731,7 +579,7 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
 KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 {
-    name = GoldFoil-main
+    name = GoldFoil
     title = PP-GoldFoil
     recolorable = true
     MATERIAL
@@ -798,36 +646,32 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
         name = SSTURecolorGUI
     }
 
-
     MODULE
     {
         name = KSPTextureSwitch
         transformName = sides
-    
-	//for recolorable texture sets, this is the name that will be displayed for the 'section' in the GUI
         sectionName = Sides
 
-        currentTextureSet = Stockalike-main
-        textureSet = Original-main
-        textureSet = Tiles-main
-        textureSet = Stockalike-main
-        textureSet = German-main
-        textureSet = Saturn-main
-        textureSet = SegmentedSRB-main
-        textureSet = CryogenicOrange-main
-        textureSet = RedstoneStripes-main
-        textureSet = TitanStripes-main
-        textureSet = WhiteSide-main
-        textureSet = BlueSide-main
-        textureSet = GreySide-main
-        textureSet = Ablative-main
-        textureSet = PlainWhite-main
-        textureSet = SoyuzGreen-main
-        textureSet = Atlas-main
-        textureSet = Mu-main
-        textureSet = Copernicus-main
-        textureSet = GoldFoil-main
-        textureSet = Pap-Foil
+        currentTextureSet = Stockalike
+        textureSet = Original
+        textureSet = Tiles
+        textureSet = Stockalike
+        textureSet = German
+        textureSet = Saturn
+        textureSet = SegmentedSRB
+        textureSet = CryogenicOrange
+        textureSet = RedstoneStripes
+        textureSet = TitanStripes
+        textureSet = WhiteSide
+        textureSet = BlueSide
+        textureSet = GreySide
+        textureSet = Ablative
+        textureSet = PlainWhite
+        textureSet = SoyuzGreen
+        textureSet = Atlas
+        textureSet = Mu
+        textureSet = Copernicus
+        textureSet = GoldFoil
     }
 
     MODULE
@@ -838,8 +682,8 @@ KSP_TEXTURE_SET:NEEDS[TexturesUnlimited]
 
         currentTextureSet = CustomEnds
         textureSet = CustomEnds
-        textureSet = GreySide-main
-        textureSet = PlainWhite-main
-        textureSet = SoyuzGreen-main
+        textureSet = GreySide
+        textureSet = PlainWhite
+        textureSet = SoyuzGreen
     }
 }
