@@ -208,6 +208,11 @@ namespace ProceduralParts
             return Mathf.PI / 24f * (6f * diameter * diameter * length + 3f * (Mathf.PI - 4) * diameter * fillet * fillet + (10f - 3f * Mathf.PI) * fillet * fillet * fillet);
         }
 
+        public override bool SeekVolume(float targetVolume)
+        {
+            throw new NotImplementedException($"SeekVolume not implemented for {ModTag}");
+        }
+
         public override void UpdateTFInterops()
         {
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", diameter, "ProceduralParts" });

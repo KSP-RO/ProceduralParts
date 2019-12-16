@@ -179,6 +179,11 @@ namespace ProceduralParts
             return Mathf.PI * M_y;
         }
 
+        public override bool SeekVolume(float targetVolume)
+        {
+            throw new NotImplementedException($"SeekVolume not implemented for {ModTag}");
+        }
+
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             CalculateVolume();  // Update the bezier curve control nodes

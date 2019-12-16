@@ -98,6 +98,13 @@ namespace ProceduralParts
             return null;
         }
 
+        /* Unknown, but in 1.6, symmetry callback happens before primary callback, AND obj is 
+         * NOT the previous value!
+         * 
+         * [LOG 14:15:29.840] [ProceduralShapeCylinder] OnShapeDimensionChangedSYMMETRY! so ignoring.  length from 6 to 6
+         * [LOG 14:15:29.841] [ProceduralShapeCylinder] OnShapeDimensionChangedSYMMETRY! so ignoring.  length from 6 to 6
+         * [LOG 14:15:29.842] [ProceduralShapeCylinder] OnShapeDimensionChanged override: length from 5 to 6
+         */
         public virtual void OnShapeDimensionChanged(BaseField f, object obj)
         {
             if (f.GetValue(this).Equals(obj))
@@ -170,13 +177,6 @@ namespace ProceduralParts
             }
         }
 
-        /* Unknown, but in 1.6, symmetry callback happens before primary callback, AND obj is 
-         * NOT the previous value!
-         * 
-         * [LOG 14:15:29.840] [ProceduralShapeCylinder] OnShapeDimensionChangedSYMMETRY! so ignoring.  length from 6 to 6
-         * [LOG 14:15:29.841] [ProceduralShapeCylinder] OnShapeDimensionChangedSYMMETRY! so ignoring.  length from 6 to 6
-         * [LOG 14:15:29.842] [ProceduralShapeCylinder] OnShapeDimensionChanged override: length from 5 to 6
-         */
         public virtual void HandleDiameterChange(float diameter, float oldDiameter)
         {
             // Adjust our own surface attach node, and translate ourselves.
@@ -206,6 +206,24 @@ namespace ProceduralParts
                     MovePartByAttachNode(node, coord);
                 }
             }
+        }
+
+        public abstract bool SeekVolume(float targetVolume);
+
+        public virtual bool SeekVolume(float targetVolume, BaseField scaledField)
+        {
+            float maxLength = (scaledField.uiControlEditor as UI_FloatEdit).maxValue;
+            float minLength = (scaledField.uiControlEditor as UI_FloatEdit).minValue;
+            float precision = (scaledField.uiControlEditor as UI_FloatEdit).incrementSlide;
+            float length = (float)scaledField.GetValue(this);
+            float targetLength = length * targetVolume / Volume;
+            targetLength = System.Convert.ToSingle(System.Math.Round(targetLength / precision)) * precision;
+            float clampedTargetLength = Mathf.Max(minLength, Mathf.Min(maxLength, targetLength));
+            bool closeEnough = Mathf.Abs((clampedTargetLength / targetLength) - 1) < 0.01;
+            scaledField.SetValue(targetLength, this);
+            OnShapeDimensionChanged(scaledField, length);
+            MonoUtilities.RefreshContextWindows(part);
+            return closeEnough;
         }
 
         public virtual void GetAttachmentNodeLocation(AttachNode node, out Vector3 worldSpace, out Vector3 localSpace, out ShapeCoordinates coord)
@@ -278,7 +296,7 @@ namespace ProceduralParts
         }
 
         public abstract void UpdateTFInterops();
-        
+
         internal void FixEditorIconScale()
         {
             var meshBounds = CalculateBounds(part.partInfo.iconPrefab.gameObject);
@@ -294,7 +312,6 @@ namespace ProceduralParts
             iconMainTrans.localScale *= factor;
             iconMainTrans.localPosition -= meshBounds.center;
         }
-
 
         //Code from PartIconFixer addon
         private static Bounds CalculateBounds(GameObject go)
@@ -416,7 +433,7 @@ namespace ProceduralParts
 
         #endregion
 
-        #region Attachments
+        #region ShapeCoordinates
 
         public class ShapeCoordinates
         {

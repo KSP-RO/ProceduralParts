@@ -95,6 +95,8 @@ namespace ProceduralParts
             return diameter * diameter * 0.25f * Mathf.PI * length;
         }
 
+        public override bool SeekVolume(float targetVolume) => SeekVolume(targetVolume, Fields[nameof(length)]);
+
         public override void UpdateTFInterops()
         {
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", diameter, "ProceduralParts" });

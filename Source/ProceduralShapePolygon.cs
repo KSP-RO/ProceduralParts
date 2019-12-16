@@ -147,7 +147,6 @@ namespace ProceduralParts
 
         #region Update handlers
 
-
         internal override void UpdateShape(bool force = true)
         {
             Volume = CalculateVolume();
@@ -184,6 +183,7 @@ namespace ProceduralParts
 
         public override float CalculateVolume() => VolumeCalculated;
         private float CalculateVolume(float area, float length) => area * length;
+        public override bool SeekVolume(float targetVolume) => SeekVolume(targetVolume, Fields[nameof(length)]);
 
         public override void UpdateTFInterops()
         {
