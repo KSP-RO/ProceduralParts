@@ -347,3 +347,4 @@ MigrationBackup/
 
 # macOS
 .DS_Store
+*.csproj
