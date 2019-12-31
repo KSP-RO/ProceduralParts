@@ -156,7 +156,7 @@ namespace ProceduralParts
             FixStackAttachments();
         }
 
-        private void FixStackAttachments()
+        private void FixStackAttachments(bool translateParts = false)
         {
             foreach (AttachNode node in this.part.attachNodes)
             {
@@ -176,9 +176,12 @@ namespace ProceduralParts
                             Debug.Log($"{ModTag} Attachment {node.id} on {node.owner} @{selfWorld}(w), REALIGNING TO: {peer.id} on {peer.owner} @{peerWorld}(w). Delta: {delta}");
                             Part partToTranslate = (part.parent == p) ? part : p;   // Move child closer to parent  (translating parent also translates child!)
                             float dir = (partToTranslate == p) ? 1 : -1;            // delta = Movement of the peer, so invert if moving the parent
-                            Debug.Log($"{ModTag} (DISABLED): Translating {partToTranslate} by {RelativeDir(dir * delta, root)}(rr)");
-                            //partToTranslate.transform.Translate(dir * delta, Space.World);
-                            //partToTranslate.orgPos = partToTranslate.transform.position += (dir * delta);
+                            Debug.Log($"{ModTag} {(translateParts ? string.Empty : "(DISABLED)")} Translating {partToTranslate} by {RelativeDir(dir * delta, root)}(rr)");
+                            if (translateParts)
+                            {
+                                //partToTranslate.transform.Translate(dir * delta, Space.World);
+                                partToTranslate.orgPos = partToTranslate.transform.position += (dir * delta);
+                            }
                         }
                     }
                 }
@@ -529,7 +532,7 @@ namespace ProceduralParts
                     }
                 }
                 shape.InitializeAttachmentNodes();
-                FixStackAttachments();
+                FixStackAttachments(true);
             }
 
             shape.isEnabled = shape.enabled = true;

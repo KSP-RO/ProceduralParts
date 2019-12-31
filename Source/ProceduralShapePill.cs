@@ -32,16 +32,17 @@ namespace ProceduralParts
             base.OnStart(state);
 
             Fields[nameof(diameter)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(OnShapeDimensionChanged) +
-                new Callback<BaseField, object>(ClampFillet);
+                new Callback<BaseField, object>(ClampFillet) +
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
+
 
             Fields[nameof(length)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(OnShapeDimensionChanged) +
-                new Callback<BaseField, object>(ClampFillet);
+                new Callback<BaseField, object>(ClampFillet) +
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
 
             Fields[nameof(fillet)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(OnShapeDimensionChanged) +
-                new Callback<BaseField, object>(ClampFillet);
+                new Callback<BaseField, object>(ClampFillet) +
+                new Callback<BaseField, object>(OnShapeDimensionChanged);
 
             Fields[nameof(diameter)].uiControlEditor.onSymmetryFieldChanged =
             Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
