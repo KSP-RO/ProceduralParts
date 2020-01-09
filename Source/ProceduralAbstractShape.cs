@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -56,7 +57,8 @@ namespace ProceduralParts
 
         #region Objects
 
-        public bool nodesInitialized = false;
+        public Boolean nodesInitialized { get; set; }
+
         public ProceduralPart PPart { get => _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
         private ProceduralPart _pPart;
 

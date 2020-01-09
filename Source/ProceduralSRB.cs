@@ -19,10 +19,13 @@ namespace ProceduralParts
 
         private Dictionary<String, GameObject> LRs = new Dictionary<string, GameObject>();
         private Dictionary<String, Vector3> VECs = new Dictionary<string, Vector3>();
-        
+
         public ProceduralPart PPart => _pPart ?? (_pPart = GetComponent<ProceduralPart>());
         private ProceduralPart _pPart;
 
+        [KSPField] 
+        public bool debugMarkers = false;
+        
         #region callbacks
 
         public void Update()
@@ -74,10 +77,21 @@ namespace ProceduralParts
                 {
                     GameEvents.onEditorPartEvent.Add(OnEditorPartEvent);
 
-                    PPart.Fields[nameof(PPart.shapeName)].uiControlEditor.onFieldChanged += HandleShapeChange;
-                    Fields[nameof(selectedBellName)].uiControlEditor.onFieldChanged += HandleBellChange;
-                    Fields[nameof(thrustDeflection)].uiControlEditor.onFieldChanged += HandleBellChange;
-                    Fields[nameof(thrust)].uiControlEditor.onFieldChanged += HandleBellChange;
+                    UI_Control uiShape = PPart.Fields[nameof(PPart.shapeName)].uiControlEditor; 
+                    uiShape.onFieldChanged += HandleShapeChange;
+                    uiShape.onSymmetryFieldChanged += HandleShapeChange;
+
+                    UI_Control uiBell = Fields[nameof(selectedBellName)].uiControlEditor;
+                    uiBell.onFieldChanged += HandleBellChange;
+                    uiBell.onSymmetryFieldChanged += HandleBellChange;
+
+                    UI_Control uiDeflection = Fields[nameof(thrustDeflection)].uiControlEditor;
+                    uiDeflection.onFieldChanged += HandleBellChange;
+                    uiDeflection.onSymmetryFieldChanged += HandleBellChange;
+                    
+                    UI_Control uiThrust = Fields[nameof(thrust)].uiControlEditor;
+                    uiThrust.onFieldChanged += HandleBellChange;
+                    uiThrust.onSymmetryFieldChanged += HandleBellChange;
                     AddLengthChangeListener();
                 }
             }
@@ -101,21 +115,26 @@ namespace ProceduralParts
         
         private void AddLengthChangeListener()
         {
+            UI_Control uiLength;
             switch(PPart.CurrentShape)
             {
                 case ProceduralShapeBezierCone cone:
-                    cone.Fields[nameof(cone.length)].uiControlEditor.onFieldChanged += HandleLengthChange;
+                    uiLength = cone.Fields[nameof(cone.length)].uiControlEditor;
                     break;
                 case ProceduralShapeCone cone:
-                    cone.Fields[nameof(cone.length)].uiControlEditor.onFieldChanged += HandleLengthChange;
+                    uiLength = cone.Fields[nameof(cone.length)].uiControlEditor;
                     break;
                 case ProceduralShapeCylinder cyl:
-                    cyl.Fields[nameof(cyl.length)].uiControlEditor.onFieldChanged += HandleLengthChange;
+                    uiLength = cyl.Fields[nameof(cyl.length)].uiControlEditor;
                     break;
                 case ProceduralShapePill pill:
-                    pill.Fields[nameof(pill.length)].uiControlEditor.onFieldChanged += HandleLengthChange;
+                    uiLength = pill.Fields[nameof(pill.length)].uiControlEditor;
                     break;
+                default:
+                    return;
             }   
+            uiLength.onFieldChanged += HandleLengthChange;
+            uiLength.onSymmetryFieldChanged += HandleLengthChange;
         }
         
         public void OnDestroy()
@@ -133,11 +152,14 @@ namespace ProceduralParts
         {
             try
             {
-                LR("srbNozzle", part.FindModelTransform("srbNozzle").position);
-                LR("bellModel ", selectedBell.model.position);
-                LR("srbAttach  ", selectedBell.srbAttach.position);
-                LR("bellTransform", bellTransform.position);
-                LR("Transform", part.transform.position);
+                if (debugMarkers)
+                {
+                    LR("srbNozzle", part.FindModelTransform("srbNozzle").position);
+                    LR("bellModel ", selectedBell.model.position);
+                    LR("srbAttach  ", selectedBell.srbAttach.position);
+                    LR("bellTransform", bellTransform.position);
+                    LR("Transform", part.transform.position);
+                }
             }
             catch (Exception)
             {
@@ -180,8 +202,13 @@ namespace ProceduralParts
                     type == ConstructionEventType.PartAttached)
                 {
                     SetBellRotation();
+                    MoveBellAndBottomNode();
                     foreach (var counterPart in part.symmetryCounterparts)
-                        counterPart.GetComponent<ProceduralSRB>().SetBellRotation();
+                    {
+                        ProceduralSRB srb = counterPart.GetComponent<ProceduralSRB>();
+                        srb.SetBellRotation();
+                        srb.MoveBellAndBottomNode();
+                    }
                 }
             }
 
@@ -446,13 +473,14 @@ namespace ProceduralParts
             thrustTransform.position = selectedBell.srbAttach.position;
         }
 
+        #region Attachments and nodes
+
         private void MoveBellAndBottomNode()
         {
             if (!PPart.CurrentShape.nodesInitialized)
             {
                 return;
             }
-            Debug.Log($"{ModTag} {part}.{this}: placing bell and node");
             // Move bell a little bit inside the SRB so gimbaling and tilting won't make weird gap between bell choke and SRB
             // d = chokeDia * scale * 0.5 * sin(max deflection angle)
             float d = (float)(selectedBell.bellChokeDiameter / 2 * bellScale * Math.PI * (
@@ -464,11 +492,9 @@ namespace ProceduralParts
                 PPart.transform.InverseTransformPoint(part.transform.position) - 
                                 GetLength() / 2 * Vector3.up + d * Vector3.up);
 
-            Debug.Log($"{ModTag} {part}.{this}: node position before: {bottomAttachNode.position}");
             Vector3 origNodePosition = bottomAttachNode.position;
             // Place attachment node inside the bell 
             bottomAttachNode.position = PPart.transform.InverseTransformPoint(selectedBell.srbAttach.position);
-            Debug.Log($"{ModTag} {part}.{this}: node position after: {bottomAttachNode.position}");
 
             // Translate attached parts
             TranslateAttachedPart(origNodePosition, bottomAttachNode.position);
@@ -479,8 +505,6 @@ namespace ProceduralParts
             if (bottomAttachNode.attachedPart is Part pushTarget)
             {
                 Vector3 translation = newPosition - origPosition; 
-                Debug.Log($"{ModTag} {part}.{this}: translation: {translation}");
-
                 PPart.CurrentShape.TranslatePart(pushTarget, translation);
             }
         }
@@ -489,7 +513,6 @@ namespace ProceduralParts
         {
             Vector3 rotationDelta = Vector3.right * (float) (Math.PI * thrustDeflection / 180f);
             bottomAttachNode.orientation = bottomAttachNode.originalOrientation + rotationDelta;
-            Debug.Log($"{ModTag} {part}.{this}: node orientation : {bottomAttachNode.orientation}; original: {bottomAttachNode.originalOrientation}");
 
             if (bottomAttachNode.attachedPart is Part rotTarget)
             {
@@ -499,17 +522,12 @@ namespace ProceduralParts
 
                 if (rotTarget == part.parent)
                 {
-                    // We will push once for each symmetry sibling, so scale this push.
-                    //float sibMult = part.symmetryCounterparts == null ? 1f : 1f / (part.symmetryCounterparts.Count + 1);
-                    //pushTarget = GetEldestParent(this.part);
-
-                    //this.part.transform.Translate(-translation * sibMult, Space.Self);
                     rotTarget = part;
                     delta = -delta;
                 }
                 
                 rotTarget.partTransform.Rotate(rotAxis, delta, Space.World);
-                // Check new bell position after rotation
+                // Check new bell position after it was rotated
                 Vector3 shift = rotTarget == part
                     ? opposingNodePos - selectedBell.srbAttach.position
                     : selectedBell.srbAttach.position - opposingNodePos;
@@ -520,6 +538,9 @@ namespace ProceduralParts
                 bottomAttachNode.position = PPart.transform.InverseTransformPoint(selectedBell.srbAttach.position);
             }
         }
+        
+        #endregion
+
         private void ConfigureRealFuels()
         {
             // Config for Real Fuels.
@@ -849,23 +870,11 @@ namespace ProceduralParts
 
         public void UpdateFAR()
         {
-            /*if (HighLogic.LoadedSceneIsEditor)
-            {
-                if (part.Modules.Contains("FARBasicDragModel"))
-                {
-                    PartModule pModule = part.Modules["FARBasicDragModel"];
-                    pModule.GetType().GetMethod("UpdatePropertiesWithShapeChange").Invoke(pModule, null);
-                }
-            }*/
             if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
             {
                 part.SendMessage("GeometryPartModuleRebuildMeshData");
             }
         }
-
-        #endregion
-
-        #region Attachments and nodes
 
         #endregion
 
@@ -940,8 +949,10 @@ namespace ProceduralParts
                     return pill.length;
             }
             return 0f;
-        } 
-        
+        }
+
+        #region DebugMarkers
+
         private void LR(String txt, Vector3 point)
         {
             Color[] c = {Color.green, Color.blue, Color.magenta, Color.red, Color.yellow};
@@ -997,5 +1008,7 @@ namespace ProceduralParts
             tm.text = txt + " " + point;
             tm.transform.position = point + Vector3.up * s / 2 + Vector3.right * s / 2;
         }
+        
+        #endregion
     }
 }
