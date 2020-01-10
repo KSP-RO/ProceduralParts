@@ -175,11 +175,10 @@ namespace ProceduralParts
             // If it is our parent, then we need to find the eldest grandparent and push that, and also ourselves
             if (pushTarget == this.part.parent)
             {
-                // We will push once for each symmetry sibling, so scale this push.
+                this.part.transform.Translate(-translation, Space.Self);    // Push ourselves normally
                 float sibMult = part.symmetryCounterparts == null ? 1f : 1f / (part.symmetryCounterparts.Count + 1);
                 pushTarget = GetEldestParent(this.part);
-
-                this.part.transform.Translate(-translation * sibMult, Space.Self);
+                translation *= sibMult; // Push once for each symmetry sibling, so scale the parent push.
             }
             // Convert to world space, to deal with bizarre orientation relationships.
             // (ex: pushTarget is inverted, and our top node connects to its top node)
