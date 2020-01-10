@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -55,6 +56,9 @@ namespace ProceduralParts
         #endregion
 
         #region Objects
+
+        public Boolean nodesInitialized { get; set; }
+
         public ProceduralPart PPart { get => _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
         private ProceduralPart _pPart;
 
@@ -145,21 +149,9 @@ namespace ProceduralParts
                 if (node.nodeType == AttachNode.NodeType.Stack)
                 {
                     TranslateNode(node, translation);
-                    // If the attached part is a child of ours, push it directly.
-                    // If it is our parent, then we need to find the eldest grandparent and push that, and also ourselves
                     if (node.attachedPart is Part pushTarget)
                     {
-                        if (pushTarget == this.part.parent)
-                        {
-                            // We will push once for each symmetry sibling, so scale this push.
-                            float sibMult = part.symmetryCounterparts == null ? 1f : 1f / (part.symmetryCounterparts.Count + 1);
-                            pushTarget = GetEldestParent(this.part);
-                            this.part.transform.Translate(-translation * sibMult, Space.Self);
-                        }
-                        // Convert to world space, to deal with bizarre orientation relationships.
-                        // (ex: pushTarget is inverted, and our top node connects to its top node)
-                        Vector3 worldSpaceTranslation = part.transform.TransformVector(translation);
-                        pushTarget.transform.Translate(worldSpaceTranslation, Space.World);
+                        TranslatePart(pushTarget, translation);
                     }
                 }
             }
@@ -175,6 +167,24 @@ namespace ProceduralParts
                     MovePartByAttachNode(node, coord);
                 }
             }
+        }
+
+        public void TranslatePart(Part pushTarget, Vector3 translation)
+        {
+            // If the attached part is a child of ours, push it directly.
+            // If it is our parent, then we need to find the eldest grandparent and push that, and also ourselves
+            if (pushTarget == this.part.parent)
+            {
+                // We will push once for each symmetry sibling, so scale this push.
+                float sibMult = part.symmetryCounterparts == null ? 1f : 1f / (part.symmetryCounterparts.Count + 1);
+                pushTarget = GetEldestParent(this.part);
+
+                this.part.transform.Translate(-translation * sibMult, Space.Self);
+            }
+            // Convert to world space, to deal with bizarre orientation relationships.
+            // (ex: pushTarget is inverted, and our top node connects to its top node)
+            Vector3 worldSpaceTranslation = part.transform.TransformVector(translation);
+            pushTarget.transform.Translate(worldSpaceTranslation, Space.World);
         }
 
         public virtual void HandleDiameterChange(float diameter, float oldDiameter)
@@ -382,6 +392,7 @@ namespace ProceduralParts
         {
             InitializeStackAttachmentNodes(length);
             InitializeSurfaceAttachmentNode(length, diameter);
+            nodesInitialized = true;
         }
 
         internal virtual void InitializeStackAttachmentNodes(float length)
