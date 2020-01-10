@@ -509,9 +509,10 @@ namespace ProceduralParts
             }
         }
         
-        public void RotateAttachedPartAndNode(Vector3 rotAxis, float delta)
+        public void RotateAttachedPartAndNode(Vector3 rotAxis, float delta, float adjustedDeflection)
         {
-            Vector3 rotationDelta = Vector3.right * (float) (Math.PI * thrustDeflection / 180f);
+            Vector3 rotationDelta = Vector3.right * (float) (Math.PI * adjustedDeflection / 180f);
+            Debug.Log($"{ModTag} {part}.{this}: setting node orientation: {bottomAttachNode.originalOrientation} + {rotationDelta}");
             bottomAttachNode.orientation = bottomAttachNode.originalOrientation + rotationDelta;
 
             if (bottomAttachNode.attachedPart is Part rotTarget)
@@ -618,8 +619,6 @@ namespace ProceduralParts
             InitModulesFromBell();
 
             UpdateMaxThrust();
-
-            oldThrustDeflection = thrustDeflection;
         }
 
         private void SetBellRotation()
@@ -633,22 +632,24 @@ namespace ProceduralParts
                 var rotAxis = Vector3.Cross(part.partTransform.right, part.partTransform.up);
 
                 var adjustedDir = thrustDeflection;
-                var oldAdjustedDir = oldThrustDeflection;
+                var rotationDelta = thrustDeflection - oldThrustDeflection;
 
                 if (part.symMethod == SymmetryMethod.Mirror && !part.IsSurfaceAttached())
                 {
                     if (!isSymmetryOriginal)
                     {
                         adjustedDir *= -1;
-                        oldAdjustedDir *= -1;
+                        rotationDelta *= -1;
                     }
                 }
 
-                Debug.Log($"{ModTag} {part}.{this}: rotating to: {adjustedDir} (was: {oldAdjustedDir})");
+                Debug.Log($"{ModTag} {part}.{this}: rotating to: {adjustedDir}; delta={rotationDelta}");
 
                 bellTransform.Rotate(rotAxis, adjustedDir, Space.World);
                 selectedBell.srbAttach.Rotate(rotAxis, adjustedDir, Space.World);
-                RotateAttachedPartAndNode(rotAxis, adjustedDir - oldAdjustedDir);
+                RotateAttachedPartAndNode(rotAxis, rotationDelta, adjustedDir);
+
+                oldThrustDeflection = thrustDeflection;
             }
             catch (Exception ex)
             {
