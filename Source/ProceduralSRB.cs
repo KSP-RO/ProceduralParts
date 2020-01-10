@@ -66,7 +66,7 @@ namespace ProceduralParts
             {
                 if (PPart is null)
                 {
-                    Debug.LogError($"{ModTag} {part.persistentId}.{this} Procedural Part not found");
+                    Debug.LogError($"{ModTag} {part}.{this} Procedural Part not found");
                     return;
                 }
                 bottomAttachNode = part.FindAttachNode(bottomAttachNodeName);
@@ -387,7 +387,7 @@ namespace ProceduralParts
 
         private void InitializeBells()
         {
-            Debug.Log($"{ModTag} {part.persistentId}.{this}: InitializeBells");
+            Debug.Log($"{ModTag} {part}.{this}: InitializeBells");
             // Initialize the configs.
             if (srbConfigs == null)
                 LoadSRBConfigs();
@@ -397,7 +397,7 @@ namespace ProceduralParts
             switch (srbConfigs.Count)
             {
                 case 0:
-                    Debug.LogError($"{ModTag} {part.persistentId}.{this}: No SRB bells configured");
+                    Debug.LogError($"{ModTag} {part}.{this}: No SRB bells configured");
                     return;
                 case 1:
                     field.guiActiveEditor = false;
@@ -449,7 +449,7 @@ namespace ProceduralParts
 
                     // Legacy bell scaling equation
                     bellScale = Mathf.Sqrt(thrust / deprecatedThrustScaleFactor);
-                    Debug.Log($"{ModTag} {part.persistentId}.{this}: legacy bell scale: {bellScale}");
+                    Debug.Log($"{ModTag} {part}.{this}: legacy bell scale: {bellScale}");
                 }
 
                 UpdateEngineAndBellScale();
@@ -467,7 +467,7 @@ namespace ProceduralParts
                 SetBellRotation();
             }
             else
-                Debug.Log($"{ModTag} {part.persistentId}.{this}: ProceduralSRB.InitializeBells() Unable to find ProceduralPart component! (null) for {part.name}");
+                Debug.Log($"{ModTag} {part}.{this}: ProceduralSRB.InitializeBells() Unable to find ProceduralPart component! (null) for {part.name}");
 
             // Move thrust transform to the end of the bell
             thrustTransform.position = selectedBell.srbAttach.position;
@@ -485,7 +485,7 @@ namespace ProceduralParts
             // d = chokeDia * scale * 0.5 * sin(max deflection angle)
             float d = (float)(selectedBell.bellChokeDiameter / 2 * bellScale * Math.PI * (
                                   selectedBell.gimbalRange + Math.Abs(thrustDeflection)) / 180f);
-            Debug.Log($"{ModTag} {part.persistentId}.{this}: bell d: {d}; bellD: {selectedBell.bellChokeDiameter}; scale: {bellScale}; angle: {selectedBell.gimbalRange}");
+            Debug.Log($"{ModTag} {part}.{this}: bell d: {d}; bellD: {selectedBell.bellChokeDiameter}; scale: {bellScale}; angle: {selectedBell.gimbalRange}");
             
             // Using part transform as a base and shape length as offset for bell placement
             bellTransform.position = PPart.transform.TransformPoint(
@@ -574,7 +574,7 @@ namespace ProceduralParts
                 conf.model = part.FindModelTransform(conf.modelName);
                 if (conf.model == null)
                 {
-                    Debug.LogError($"{ModTag} {part.persistentId}.{this}: Unable to find model transform for SRB bell name: {conf.modelName}");
+                    Debug.LogError($"{ModTag} {part}.{this}: Unable to find model transform for SRB bell name: {conf.modelName}");
                     srbConfigs.Remove(conf.modelName);
                     continue;
                 }
@@ -583,7 +583,7 @@ namespace ProceduralParts
                 conf.srbAttach = conf.model.Find(conf.srbAttachName);
                 if (conf.srbAttach == null)
                 {
-                    Debug.LogError($"{ModTag} {part.persistentId}.{this}: Unable to find srbAttach for SRB bell name: {conf.modelName}");
+                    Debug.LogError($"{ModTag} {part}.{this}: Unable to find srbAttach for SRB bell name: {conf.modelName}");
                     srbConfigs.Remove(conf.modelName);
                     continue;
                 }
@@ -605,7 +605,7 @@ namespace ProceduralParts
 
             if (!srbConfigs.TryGetValue(selectedBellName, out selectedBell))
             {
-                Debug.LogError($"{ModTag} {part.persistentId}.{this}: Selected bell name \"{selectedBellName}\" does not exist. Reverting.");
+                Debug.LogError($"{ModTag} {part}.{this}: Selected bell name \"{selectedBellName}\" does not exist. Reverting.");
                 selectedBellName = oldSelectedBell.name;
                 selectedBell = oldSelectedBell;
                 return;
@@ -644,7 +644,7 @@ namespace ProceduralParts
                     }
                 }
 
-                Debug.Log($"{ModTag} {part.persistentId}.{this}: rotating to: {adjustedDir} (was: {oldAdjustedDir})");
+                Debug.Log($"{ModTag} {part}.{this}: rotating to: {adjustedDir} (was: {oldAdjustedDir})");
 
                 bellTransform.Rotate(rotAxis, adjustedDir, Space.World);
                 selectedBell.srbAttach.Rotate(rotAxis, adjustedDir, Space.World);
@@ -652,7 +652,7 @@ namespace ProceduralParts
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"{ModTag} {part.persistentId}.{this}:** Exception within SetBellRotation:");
+                Debug.LogWarning($"{ModTag} {part}.{this}:** Exception within SetBellRotation:");
                 Debug.LogException(ex);
             }
         }
@@ -736,7 +736,7 @@ namespace ProceduralParts
             if (selectedBell == null)
                 return;
 
-            Debug.Log($"{ModTag} {part.persistentId}.{this}: attachedEndSize: {attachedEndSize}");
+            Debug.Log($"{ModTag} {part}.{this}: attachedEndSize: {attachedEndSize}");
             maxThrust = (float)Math.Max(Math.Round(attachedEndSize * attachedEndSize * thrust1m, 1), 10.0);
 
             if (!UsingME)
@@ -753,7 +753,7 @@ namespace ProceduralParts
                 {
                     float isp0 = Engine.atmosphereCurve.Evaluate(0);
                     float minBurnTime = (float)Math.Ceiling(isp0 * solidFuel.maxAmount * solidFuel.info.density * Engine.g / maxThrust);
-                    Debug.Log($"{ModTag} {part.persistentId}.{this}: UsingME = {UsingME}, minBurnTime = {minBurnTime}, maxThrust = {maxThrust}");
+                    Debug.Log($"{ModTag} {part}.{this}: UsingME = {UsingME}, minBurnTime = {minBurnTime}, maxThrust = {maxThrust}");
                     ((UI_FloatEdit)Fields["burnTimeME"].uiControlEditor).minValue = minBurnTime;
 
                     // Keep the thrust constant, change the current burn time to match
@@ -797,7 +797,7 @@ namespace ProceduralParts
 
         private void UpdateThrustDependentCalcs()
         {
-            Debug.Log($"{ModTag} {part.persistentId}.{this}: ProceduralSRB.UpdateThrustDependentCalcs();");
+            Debug.Log($"{ModTag} {part}.{this}: ProceduralSRB.UpdateThrustDependentCalcs();");
             PartResource solidFuel = part.Resources["SolidFuel"];
 
             double solidFuelMassG;
@@ -812,7 +812,7 @@ namespace ProceduralParts
             {
                 //float burnTime0 = burnTimeME = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / thrust);
                 //float burnTime1 = (float)(atmosphereCurve.Evaluate(1) * solidFuelMassG / thrust);
-                Debug.Log($"{ModTag} {part.persistentId}.{this}: Not using MEC ChangeThrust, thrust = {thrust}");
+                Debug.Log($"{ModTag} {part}.{this}: Not using MEC ChangeThrust, thrust = {thrust}");
                 fuelRate = thrust / (atmosphereCurve.Evaluate(0f) * Engine.g);
                 if (solidFuel != null)
                 {
@@ -824,7 +824,7 @@ namespace ProceduralParts
             }
             else
             {
-                Debug.Log($"{ModTag} {part.persistentId}.{this}: ME thrust calculation");
+                Debug.Log($"{ModTag} {part}.{this}: ME thrust calculation");
                 thrust = (float)(atmosphereCurve.Evaluate(0) * solidFuelMassG / burnTimeME);
                 Debug.Log($"thrust = {thrust}; maxThrust = {maxThrust}");
                 if (thrust > maxThrust)
@@ -852,7 +852,7 @@ namespace ProceduralParts
             // Rescale the bell.
             float bellScale1m = selectedBell.chokeEndRatio / selectedBell.bellChokeDiameter;
             bellScale = bellScale1m * Mathf.Sqrt(thrust / thrust1m);
-            Debug.Log($"{ModTag} {part.persistentId}.{this}: bell scale: {bellScale}; thrust: {thrust}, thrust1m: {thrust1m}");
+            Debug.Log($"{ModTag} {part}.{this}: bell scale: {bellScale}; thrust: {thrust}, thrust1m: {thrust1m}");
 
             UpdateEngineAndBellScale();
         }
@@ -864,7 +864,7 @@ namespace ProceduralParts
             //part.GetComponent<ModuleEngines>().maxFuelFlow = (float)(0.1*fuelRate);
             part.GetComponent<ModuleEngines>().maxFuelFlow = fuelRate;
 
-            Debug.Log($"{ModTag} {part.persistentId}.{this}: rescaling bell: {bellScale}");
+            Debug.Log($"{ModTag} {part}.{this}: rescaling bell: {bellScale}");
             selectedBell.model.transform.localScale = new Vector3(bellScale, bellScale, bellScale);
 
             //if (UsingME)
@@ -981,7 +981,7 @@ namespace ProceduralParts
             else
             {
                 GameObject go = new GameObject(txt);
-                Debug.Log($"{ModTag} {part.persistentId}.{this} added GO {txt} ({LRs.Count % c.Length})");
+                Debug.Log($"{ModTag} {part}.{this} added GO {txt} ({LRs.Count % c.Length})");
 
                 lr = go.AddComponent<LineRenderer>();
                 lr.positionCount = 8;
