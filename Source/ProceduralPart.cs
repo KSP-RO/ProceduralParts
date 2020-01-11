@@ -17,6 +17,14 @@ namespace ProceduralParts
 
         #region Initialization
 
+        [KSPField(isPersistant = true)]
+        private Vector3 tempColliderCenter;
+
+        [KSPField(isPersistant = true)]
+        private Vector3 tempColliderSize;
+
+        private BoxCollider tempCollider;
+        private bool isInitialized = false;
         public static bool installedFAR = false;
         public static bool staticallyInitialized = false;
         public static void StaticInit()
@@ -40,14 +48,6 @@ namespace ProceduralParts
         {
             if (HighLogic.LoadedSceneIsEditor && needsTechInit) InitializeTechLimits();
         }
-
-        [KSPField(isPersistant = true)]
-        private Vector3 tempColliderCenter;
-
-        [KSPField(isPersistant = true)]
-        private Vector3 tempColliderSize;
-
-        private BoxCollider tempCollider;
 
         public override void OnLoad(ConfigNode node)
         {
@@ -93,8 +93,6 @@ namespace ProceduralParts
 
             return base.GetInfo();
         }
-
-        private bool isInitialized = false;
 
         public override void OnStart(StartState state)
         {
@@ -199,14 +197,14 @@ namespace ProceduralParts
             }
         }
 
-        private void OnTextureChanged(BaseField f, object obj)
+        public void OnTextureChanged(BaseField f, object obj)
         {
             UpdateTexture();
         }
 
         // onSymmetryFieldChanged() callback has the incorrect value for parameter obj
         // So we manually invoke things for our symmetry counterparts.
-        private void OnShapeSelectionChanged(BaseField f, object obj)
+        public void OnShapeSelectionChanged(BaseField f, object obj)
         {
             Debug.Log($"{ModTag} OnShapeSelectionChanged for {this} from {obj} to {f.GetValue(this)}");
             ChangeShape(fromShape: availableShapes[obj as string]);
@@ -217,7 +215,7 @@ namespace ProceduralParts
             }
         }
 
-        private void OnVariantApplied(Part p, PartVariant pv)
+        public void OnVariantApplied(Part p, PartVariant pv)
         {
             if (p is Part && this.part == p)
             {
@@ -467,6 +465,12 @@ namespace ProceduralParts
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Shape", groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string shapeName;
+        public void SetShapeName(string s)
+        {
+            string old = shapeName;
+            shapeName = s;
+            OnShapeSelectionChanged(Fields[nameof(shapeName)], old);
+        }
 
         private ProceduralAbstractShape shape;
         private readonly Dictionary<string, ProceduralAbstractShape> availableShapes = new Dictionary<string, ProceduralAbstractShape>();
