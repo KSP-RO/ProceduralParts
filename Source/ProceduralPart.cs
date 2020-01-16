@@ -470,7 +470,6 @@ namespace ProceduralParts
 
         private ProceduralAbstractShape shape;
         private readonly Dictionary<string, ProceduralAbstractShape> availableShapes = new Dictionary<string, ProceduralAbstractShape>();
-
         public ProceduralAbstractShape CurrentShape { get => shape; }
 
         private void InitializeShapes()
