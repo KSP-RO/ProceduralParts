@@ -73,17 +73,13 @@ namespace ProceduralParts
                     return;
                 }
 
-                if (part.symMethod == SymmetryMethod.Mirror)
-                {
-                    if (part.symmetryCounterparts.Count > 0)
-                    {
-                        isMirrored = !part.symmetryCounterparts[0].GetComponent<ProceduralSRB>().isMirrored;
-                    }
-                }
-                else
-                {
-                    isMirrored = false;
-                }
+                // isMirrored flag is required for correct bell deflection - real deflection angles is multiplied by
+                // -1 on mirrored part.
+                // Because of this, we need to check if we've been created off of the part that already was "mirrored"
+                // and set out flag accordingly.
+                isMirrored =
+                    part.symMethod == SymmetryMethod.Mirror && part.symmetryCounterparts.Count > 0 &&
+                    !part.symmetryCounterparts[0].GetComponent<ProceduralSRB>().isMirrored;
 
                 bottomAttachNode = part.FindAttachNode(bottomAttachNodeName);
                 
