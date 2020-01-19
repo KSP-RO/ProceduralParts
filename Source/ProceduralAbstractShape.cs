@@ -57,8 +57,6 @@ namespace ProceduralParts
 
         #region Objects
 
-        public Boolean nodesInitialized { get; set; }
-
         public ProceduralPart PPart { get => _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
         private ProceduralPart _pPart;
 
@@ -391,7 +389,7 @@ namespace ProceduralParts
         {
             InitializeStackAttachmentNodes(length);
             InitializeSurfaceAttachmentNode(length, diameter);
-            nodesInitialized = true;
+            part.SendEvent ("OnPartNodeMoved");
         }
 
         internal virtual void InitializeStackAttachmentNodes(float length)
@@ -438,6 +436,7 @@ namespace ProceduralParts
                     node.position = destination;
                 }
                 node.originalPosition = node.position;
+                part.SendEvent ("OnPartNodeMoved");
             }
         }
 
