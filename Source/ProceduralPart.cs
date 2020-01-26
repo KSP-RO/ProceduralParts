@@ -111,7 +111,7 @@ namespace ProceduralParts
                 part.variants.useMultipleDragCubes = false;
 
             if (HighLogic.LoadedSceneIsFlight && vessel is Vessel && vessel.rootPart == part)
-                TimingManager.FixedUpdateAdd(TimingManager.TimingStage.FlightIntegrator, DragCubeFixer);
+                GameEvents.onFlightReady.Add(DragCubeFixer);
 
             if (HighLogic.LoadedSceneIsEditor)
             {
@@ -191,10 +191,10 @@ namespace ProceduralParts
 
         public void OnDestroy()
         {
+            if (HighLogic.LoadedSceneIsFlight)
+                GameEvents.onFlightReady.Remove(DragCubeFixer);
             if (HighLogic.LoadedSceneIsEditor)
-            {
                 GameEvents.onVariantApplied.Remove(OnVariantApplied);
-            }
         }
 
         public void OnTextureChanged(BaseField f, object obj)
@@ -675,34 +675,21 @@ namespace ProceduralParts
             if (HighLogic.LoadedSceneIsFlight || (HighLogic.LoadedSceneIsEditor && updateDragCubesInEditor))
             {
                 DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
-
                 part.DragCubes.ClearCubes();
                 part.DragCubes.Cubes.Add(dragCube);
                 part.DragCubes.ResetCubeWeights();
                 part.DragCubes.ForceUpdate(true, true, false);
-                if (vessel is null)
-                    Debug.LogError($"{ModTag} OnPartColliderChanged() - VESSEL IS NULL");
-                //rebuilding the drag cube might mess up the thermal graph. Firing a vessel event should cause it to rebuild
-                //GameEvents.onVesselWasModified.Fire(part.vessel);
-                //part.DragCubes.Procedural = true;
             }
         }
 
         private void DragCubeFixer()
         {
-            /* FlightIntegrator resets our dragcube after loading, so we need to rerender it. We cannot do it on the first frame because it would
-                be executed before the reset. Instead we must do it on the second frame.
-                FlightIntegrator doesn't act on the first frame anymore, so we need to wait until it has done something.
-                This appears to work on Flight scene starts, but not when eg reverting to launch.
+            /* FlightIntegrator resets our dragcube after loading, so we need to rerender it.
+             * Exactly when FlightIntegrator does this is unpredictable, so we resort to the OnFlightReady event.
             */
-            if (FlightIntegrator.ActiveVesselFI is FlightIntegrator FI && FI.isRunning && !FI.firstFrame)
-            {
-                Debug.Log($"{ModTag} DragCubeFixer rebuilding root part drag cubes");
-                OnPartColliderChanged();
-                GameEvents.onVesselWasModified.Fire(part.vessel);
-                TimingManager.FixedUpdateRemove(TimingManager.TimingStage.FlightIntegrator, DragCubeFixer);
-                //isEnabled = enabled = false;
-            }
+            Debug.Log($"{ModTag} DragCubeFixer rebuilding root part drag cubes");
+            OnPartColliderChanged();
+            GameEvents.onVesselWasModified.Fire(part.vessel);
         }
 
         public void UpdateProps()
