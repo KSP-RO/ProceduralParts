@@ -111,7 +111,15 @@ namespace ProceduralParts
                 foreach (ConfigNode node in texInfo.nodes)
                 {
                     if (LoadTextureSet(node) is TextureSet textureSet)
-                        dict.Add(textureSet.name, textureSet);
+                    {
+                        if (dict.ContainsKey(textureSet.name))
+                        {
+                            Debug.LogError($"Duplicate legacy TextureSet {textureSet.name} found in {node}, skipping!");
+                        } else
+                        {
+                            dict.Add(textureSet.name, textureSet);
+                        }
+                    }
                 }
             }
 
