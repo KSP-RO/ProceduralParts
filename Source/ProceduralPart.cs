@@ -191,8 +191,7 @@ namespace ProceduralParts
 
         public void OnDestroy()
         {
-            if (HighLogic.LoadedSceneIsFlight)
-                GameEvents.onFlightReady.Remove(DragCubeFixer);
+            GameEvents.onFlightReady.Remove(DragCubeFixer);
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onVariantApplied.Remove(OnVariantApplied);
         }
