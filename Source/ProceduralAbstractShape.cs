@@ -394,7 +394,7 @@ namespace ProceduralParts
 
         internal virtual void InitializeStackAttachmentNodes(float length)
         {
-            Debug.Log($"{ModTag} InitializeStackAttachmentNodes for {this} length {length}");
+//            Debug.Log($"{ModTag} InitializeStackAttachmentNodes for {this} length {length}");
             foreach (AttachNode node in part.attachNodes)
             {
                 if (node.owner != part)
@@ -408,7 +408,7 @@ namespace ProceduralParts
 
         internal virtual void InitializeSurfaceAttachmentNode(float length, float diameter)
         {
-            Debug.Log($"{ModTag} InitializeSurfaceAttachmentNode for {this} diameter {diameter}");
+//            Debug.Log($"{ModTag} InitializeSurfaceAttachmentNode for {this} diameter {diameter}");
             if (part.srfAttachNode is AttachNode node)
             {
                 if (node.owner != part)
@@ -425,7 +425,7 @@ namespace ProceduralParts
         {
             if (Vector3.Distance(node.position, destination) > 0.01f)
             {
-                Debug.Log($"{ModTag} MoveNode() moved {node.id} from {node.position} to {destination} = {part.transform.TransformPoint(destination)} (worldspace)");
+//                Debug.Log($"{ModTag} MoveNode() moved {node.id} from {node.position} to {destination} = {part.transform.TransformPoint(destination)} (worldspace)");
                 if (node.nodeTransform is Transform)
                 {
                     node.nodeTransform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
