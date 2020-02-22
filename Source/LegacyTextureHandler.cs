@@ -90,7 +90,7 @@ namespace ProceduralParts
             sidesMaterial.mainTextureScale = scaleUV;
             sidesMaterial.mainTextureOffset = Vector2.zero;
             sidesMaterial.SetTexture("_MainTex", tex.sides);
-            if (tex.sidesBump is Texture)
+            if (tex.sidesBump is Texture && sidesMaterial.HasProperty("_BumpMap"))
             {
                 sidesMaterial.SetTextureScale("_BumpMap", scaleUV);
                 sidesMaterial.SetTextureOffset("_BumpMap", Vector2.zero);

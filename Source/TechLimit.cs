@@ -62,6 +62,6 @@
         }
 
         public override string ToString() =>
-            $"TechLimits(TechRequired={name} diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volumeMax={volumeMax:G3} )";
+            $"TechLimits(TechRequired={name} diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volumeMax={volumeMax:G3}";
     }
 }

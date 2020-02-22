@@ -96,7 +96,7 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            Debug.Log($"{ModTag} OnStart()");
+            Debug.Log($"{ModTag} OnStart({state}) for {this}");
             isInitialized = true;
             InitializeObjects();
             InitializeShapes();
@@ -205,7 +205,7 @@ namespace ProceduralParts
         // So we manually invoke things for our symmetry counterparts.
         public void OnShapeSelectionChanged(BaseField f, object obj)
         {
-            Debug.Log($"{ModTag} OnShapeSelectionChanged for {this} from {obj} to {f.GetValue(this)}");
+//            Debug.Log($"{ModTag} OnShapeSelectionChanged for {this} from {obj} to {f.GetValue(this)}");
             ChangeShape(fromShape: availableShapes[obj as string]);
             foreach (Part p in part.symmetryCounterparts)
             {
@@ -248,8 +248,6 @@ namespace ProceduralParts
 
         private void InitializeObjects()
         {
-            Debug.Log($"{ModTag} InitializeObjects() - Transforms, Materials and Meshes");
-            //Transform partModel = part.FindModelTransform(partModelName);
             Transform colliderTr = part.FindModelTransform(collisionName);
             partCollider = colliderTr.GetComponent<MeshCollider>();
             legacyTextureHandler = new LegacyTextureHandler(part, this);
@@ -379,7 +377,6 @@ namespace ProceduralParts
                 TechLimit limit = new TechLimit();
                 limit.Load(tNode);
                 techLimits.Add(limit);
-                Debug.Log($"{ModTag} LoadTechLimits loading {limit}");
             }
         }
 
@@ -477,7 +474,6 @@ namespace ProceduralParts
 
         private void InitializeShapes()
         {
-            Debug.Log($"{ModTag} InitializeShapes - Discovering available shapes and selecting for {shapeName}");
             availableShapes.Clear();
             foreach (ProceduralAbstractShape compShape in GetComponents<ProceduralAbstractShape>())
             {
@@ -489,7 +485,7 @@ namespace ProceduralParts
             }
             if (string.IsNullOrEmpty(shapeName) || !availableShapes.ContainsKey(shapeName))
             {
-                Debug.Log($"{ModTag} InitailizeShapes() Shape {shapeName} not available, defaulting to {availableShapes.Keys.First()}");
+                Debug.Log($"{ModTag} InitailizeShapes() Shape \"{shapeName}\" not available, defaulting to {availableShapes.Keys.First()}");
                 shapeName = availableShapes.Keys.First();
             }
             shape = availableShapes[shapeName];

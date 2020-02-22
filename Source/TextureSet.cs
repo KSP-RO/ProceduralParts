@@ -199,7 +199,7 @@ namespace ProceduralParts
 
             SetupShader(material, bumpMap);
 
-            if (bumpMap != null)
+            if (bumpMap != null && material.HasProperty("_BumpMap"))
             {
                 material.SetTextureScale("_BumpMap", scaleVec);
                 material.SetTextureOffset("_BumpMap", offsetVec);
