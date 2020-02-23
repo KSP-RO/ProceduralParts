@@ -115,6 +115,12 @@ namespace ProceduralParts
 
             if (HighLogic.LoadedSceneIsEditor)
             {
+                if (!(part.GetComponent("KSPTextureSwitch") is Component))  // TU not enabled/installed for this part
+                {
+                    forceLegacyTextures = true;
+                    Fields[nameof(forceLegacyTextures)].guiActiveEditor = false;
+                }
+
                 BaseField field = Fields[nameof(textureSet)];
                 UI_ChooseOption opt = (UI_ChooseOption)field.uiControlEditor;
                 opt.options = LegacyTextureHandler.textureSets.Keys.ToArray();
@@ -440,14 +446,14 @@ namespace ProceduralParts
 
         public bool ApplyLegacyTextures() => forceLegacyTextures || !(part.GetComponent("KSPTextureSwitch") is Component);
 
-        [KSPField(guiName = "Legacy Textures", guiActive = false, guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false),
+        [KSPField(guiName = "Legacy Textures", guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false),
          UI_Toggle(disabledText = "Disabled", enabledText = "Enabled", scene = UI_Scene.Editor)]
         public bool forceLegacyTextures = false;
 
-        [KSPField(guiName = "Texture", guiActive = false, guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(guiName = "Texture", guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string textureSet = "Original";
 
-        [KSPField(guiName = "Ends Texture", guiActive = false, guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(guiName = "Ends Texture", guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public int capTextureIndex = 0;
         private void UpdateTexture()
         {
@@ -562,7 +568,7 @@ namespace ProceduralParts
         [KSPField(isPersistant=true)]
         public float moduleCost = 0f;
 
-        [KSPField(guiActiveEditor=true, guiName="cost")]
+        [KSPField(guiActiveEditor = true, guiName = "cost")]
         private string costDisplay = "";
 
         [KSPField]
