@@ -8,6 +8,8 @@ namespace ProceduralParts
 {
     public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
     {
+        private static readonly string ModTag = "[ProceduralAbstractShapeSoR]";
+
         #region Config fields
 
         internal const int MinCircleVertexes = 12;
@@ -19,513 +21,6 @@ namespace ProceduralParts
 
         [KSPField]
         public string bottomNodeName = "bottom";
-
-        #endregion
-
-        #region attachments
-
-        public override Vector3 FromCylindricCoordinates(ShapeCoordinates coords)
-        {
-            Vector3 position = new Vector3();
-
-            switch (coords.HeightMode)
-            {
-                case ShapeCoordinates.YMode.RELATIVE_TO_SHAPE:
-                    float halfLength = (lastProfile.Last.Value.y - lastProfile.First.Value.y) / 2.0f;
-                    position.y = halfLength * coords.y;
-                    break;
-
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_CENTER:
-                    position.y = coords.y;
-                    break;
-
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_BOTTOM:
-                    position.y = coords.y + lastProfile.First.Value.y;
-                    break;
-
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_TOP:
-                    position.y = coords.y + lastProfile.Last.Value.y;
-                    break;
-                default:
-                    Debug.LogError("Can not handle PartCoordinate attribute: " + coords.HeightMode);
-                    position.y = 0.0f;
-                    break;
-            }
-
-
-            float radius = coords.r;
-
-            if (coords.RadiusMode != ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_CENTER)
-            {
-                if (position.y < lastProfile.First.Value.y)
-                    radius = coords.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
-                        lastProfile.First.Value.dia / 2.0f + coords.r :
-                        radius = lastProfile.First.Value.dia / 2.0f * coords.r;
-
-                else if (position.y > lastProfile.Last.Value.y)
-                    radius = coords.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
-                        lastProfile.Last.Value.dia / 2.0f + coords.r :
-                        radius = lastProfile.Last.Value.dia / 2.0f * coords.r;
-                else
-                {
-                    ProfilePoint pt = lastProfile.First.Value;
-                    for (LinkedListNode<ProfilePoint> ptNode = lastProfile.First.Next; ptNode != null; ptNode = ptNode.Next)
-                    {
-                        if (!ptNode.Value.inCollider)
-                            continue;
-                        ProfilePoint pv = pt;
-                        pt = ptNode.Value;
-
-                        if (position.y >= Mathf.Min(pv.y, pt.y) && position.y < Mathf.Max(pv.y, pt.y))
-                        {
-                            float t = Mathf.InverseLerp(Mathf.Min(pv.y, pt.y), Mathf.Max(pv.y, pt.y), position.y);
-                            if (float.IsNaN(t))
-                                t = 0f;
-                            float profileRadius = Mathf.Lerp(pv.dia, pt.dia, t) / 2.0f;
-
-                            
-                            radius = coords.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ? 
-                                profileRadius + coords.r :
-                                radius = profileRadius * coords.r;
-                        }
-                    }
-                }
-            }
-
-            
-            float theta = Mathf.Lerp(0, Mathf.PI * 2f, coords.u);
-
-            position.x = Mathf.Cos(theta) * radius;
-            position.z = -Mathf.Sin(theta) * radius;
-
-            return position;
-            
-        }
-
-        public override void GetCylindricCoordinates(Vector3 position, ShapeCoordinates result)
-        {
-
-            Vector2 direction = new Vector2(position.x, position.z);
-
-            switch(result.HeightMode)
-            {
-                case ShapeCoordinates.YMode.RELATIVE_TO_SHAPE:
-                    float halfLength = (lastProfile.Last.Value.y - lastProfile.First.Value.y) / 2.0f;
-                    result.y = position.y / halfLength;
-                    if (float.IsNaN(result.y))
-                        result.y = 0f;
-                    break;
-                    
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_CENTER:
-                    result.y = position.y;
-                    break;
-
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_BOTTOM:
-                    result.y = position.y - lastProfile.First.Value.y;
-                    break;
-
-                case ShapeCoordinates.YMode.OFFSET_FROM_SHAPE_TOP:
-                    result.y = position.y - lastProfile.Last.Value.y;
-                    break;
-                default:
-                    Debug.LogError("Can not handle PartCoordinate attribute: " + result.HeightMode);
-                    result.y = 0.0f;
-                    break;
-            }
-
-            
-            result.r = 0;
-            
-            float theta = Mathf.Atan2(-direction.y, direction.x);
-           
-            result.u = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
-            if (float.IsNaN(result.u))
-                result.u = 0f;
-
-            if(result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_CENTER)
-            {
-                result.r = direction.magnitude;
-                return;
-            }
-
-            if (position.y <= lastProfile.First.Value.y)
-                result.r = result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ? 
-                    direction.magnitude - lastProfile.First.Value.dia / 2.0f :
-                    direction.magnitude / (lastProfile.First.Value.dia / 2.0f); // RELATIVE_TO_SHAPE_RADIUS
-
-            else if (position.y >= lastProfile.Last.Value.y)
-                result.r = result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
-                    direction.magnitude - lastProfile.Last.Value.dia / 2.0f :
-                    direction.magnitude / (lastProfile.Last.Value.dia / 2.0f); // RELATIVE_TO_SHAPE_RADIUS
-            else
-            {
-                ProfilePoint pt = lastProfile.First.Value;
-                for (LinkedListNode<ProfilePoint> ptNode = lastProfile.First.Next; ptNode != null; ptNode = ptNode.Next)
-                {
-                    if (!ptNode.Value.inCollider)
-                        continue;
-                    ProfilePoint pv = pt;
-                    pt = ptNode.Value;
-
-                    if(position.y >= Mathf.Min(pv.y, pt.y) && position.y < Mathf.Max(pv.y, pt.y))
-                    {
-                        float t = Mathf.InverseLerp(Mathf.Min(pv.y, pt.y), Mathf.Max(pv.y, pt.y), position.y);
-                        if (float.IsNaN(t))
-                            t = 0f;
-                        float r = Mathf.Lerp(pv.dia, pt.dia, t) / 2.0f;
-
-                        result.r = result.RadiusMode == ShapeCoordinates.RMode.OFFSET_FROM_SHAPE_RADIUS ?
-                            direction.magnitude - r : direction.magnitude / r;
-                    }
-
-                }
-
-            }
-
-            // sometimes, if the shapes radius is 0, r rersults in NaN
-            if (float.IsNaN(result.r) || float.IsPositiveInfinity(result.r) || float.IsNegativeInfinity(result.r))
-            {
-                result.r = 0;
-            }
-        }
-
-        private enum Location
-        {
-            Top, Bottom, Side
-        }
-
-        private class Attachment
-        {
-            public TransformFollower follower;
-            public Location location;
-            public Vector2 uv;
-
-            public LinkedListNode<Attachment> node;
-
-            public override string ToString()
-            {
-                return "Attachment(location:" + location + ", uv=" + uv.ToString("F4") + ")";
-            }
-        }
-
-        private readonly LinkedList<Attachment> topAttachments = new LinkedList<Attachment>();
-        private readonly LinkedList<Attachment> bottomAttachments = new LinkedList<Attachment>();
-        private readonly LinkedList<Attachment> sideAttachments = new LinkedList<Attachment>();
-
-        public override object AddAttachment(TransformFollower attach, bool normalized)
-        {
-            return normalized ? AddAttachmentNormalized(attach) : AddAttachmentNotNormalized(attach);
-        }
-
-        private object AddAttachmentNotNormalized(TransformFollower attach)
-        {
-            Attachment ret = new Attachment
-            {
-                follower = attach
-            };
-
-            if (lastProfile == null)
-                throw new InvalidOperationException("Can't child non-normalized attachments prior to the first update");
-
-            // All the code from here down assumes the part is a convex shape, which is fair as it needs to be convex for 
-            // partCollider purposes anyhow. If we allow concave shapes it will need some refinement.
-            Vector3 position = attach.transform.localPosition;
-
-            // Convert the offset into spherical coords
-            float r = position.magnitude;
-            float theta, phi;
-            if (r > 0f)
-            {
-                theta = Mathf.Atan2(-position.z, position.x);
-                phi = Mathf.Asin(Mathf.Clamp(position.y / r, -1f, 1f));
-            }
-            else
-            {
-                // move the origin to the top to avoid divide by zeros.
-                theta = 0;
-                phi = Mathf.PI / 2f;
-            }
-
-
-            // top or bottom?
-            // ReSharper disable once CompareOfFloatsByEqualityOperator
-            if (phi != 0)
-            {
-                ProfilePoint topBot = (phi < 0) ? lastProfile.First.Value : lastProfile.Last.Value;
-
-                float tbR = Mathf.Sqrt(Mathf.Clamp(topBot.y * topBot.y + topBot.dia * topBot.dia * 0.25f, 0f, Mathf.Infinity));
-                float tbPhi = Mathf.Asin(Mathf.Clamp(topBot.y / tbR, -1f, 1f));
-
-                if (Mathf.Abs(phi) >= Mathf.Abs(tbPhi))
-                {
-                    ret.uv = topBot.dia < 0.001f ? 
-                        new Vector2(0.5f, 0.5f) : 
-                        new Vector2(position.x / topBot.dia * 2f + 0.5f, position.z / topBot.dia * 2f + 0.5f);
-
-                    if (phi > 0)
-                    {
-                        ret.location = Location.Top;
-                        ret.node = topAttachments.AddLast(ret);
-                        ret.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.up, Vector3.right));
-                    }
-                    else
-                    {
-                        ret.location = Location.Bottom;
-                        ret.node = bottomAttachments.AddLast(ret);
-                        ret.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.down, Vector3.left));
-                    }
-                    //Debug.LogWarning("Adding non-normalized attachment to position=" + position + " location=" + ret.location + " uv=" + ret.uv + " attach=" + attach.name);
-                    return ret;
-                }
-            }
-
-            // THis is the slope of a line projecting out towards our attachment
-            float s = position.y / Mathf.Sqrt(position.x * position.x + position.z * position.z);
-
-            ret.location = Location.Side;
-            ret.uv[0] = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
-            if (float.IsNaN(ret.uv[0]))
-                ret.uv[0] = 0f;
-
-            ProfilePoint pt = lastProfile.First.Value;
-            for (LinkedListNode<ProfilePoint> ptNode = lastProfile.First.Next; ptNode != null; ptNode = ptNode.Next)
-            {
-                if (!ptNode.Value.inCollider)
-                    continue;
-                ProfilePoint pv = pt;
-                pt = ptNode.Value;
-
-                float ptR = Mathf.Sqrt(pt.y * pt.y + pt.dia * pt.dia * 0.25f);
-                float ptPhi = Mathf.Asin(pt.y / ptR);
-
-                //Debug.LogWarning("ptPhi=" + ptPhi + " phi=" + phi);
-
-                if (phi > ptPhi)
-                    continue;
-
-                // so we know the attachment is somewhere between the previous and this circle
-                // Geometry: draw a line between the point (dia/2, y) in the prev circle and  (dia/2, y) in the current circle (parametric in t)
-                // find the point on the line where y = s * dia / 2  and solve for t
-
-                // r(t) = r0 + (r1-r0)t
-                // y(t) = y0 + (y1-y0)t
-                // y(t) = s * r(t)
-                //
-                // y0 + (y1-y0)t = s r0 + s (r1-r0) t
-                // ((y1-y0)- s(r1-r0))t = s r0 - y0
-                // t = (s r0 - y0) / ((y1-y0) - s(r1-r0))
-
-                float r0 = pv.dia * 0.5f;
-                float r1 = pt.dia * 0.5f;
-
-                float t = (s * r0 - pv.y) / ((pt.y - pv.y) - s * (r1 - r0));
-
-                //Debug.LogWarning(string.Format("New Attachment: pv=({0:F2}, {1:F2}) pt=({2:F2}, {3:F2}) s={4:F2} t={5:F2}", r0, pv.y, r1, pt.y, s, t));
-
-                ret.uv[1] = Mathf.Lerp(pv.v, pt.v, t);
-                if (ret.uv[1] > 1.0f)
-                    Debug.LogError("result off end of segment v=" + ret.uv[1] + " pv.v=" + pv.v + " pt.v=" + pt.v + " t=" + t);
-
-                // 
-                Vector3 normal;
-                Quaternion rot = SideAttachOrientation(pv, pt, theta, out normal);
-                ret.follower.SetLocalRotationReference(rot);
-
-                AddSideAttachment(ret);
-                //Debug.LogWarning("Adding non-normalized attachment to position=" + position + " location=" + ret.location + " uv=" + ret.uv + " attach=" + attach.name);
-                return ret;
-            }
-
-            // This should be impossible to reach
-            throw new InvalidProgramException("Unreachable code reached");
-        }
-
-        private object AddAttachmentNormalized(TransformFollower attach)
-        {
-            Attachment ret = new Attachment
-            {
-                follower = attach
-            };
-
-            Vector3 position = attach.transform.localPosition;
-
-            // This is easy, just get the UV and location correctly and force an update.
-            // as the position might be after some rotation and translation, it might not be exactly +/- 0.5
-            if (Mathf.Abs(Mathf.Abs(position.y) - Mathf.Abs(position.magnitude)) < 1e-5f)
-            {
-                if (position.y > 0)
-                {
-                    ret.location = Location.Top;
-                    ret.uv = new Vector2(position.x + 0.5f, position.z + 0.5f);
-                    ret.node = topAttachments.AddLast(ret);
-                    ret.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.up, Vector3.right));
-                }
-                else if (position.y < 0)
-                {
-                    ret.location = Location.Bottom;
-                    ret.uv = new Vector2(position.x + 0.5f, position.z + 0.5f);
-                    ret.node = bottomAttachments.AddLast(ret);
-                    ret.follower.SetLocalRotationReference(Quaternion.LookRotation(Vector3.down, Vector3.left));
-                }
-            }
-            else
-            {
-                ret.location = Location.Side;
-                float theta = Mathf.Atan2(-position.z, position.x);
-                ret.uv[0] = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
-                if (float.IsNaN(ret.uv[0]))
-                    ret.uv[0] = 0f;
-                ret.uv[1] = 0.5f - position.y;
-
-                Vector3 normal = new Vector3(position.x * 2f, 0, position.z * 2f);
-                ret.follower.SetLocalRotationReference(Quaternion.FromToRotation(Vector3.up, normal));
-
-                // side attachments are kept sorted
-                AddSideAttachment(ret);
-            }
-            ForceNextUpdate();
-
-            //Debug.LogWarning("Adding normalized attachment to position=" + position + " location=" + ret.location + " uv=" + ret.uv + " attach=" + attach.name);
-            return ret;
-        }
-
-        private void MoveAttachments(LinkedList<ProfilePoint> pts)
-        {
-            lastProfile = pts;
-
-            // top points
-            ProfilePoint top = pts.Last.Value;
-            foreach (Attachment a in topAttachments)
-            {
-                Vector3 pos = new Vector3(
-                    (a.uv[0] - 0.5f) * top.dia * 0.5f,
-                    top.y,
-                    (a.uv[1] - 0.5f) * top.dia * 0.5f);
-                //Debug.LogWarning("Moving attachment:" + a + " to:" + pos.ToString("F7") + " uv: " + a.uv.ToString("F5"));
-                a.follower.transform.localPosition = pos;
-                a.follower.ForceUpdate();
-            }
-
-            // bottom points
-            ProfilePoint bot = pts.First.Value;
-            foreach (Attachment a in bottomAttachments)
-            {
-                Vector3 pos = new Vector3(
-                    (a.uv[0] - 0.5f) * bot.dia * 0.5f,
-                    bot.y,
-                    (a.uv[1] - 0.5f) * bot.dia * 0.5f);
-                //Debug.LogWarning("Moving attachment:" + a + " to:" + pos.ToString("F7") + " uv: " + a.uv.ToString("F5"));
-                a.follower.transform.localPosition = pos;
-                a.follower.ForceUpdate();
-            }
-
-            // sides
-            ProfilePoint pv = null;
-            ProfilePoint pt = pts.First.Value;
-            LinkedListNode<ProfilePoint> ptNode = pts.First;
-            foreach (Attachment a in sideAttachments)
-            {
-                while (pt.v < a.uv[1])
-                {
-                    ptNode = ptNode.Next;
-                    if (ptNode == null)
-                    {
-                        ptNode = pts.Last;
-                        Debug.LogError("Child v greater than last point. Child v=" + a.uv[1] + " last point v=" + ptNode.Value.v);
-                        break;
-                    }
-                    if (!ptNode.Value.inCollider)
-                        continue;
-                    pv = pt;
-                    pt = ptNode.Value;
-                }
-                if (pv == null)
-                {
-                    Debug.LogError("Child v " +
-                                   "smaller than first point. Child v=" + a.uv[1] + " first point v=" + ptNode.Value.v);
-                    continue;                    
-                }
-
-                float t = Mathf.InverseLerp(pv.v, pt.v, a.uv[1]);
-                if (float.IsNaN(t))
-                    t = 0f;
-                //Debug.LogWarning("pv.v=" + pv.v + " pt.v=" + pt.v + " att.v=" + a.uv[1] + " t=" + t);
-
-                // using cylindrical coords
-                float r = Mathf.Lerp(pv.dia * 0.5f, pt.dia * 0.5f, t);
-                float y = Mathf.Lerp(pv.y, pt.y, t);
-
-                float theta = Mathf.Lerp(0, Mathf.PI * 2f, a.uv[0]);
-
-                float x = Mathf.Cos(theta) * r;
-                float z = -Mathf.Sin(theta) * r;
-
-                Vector3 pos = new Vector3(x, y, z);
-                //print("Moving attachment:" + a + " to:" + pos.ToString("F3"));
-                a.follower.transform.localPosition = pos;
-
-                Vector3 normal;
-                Quaternion rot = SideAttachOrientation(pv, pt, theta, out normal);
-
-                //Debug.LogWarning("Moving to orientation: normal: " + normal.ToString("F3") + " theta:" + (theta * 180f / Mathf.PI) + rot.ToStringAngleAxis());
-
-                a.follower.transform.localRotation = rot;
-                a.follower.ForceUpdate();
-            }
-        }
-
-        private static Quaternion SideAttachOrientation(ProfilePoint pv, ProfilePoint pt, float theta, out Vector3 normal)
-        {
-            normal = Quaternion.AngleAxis(theta * 180 / Mathf.PI, Vector3.up) * new Vector2(pt.y - pv.y, -(pt.dia - pv.dia) / 2f);
-            return Quaternion.FromToRotation(Vector3.up, normal);
-        }
-
-        private void AddSideAttachment(Attachment ret)
-        {
-            for (LinkedListNode<Attachment> node = sideAttachments.First; node != null; node = node.Next)
-                if (node.Value.uv[1] > ret.uv[1])
-                {
-                    ret.node = sideAttachments.AddBefore(node, ret);
-                    return;
-                }
-            ret.node = sideAttachments.AddLast(ret);
-        }
-
-        public override TransformFollower RemoveAttachment(object data, bool normalize)
-        {
-            Attachment attach = (Attachment)data;
-            switch (attach.location)
-            {
-                case Location.Top:
-                    topAttachments.Remove(attach.node);
-                    if (normalize)
-                        attach.follower.transform.localPosition = new Vector3(attach.uv[0] - 0.5f, 0.5f, attach.uv[1] - 0.5f);
-                    break;
-                case Location.Bottom:
-                    bottomAttachments.Remove(attach.node);
-                    if (normalize)
-                        attach.follower.transform.localPosition = new Vector3(attach.uv[0] - 0.5f, -0.5f, attach.uv[1] - 0.5f);
-                    break;
-                case Location.Side:
-                    sideAttachments.Remove(attach.node);
-
-                    if (normalize)
-                    {
-                        float theta = Mathf.Lerp(0, Mathf.PI * 2f, attach.uv[0]);
-                        float x = Mathf.Cos(theta);
-                        float z = -Mathf.Sin(theta);
-
-                        Vector3 normal = new Vector3(x, 0, z);
-                        attach.follower.transform.localPosition = new Vector3(normal.x * 0.5f, 0.5f - attach.uv[1], normal.z * 0.5f);
-                        attach.follower.transform.localRotation = Quaternion.FromToRotation(Vector3.up, normal);
-                    }
-                    break;
-            }
-
-            if (normalize)
-                attach.follower.ForceUpdate();
-            return attach.follower;
-        }
 
         #endregion
 
@@ -577,17 +72,10 @@ namespace ProceduralParts
                 return new Vector3[0];
 
             ProfilePoint profilePoint = top ? lastProfile.Last.Value : lastProfile.First.Value;
-            
-
             Vector3[] verticies = new Vector3[profilePoint.circ.totVertexes];
-
-            bool odd = false;
-
-            
-            odd = lastProfile.Count % 2 == 0;
+            bool odd = lastProfile.Count % 2 == 0;
 
             profilePoint.circ.WriteEndcapVerticies(profilePoint.dia, profilePoint.y, 0, verticies, odd);
-
             return verticies;
         }
         
@@ -613,8 +101,7 @@ namespace ProceduralParts
             UpdateNodeSize(pts.First(), bottomNodeName);
             UpdateNodeSize(pts.Last(), topNodeName);
 
-            // Move attachments first, before subdividing
-            MoveAttachments(pts);
+            lastProfile = pts;
 
             // Horizontal profile point subdivision
             SubdivHorizontal(pts);
@@ -709,7 +196,7 @@ namespace ProceduralParts
             //print("ULength=" + tankULength + " VLength=" + tankVLength);
 
             // set the texture scale.
-            RaiseChangeTextureScale("sides", PPart.SidesMaterial, new Vector2(tankULength, tankVLength));
+            RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
 
             
 
@@ -791,13 +278,7 @@ namespace ProceduralParts
 
             PPart.ColliderMesh = colliderMesh;
 
-            // updatem all props
-            foreach(PartModule pm in GetComponents<PartModule>())
-            {
-                IProp prop = pm as IProp;
-                if(null != prop)
-                    prop.UpdateProp();
-            }
+            PPart.UpdateProps();
 
             RaiseModelAndColliderChanged();
         }
@@ -866,7 +347,7 @@ namespace ProceduralParts
             RaiseChangeAttachNodeSize(node, pt.dia, Mathf.PI * pt.dia * pt.dia * 0.25f);
 
             // TODO: separate out the meshes for each end so we can use the scale for texturing.
-            RaiseChangeTextureScale(nodeName, PPart.EndsMaterial, new Vector2(pt.dia, pt.dia));
+            RaiseChangeTextureScale(nodeName, PPart.legacyTextureHandler.EndsMaterial, new Vector2(pt.dia, pt.dia));
         }
 
         #endregion

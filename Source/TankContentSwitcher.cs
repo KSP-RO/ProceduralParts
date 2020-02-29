@@ -1,11 +1,8 @@
 ﻿using KSPAPIExtensions;
-//using KSPAPIExtensions.PartMessage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 namespace ProceduralParts
 {
@@ -22,195 +19,101 @@ namespace ProceduralParts
     /// The class also accepts the message ChangeVolume(float volume) if attached to a dynamic resizing part
     /// such as ProceeduralTanks.
     /// </summary>
-    public class TankContentSwitcher : PartModule, IPartMassModifier, ICostMultiplier, IEndDragHandler
+    public class TankContentSwitcher : PartModule, IPartMassModifier, ICostMultiplier
     {
-        private bool displayDirty = false;
-        private UIPartActionWindow window;
+        private static readonly string ModTag = "[ProceduralParts.TankContentSwitcher]";
 
-        #region IEndDragHandler implementation
-        public void OnEndDrag(PointerEventData eventData)
-        {
-            if (this.displayDirty)
-                this.window.displayDirty = true;
-        }
+        #region IPartMassModifier implementation
+
+        public float GetModuleMass(float defaultMass, ModifierStagingSituation sit) => mass - defaultMass;
+        public ModifierChangeWhen GetModuleMassChangeWhen() => ModifierChangeWhen.FIXED;
+
         #endregion
 
-		#region IPartMassModifier implementation
-
-		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
-		{
-			return mass - defaultMass;
-		}
-
-		public ModifierChangeWhen GetModuleMassChangeWhen ()
-		{
-			return ModifierChangeWhen.FIXED;
-		}
-
-		#endregion
-
-        #region Callbacks
-
-        private bool isInitialized;
-        
-        public override void OnAwake()
-        {
-            base.OnAwake();
-            this.window = part.FindActionWindow();
-            //PartMessageService.Register(this);
-            //this.RegisterOnUpdateEditor(OnUpdateEditor);
-        }
-
-        public void Update()
-        {
-            if (HighLogic.LoadedSceneIsEditor)
-                OnUpdateEditor();
-        }
+        #region Unity Callbacks
 
         public override void OnLoad(ConfigNode node)
         {
-            if (!GameSceneFilter.AnyInitializing.IsLoaded())
-                return;
-        
-            tankTypeOptions = new List<TankTypeOption>();
-            foreach (ConfigNode optNode in node.GetNodes("TANK_TYPE_OPTION"))
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
             {
-                TankTypeOption option = new TankTypeOption();
-                option.Load(optNode);
-                tankTypeOptions.Add(option);
-            }
-
-            // Unity for some daft reason, and not as according to it's own documentation, won't clone 
-            // serializable member fields. Lets DIY.
-            tankTypeOptionsSerialized = ObjectSerializer.Serialize(tankTypeOptions);
-
-
-            try
-            {
-                if (bool.Parse(node.GetValue("useVolume")))
+                foreach (ConfigNode optNode in node.GetNodes("TANK_TYPE_OPTION"))
                 {
-                    tankVolumeName = PartVolumes.Tankage.ToString();
+                    TankTypeOption option = new TankTypeOption();
+                    option.Load(optNode);
+                    tankTypeOptions.Add(option.name, option);
                 }
+                if (string.IsNullOrEmpty(tankType) || !tankTypeOptions.Keys.Contains(tankType))
+                    tankType = tankTypeOptions.Keys.First();
             }
-            // ReSharper disable once EmptyGeneralCatchClause
-            catch { }
-        }
-
-        public override void OnSave(ConfigNode node)
-        {
-            // Force saved value for enabled to be true.
-            node.SetValue("isEnabled", "True");
-        }
-
-        public override void OnInitialize()
-        {
-            if (!isInitialized)
-                DoInitialize();
+            bool useV = false;
+            if (node.TryGetValue("useVolume", ref useV) && useV)
+                tankVolumeName = PartVolumes.Tankage.ToString();
         }
 
         public override void OnStart(StartState state)
         {
-            if (!isInitialized)
-                DoInitialize();
-        }
-
-        private void DoInitialize()
-        {
-            isInitialized = true;
-            if (HighLogic.LoadedSceneIsFlight)
-            {
-                if (tankVolumeName != null)
-                {
-                    MassChanged(mass);
-                }
-                isEnabled = enabled = false;
-                return;
-            }
-
             InitializeTankType();
-            // ReSharper disable once CompareOfFloatsByEqualityOperator
-            if (tankVolume != 0)
-                UpdateTankType(true);
-            isEnabled = enabled = HighLogic.LoadedSceneIsEditor;
+
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                Fields[nameof(volumeDisplay)].guiActiveEditor = !string.IsNullOrEmpty(tankVolumeName);
+                Fields[nameof(massDisplay)].guiActiveEditor = !string.IsNullOrEmpty(tankVolumeName);
+                Fields[nameof(tankType)].guiActiveEditor = tankTypeOptions.Count > 1;
+                // Don't listen for OnPartVolumeChanged until we have started.
+                Events[nameof(OnPartVolumeChanged)].active = true;
+
+                UI_ChooseOption options = Fields[nameof(tankType)].uiControlEditor as UI_ChooseOption;
+                options.options = tankTypeOptions.Keys.ToArray();
+                options.onFieldChanged += OnTankTypeChanged;
+            }
+            tankVolume = PPart?.CurrentShape ? PPart.CurrentShape.Volume : 0;
+            volumeDisplay = tankVolume.ToStringSI(4, 3, "L");
         }
 
-        public void OnUpdateEditor()
+        public override void OnStartFinished(StartState state)
         {
-            if (!isInitialized)
-                return;
-
-            UpdateTankType();
+            base.OnStartFinished(state);
+            if (HighLogic.LoadedSceneIsEditor)
+                this.OnTankTypeChanged(Fields[nameof(tankType)], null);
+            else
+            {
+                UpdateTankMass();
+                UpdateMassDisplay();
+            }
         }
 
         #endregion
 
-        #region Tank Volume
+        #region Fields Definitions
 
         /// <summary>
         /// Volume of part in kilolitres. 
         /// </summary>
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false)]
+        [KSPField(isPersistant = true)]
         public float tankVolume;
 
-        [KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Mass")]
+        [KSPField(guiActiveEditor = true, guiName = "Mass", groupName = "TCS", groupDisplayName = "TankContentSwitcher")]
         public string massDisplay;
 
-		[KSPField(isPersistant = false, guiActive = false, guiActiveEditor = true, guiName = "Volume")]
-		public string volumeDisplay;
+        [KSPField(guiActiveEditor = true, guiName = "Volume", groupName = "TCS")]
+        public string volumeDisplay;
 
-        [KSPField(isPersistant=true)]
+        [KSPField(isPersistant = true)]
         public float mass;
 
         [KSPField]
         public string tankVolumeName;
 
-        /// <summary>
-        /// Message sent from ProceduralAbstractShape when it updates.
-        /// </summary>
-        //[PartMessageListener(typeof(PartVolumeChanged), scenes:~GameSceneFilter.Flight)]
-        //public void ChangeVolume(string volumeName, float volume)
-		[KSPEvent(guiActive = false, active = true)]
-		public void OnPartVolumeChanged(BaseEventDetails data)
-        {
-			string volumeName = data.Get<string> ("volName");
-			double volume = data.Get<double> ("newTotalVolume");
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Tank Type", groupName = "TCS"), UI_ChooseOption(scene = UI_Scene.Editor)]
+        public string tankType;
+        private TankTypeOption SelectedTankType => tankTypeOptions.ContainsKey(tankType) ? tankTypeOptions[tankType] : null;
 
-            if (volumeName != tankVolumeName)
-                return;
+        public float GetCurrentCostMult() => SelectedTankType is TankTypeOption ? SelectedTankType.costMultiplier : 0;
+        private readonly Dictionary<string, TankTypeOption> tankTypeOptions = new Dictionary<string, TankTypeOption>();
 
-            if (volume <= 0f)
-                throw new ArgumentOutOfRangeException("volume");
-
-            tankVolume = (float)volume;
-			//Debug.Log ((float)volume);
-			volumeDisplay = volume.ToStringSI(4, 3, "L");
-
-            UpdateMassAndResources(false);
-            if (HighLogic.LoadedSceneIsEditor)
-                GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
-        }
-    
         #endregion
 
         #region Tank Type
-
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true, guiName = "Tank Type"), UI_ChooseOption(scene=UI_Scene.Editor)]
-        public string tankType;
-
-        private TankTypeOption selectedTankType;
-        
-        public float GetCurrentCostMult()
-        {
-            if (null != selectedTankType)
-                return selectedTankType.costMultiplier;
-            else
-                return 0; // tank type has not been initialized yet
-        }
-        private List<TankTypeOption> tankTypeOptions;
-
-        // This should be private, but there's a bug in KSP.
-        [SerializeField]
-        public byte[] tankTypeOptionsSerialized;
 
         [Serializable]
         public class TankTypeOption : IConfigNode
@@ -252,6 +155,11 @@ namespace ProceduralParts
                     node.AddNode(resNode);
                 }
             }
+            public bool TechAvailable =>
+                !(HighLogic.CurrentGame.Mode == Game.Modes.CAREER || HighLogic.CurrentGame.Mode == Game.Modes.SCIENCE_SANDBOX) ||
+                 string.IsNullOrEmpty(techRequired) ||
+                 ResearchAndDevelopment.GetTechnologyState(techRequired) == RDTech.State.Available;
+
         }
 
         [Serializable]
@@ -269,6 +177,8 @@ namespace ProceduralParts
             public bool isTweakable = true;
             [Persistent]
             public bool forceEmpty = false;
+            [Persistent]
+            public string flowMode = "Both";
 
             public void Load(ConfigNode node)
             {
@@ -284,332 +194,157 @@ namespace ProceduralParts
                 return other == null ? 1 : 
                     string.Compare(name, other.name, StringComparison.Ordinal);
             }
+
         }
 
         private void InitializeTankType()
         {
-            // Have to DIY to get the part options deserialized
-            if (tankTypeOptionsSerialized != null)
-                ObjectSerializer.Deserialize(tankTypeOptionsSerialized, out tankTypeOptions);
-
-            if(HighLogic.CurrentGame.Mode == Game.Modes.CAREER || HighLogic.CurrentGame.Mode == Game.Modes.SCIENCE_SANDBOX)
+            tankTypeOptions.Clear();
+            foreach (var kvp in part.partInfo.partPrefab.FindModuleImplementing<TankContentSwitcher>().tankTypeOptions)
             {
-                tankTypeOptions = tankTypeOptions.Where(to => string.IsNullOrEmpty(to.techRequired) || ResearchAndDevelopment.GetTechnologyState(to.techRequired) == RDTech.State.Available).ToList();
+                if (kvp.Value.TechAvailable)
+                    tankTypeOptions.Add(kvp.Key, kvp.Value);
             }
-
-            Fields["volumeDisplay"].guiActiveEditor = tankVolumeName != null; 
-            Fields["massDisplay"].guiActiveEditor = tankVolumeName != null;
 
             if (tankTypeOptions == null || tankTypeOptions.Count == 0)
             {
                 Debug.LogError("*TCS* No part type options available");
                 return;
             }
-
-            BaseField field = Fields["tankType"];
-            UI_ChooseOption options = (UI_ChooseOption)field.uiControlEditor;
-
-            options.options = tankTypeOptions.ConvertAll(opt => opt.name).ToArray();
-
-            field.guiActiveEditor = (tankTypeOptions.Count > 1);
-
-            if (string.IsNullOrEmpty(tankType))
-                tankType = tankTypeOptions[0].name;
-        }
-
-        private void UpdateTankType(bool init = false)
-        {
-            if (tankTypeOptions == null || ( selectedTankType != null && selectedTankType.name == tankType))
-                return;
-
-            TankTypeOption oldTankType = selectedTankType;
-
-            selectedTankType = tankTypeOptions.Find(opt => opt.name == tankType);
-
-            if (selectedTankType == null)
-            {
-                if (oldTankType == null)
-                {
-                    Debug.LogWarning("*TCS* Initially selected part type '" + tankType + "' does not exist, reverting to default");
-                    selectedTankType = tankTypeOptions[0];
-                    tankType = selectedTankType.name;
-                }
-                else 
-                {
-                    Debug.LogWarning("*TCS* Selected part type '" + tankType + "' does not exist, reverting to previous");
-                    selectedTankType = oldTankType;
-                    tankType = selectedTankType.name;
-                    if (HighLogic.LoadedSceneIsEditor)
-                        GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
-                    return;
-                }
-            }
-
-            if (selectedTankType.isStructural)
-                Fields["volumeDisplay"].guiActiveEditor = false;
-            else
-				Fields["volumeDisplay"].guiActiveEditor = tankVolumeName != null;
-
-            UpdateMassAndResources(true, init);
-            if (HighLogic.LoadedSceneIsEditor)
-                GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+            if (string.IsNullOrEmpty(tankType) || !tankTypeOptions.Keys.Contains(tankType))
+                tankType = tankTypeOptions.Keys.First();
+            Fields[nameof(volumeDisplay)].guiActiveEditor = SelectedTankType.isStructural ? false : tankVolumeName != null;
         }
 
         #endregion
 
-        #region Resources
+        #region Updaters / Callbacks
 
-        //[PartMessageEvent]
-        //public event PartMassChanged MassChanged;
-		public void MassChanged (float mass)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<float> ("mass", mass);
-
-			part.SendEvent ("OnPartMassChanged", data, 0);
-		}
-
-		//[PartMessageEvent]
-        //public event PartResourceListChanged ResourceListChanged;
-        
-		public void ResourceListChanged (Part part)
-		{
-			part.SendEvent("OnResourceListChanged", null, 0);
-		}
-
-		//[PartMessageEvent]
-        //public event PartResourceMaxAmountChanged MaxAmountChanged;
-		public void MaxAmountChanged (Part part, PartResource resource, double amount)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<PartResource> ("resource", resource);
-			data.Set<double> ("amount", amount);
-			part.SendEvent ("OnResourceMaxChanged", data, 0);
-		}
-
-        //[PartMessageEvent]
-        //public event PartResourceInitialAmountChanged InitialAmountChanged;
-		public void InitialAmountChanged (Part part, PartResource resource, double amount)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<PartResource> ("resource", resource);
-			data.Set<double> ("amount", amount);
-			part.SendEvent ("OnResourceInitialChanged", data, 0);
-		}
-
-        private void UpdateMassAndResources(bool typeChanged, bool keepAmount = false) // keep amount when rebuild (for saved part loading)
+        /// <summary>
+        /// Message sent from ProceduralAbstractShape when it updates.
+        /// </summary>
+        [KSPEvent(guiActive = false, active = false)]
+        public void OnPartVolumeChanged(BaseEventDetails data)
         {
-            // Wait for the first update...
-            if (selectedTankType == null)
-                return;
+            string volumeName = data.Get<string>("volName");
+            double volume = data.Get<double>("newTotalVolume");
+            Debug.Log($"{ModTag} {this} OnPartVolumeChanged for {volumeName} to {volume}");
 
-            if (tankVolumeName != null)
+            if (volumeName != tankVolumeName)
             {
-                mass = selectedTankType.dryDensity * tankVolume + selectedTankType.massConstant;
-
-                if (PPart != null)
-                    mass *= PPart.CurrentShape.massMultiplier;
-
-                MassChanged(mass);
+                Debug.LogWarning($"{ModTag} OnPartVolumeChanged for {this}, volumeName {volumeName} vs tankVolumeName {tankVolumeName}");
+                return;
             }
 
-            // Update the resources list.
-            if (typeChanged || !UpdateResources())
-                RebuildResources(keepAmount);
+            if (volume <= 0f)
+                throw new ArgumentOutOfRangeException("volume");
 
-            if (tankVolumeName != null)
+            tankVolume = Convert.ToSingle(volume);
+            volumeDisplay = tankVolume.ToStringSI(4, 3, "L");
+            UpdateTankMass();
+            UpdateResourceAmounts();
+            UpdateMassDisplay();
+
+            if (HighLogic.LoadedSceneIsEditor)
+                GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+
+            DirtyPAW();
+        }
+
+        private void OnTankTypeChanged(BaseField f, object obj)
+        {
+            Debug.Log($"{ModTag} OnTankTypeChanged for {this}, to {f.GetValue(this)} from {obj}");
+            UpdateTankMass();
+            string s = obj as string;
+            if (!string.IsNullOrEmpty(s) && tankTypeOptions.ContainsKey(s) && tankTypeOptions[s] is TankTypeOption oldTTO)
             {
-                double resourceMass = part.Resources.Cast<PartResource>().Sum(r => r.maxAmount*r.info.density);
+                foreach (TankResource tr in oldTTO.resources)
+                {
+                    if (part.Resources.Get(tr.name) is PartResource pr)
+                    {
+                        part.RemoveResource(pr);
+                    }
+                }
+            }
+            foreach (TankResource tr in SelectedTankType.resources)
+            {
+                double maxAmount = CalculateMaxResourceAmount(tr);
+                // On initialization, old TankTypeOptions is null but there is still a list of PartResources, so apply their value.
+                double amount = (part.Resources.Get(tr.name) is PartResource pr) ? pr.amount : maxAmount;
 
-                float totalMass = mass + (float)resourceMass;
-                if (selectedTankType.isStructural)
+                ConfigNode node = new ConfigNode("RESOURCE");
+                node.AddValue("name", tr.name);
+                node.AddValue("maxAmount", maxAmount);
+                node.AddValue("amount", amount);
+                node.AddValue("flowMode", tr.flowMode);
+                node.AddValue("isTweakable", tr.isTweakable);
+                part.SetResource(node);
+            }
+            Fields[nameof(volumeDisplay)].guiActiveEditor = SelectedTankType.isStructural ? false : tankVolumeName != null;
+            UpdateMassDisplay();
+            DirtyPAW();
+        }
+
+        private void UpdateTankMass()
+        {
+            if (!string.IsNullOrEmpty(tankVolumeName))
+            {
+                mass = SelectedTankType.dryDensity * tankVolume + SelectedTankType.massConstant;
+                mass *= (PPart is ProceduralPart) ? PPart.CurrentShape.massMultiplier : 1;
+            }
+        }
+
+        private void UpdateMassDisplay() 
+        {
+            if (!string.IsNullOrEmpty(tankVolumeName))
+            {
+                double resourceMass = part.Resources.Cast<PartResource>().Sum(r => r.maxAmount * r.info.density);
+                float totalMass = mass + Convert.ToSingle(resourceMass);
+                if (SelectedTankType.isStructural)
                     massDisplay = MathUtils.FormatMass(totalMass);
                 else
                     massDisplay = "Dry: " + MathUtils.FormatMass(part.mass) + " / Wet: " + MathUtils.FormatMass(totalMass);
             }
         }
 
-        //[PartMessageListener(typeof(PartResourceInitialAmountChanged), scenes: GameSceneFilter.AnyEditor)]
-        //public void ResourceChanged(PartResource resource, double amount)
-		[KSPEvent(guiActive = false, active = true)]
-		public void OnPartResourceInitialAmountChanged(BaseEventDetails data)
+        private void UpdateResourceAmounts()
         {
-
-
-			if (!GameSceneFilter.AnyEditor.IsLoaded ())
-				return;
-
-            if(selectedTankType == null)
-                return;
-
-			PartResource resource = data.Get<PartResource> ("resource");
-
-            TankResource tankResource = selectedTankType.resources.Find(r => r.name == name);
-            if (tankResource == null || !tankResource.forceEmpty)
-                return;
-
-            if(resource != null && resource.amount > 0)
+            foreach (TankResource tr in SelectedTankType.resources)
             {
-                resource.amount = 0;
-                InitialAmountChanged(part, resource, resource.amount);
-            }
-        }
-
-        private bool UpdateResources()
-        {
-            // Hopefully we can just fiddle with the existing part resources.
-            // This saves having to make the window dirty, which breaks dragging on sliders.
-            if (part.Resources.Count != selectedTankType.resources.Count)
-            {
-                Debug.LogWarning("*TCS* Selected and existing resource counts differ");
-                return false;
-            }
-
-            for (int i = 0; i < part.Resources.Count; ++i)
-            {
-                PartResource partRes = part.Resources[i];
-                TankResource tankRes = selectedTankType.resources[i];
-
-                if (partRes.resourceName != tankRes.name)
+                if (part.Resources.Get(tr.name) is PartResource pr)
                 {
-                    Debug.LogWarning("*TCS* Selected and existing resource names differ");
-                    return false;
+                    double maxAmount = CalculateMaxResourceAmount(tr);
+                    pr.maxAmount = maxAmount;
+                    pr.amount = Math.Min(pr.amount, maxAmount);
                 }
-
-                //double maxAmount = (float)Math.Round(tankRes.unitsConst + tankVolume * tankRes.unitsPerKL + mass * tankRes.unitsPerT, 2);
-                double maxAmount = CalculateMaxResourceAmount(tankRes);
-
-                // ReSharper disable CompareOfFloatsByEqualityOperator
-                if (partRes.maxAmount == maxAmount)
-                    continue;
-
-                if (tankRes.forceEmpty)
-                    partRes.amount = 0;
-                else if (partRes.maxAmount == 0)
-                    partRes.amount = maxAmount;
                 else
                 {
-                    SIPrefix pfx = maxAmount.GetSIPrefix();
-                    partRes.amount = pfx.Round(partRes.amount * maxAmount / partRes.maxAmount, 4);
+                    Debug.LogError($"{ModTag} UpdateResourceAmounts for {tr.name} found no matching PartResource!");
                 }
-                partRes.maxAmount = maxAmount;
-                // ReSharper restore CompareOfFloatsByEqualityOperator
-
-                MaxAmountChanged(part, partRes, partRes.maxAmount);
-                InitialAmountChanged(part, partRes, partRes.amount);
             }
-
-            //UIPartActionWindow window = part.FindActionWindow();
-            if (this.window != null)
-            {
-                if (!this.window.dragging)
-                    this.window.displayDirty = true;
-                else
-                    this.displayDirty = true;
-            }
-            return true;
         }
 
         private double CalculateMaxResourceAmount(TankResource res)
         {
-            double shapeMultiplier = 0;
-
-            if (PPart != null)
-                if (PPart.CurrentShape != null)
-                    shapeMultiplier = PPart.CurrentShape.resourceMultiplier;
-
-            return Math.Round((res.unitsConst + tankVolume * res.unitsPerKL + mass * res.unitsPerT) * shapeMultiplier, 2);
-        }
-
-        private void RebuildResources(bool keepAmount = false)
-        {
-            List<PartResource> partResources = new List<PartResource>();
-
-            // Purge the old resources
-            foreach (PartResource res in part.Resources)
-            {
-                if (selectedTankType.resources.Any(tr => tr.name == res.resourceName))
-                {
-                    //always keep the resources because we need the flowState value
-                    partResources.Add(res);
-                    if (!keepAmount)
-                        res.amount = -1;
-                }
-            }
-
-            part.Resources.dict.Clear();
-
-            // Build them afresh. This way we don't need to do all the messing around with reflection
-            // The downside is the UIPartActionWindow gets maked dirty and rebuit, so you can't use 
-            // the sliders that affect part contents properly cos they get recreated underneith you and the drag dies.
-            foreach (TankResource res in selectedTankType.resources)
-            {
-                //double maxAmount = Math.Round(res.unitsConst + tankVolume * res.unitsPerKL + part.mass * res.unitsPerT, 2);
-                double maxAmount = CalculateMaxResourceAmount(res);
-
-                ConfigNode node = new ConfigNode("RESOURCE");
-                node.AddValue("name", res.name);
-                node.AddValue("maxAmount", maxAmount);
-
-                PartResource partResource = partResources.FirstOrDefault(r => r.resourceName == res.name);
-                if (partResource != null)
-                    node.AddValue("flowState", partResource.flowState);
-
-                if (!res.forceEmpty && null != partResource && partResource.amount != -1)
-                { 
-                    node.AddValue("amount", Math.Min(partResource.amount, maxAmount));
-                }
-                else
-                    node.AddValue("amount", res.forceEmpty ? 0 : maxAmount);
-
-                node.AddValue("isTweakable", res.isTweakable);
-                part.AddResource(node);
-            }
-
-            //UIPartActionWindow window = part.FindActionWindow();
-            if (this.window != null)
-                this.window.displayDirty = true;
-
-            ResourceListChanged(part);
+            double shapeMultiplier = (PPart is ProceduralPart && PPart.CurrentShape is ProceduralAbstractShape) ?
+                                    PPart.CurrentShape.resourceMultiplier : 0;
+            return Math.Round((res.unitsConst + (tankVolume * res.unitsPerKL) + (mass * res.unitsPerT)) * shapeMultiplier, 2);
         }
 
         #endregion
 
-		// TODO EPL
-		/*
-        #region Message passing for EPL
-
-        // Extraplanetary launchpads needs these messages sent.
-        // From the next update of EPL, this won't be required.
-
-        [PartMessageListener(typeof(PartResourcesChanged))]
-        public void ResourcesModified()
-        {
-            BaseEventDetails data = new BaseEventDetails(BaseEventDetails.Sender.USER);
-            data.Set("part", part);
-            part.SendEvent("OnResourcesModified", data, 0);
-        }
-
-        private float oldmass;
-
-        [PartMessageListener(typeof(PartMassChanged))]
-        public void MassModified(BaseEventDetails data)
-        {
-            BaseEventDetails data = new BaseEventDetails(BaseEventDetails.Sender.USER);
-            data.Set("part", part);
-            data.Set<float>("oldmass", oldmass);
-            part.SendEvent("OnMassModified", data, 0);
-
-            oldmass = paramMass;
-        }
-
-        #endregion
-        */
-
-        public ProceduralPart PPart
-        {
-            get { return _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
-        }
+        public ProceduralPart PPart => _pPart ?? (_pPart = GetComponent<ProceduralPart>());
         private ProceduralPart _pPart;
+
+        private void DirtyPAW()
+        {
+            foreach (UIPartActionWindow window in UIPartActionController.Instance.windows)
+            {
+                if (window.part == this.part)
+                {
+                    window.displayDirty = true;
+                }
+            }
+        }
     }
 }

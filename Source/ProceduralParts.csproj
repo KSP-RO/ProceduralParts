@@ -26,6 +26,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>1607</NoWarn>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -37,6 +38,7 @@
     <WarningLevel>4</WarningLevel>
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
     <DebugSymbols>true</DebugSymbols>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <OutputPath>bin\Debug\</OutputPath>
@@ -45,6 +47,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
@@ -54,6 +57,7 @@
     <PlatformTarget>anycpu</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System">
@@ -75,7 +79,7 @@
   <ItemGroup>
     <Compile Include="DecouplerTweaker.cs" />
     <Compile Include="ICostModifier.cs" />
-    <Compile Include="ObjectSerializer.cs" />
+    <Compile Include="LegacyTextureHandler.cs" />
     <Compile Include="ProceduralHeatshield.cs" />
     <Compile Include="ProceduralShapeBezierCone.cs" />
     <Compile Include="ProceduralShapePill.cs" />
@@ -88,9 +92,10 @@
     <Compile Include="ProceduralAbstractSoRShape.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TankContentSwitcher.cs" />
+    <Compile Include="TechLimit.cs" />
+    <Compile Include="TextureSet.cs" />
     <Compile Include="TransformFollower.cs" />
     <Compile Include="VectorUtils.cs" />
-    <Compile Include="zzVersionChecker.cs" />
     <Compile Include="KSPUtils.cs" />
     <Compile Include="UnityUtils.cs" />
     <Compile Include="EngineWrapper.cs" />
@@ -98,8 +103,11 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>
-    </PostBuildEvent>
+    <PostBuildEvent>"C:\Users\Joe\source\Tools\pdb2mdb\pdb2mdb.exe" "$(TargetFileName)"
+xcopy /Y "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.7.3 Dev\GameData\ProceduralParts\Plugins\"
+xcopy /Y "$(TargetDir)$(TargetName).pdb" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.7.3 Dev\GameData\ProceduralParts\Plugins\"
+xcopy /Y "$(TargetDir)$(TargetName).dll.mdb" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.7.3 Dev\GameData\ProceduralParts\Plugins\"
+</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>

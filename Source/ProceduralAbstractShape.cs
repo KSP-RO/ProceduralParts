@@ -1,13 +1,11 @@
 ﻿using System;
 using UnityEngine;
-using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
-using KSPAPIExtensions;
 
 namespace ProceduralParts
 {
-	public enum PartVolumes
+    public enum PartVolumes
 	{
 		/// <summary>
 		/// Tankage - the volume devoted to storage of fuel, life support resources, ect
@@ -19,18 +17,14 @@ namespace ProceduralParts
 		Habitable,
 	}
 
-
     public abstract class ProceduralAbstractShape : PartModule
     {
+        private static readonly string ModTag = "[ProceduralAbstractShape]";
         internal const float SliderPrecision = 0.001f;
         internal const float IteratorIncrement = 1048.5f / (1024 * 1024); // a float slightly below sliderprecision
 
-        public override void OnAwake()
-        {
-            base.OnAwake();
-            //PartMessageService.Register(this);
-            //this.RegisterOnUpdateEditor(OnUpdateEditor);
-        }
+        public bool IsAvailable => string.IsNullOrEmpty(techRequired) || ResearchAndDevelopment.GetTechnologyState(techRequired) == RDTech.State.Available;
+        public bool IsObsolete => !string.IsNullOrEmpty(techObsolete) && ResearchAndDevelopment.GetTechnologyState(techObsolete) == RDTech.State.Available;
 
         #region Config data
         [KSPField]
@@ -44,7 +38,6 @@ namespace ProceduralParts
 
         [KSPField]
         public string volumeName = PartVolumes.Tankage.ToString();
-
 
         #endregion
 
@@ -60,33 +53,24 @@ namespace ProceduralParts
         [KSPField]
         public float resourceMultiplier = 1.0f;
         
-        /////////////////////////////////////
-        
         #endregion
 
         #region Objects
-        public ProceduralPart PPart
-        {
-            get { return _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
-        }
+
+        public ProceduralPart PPart { get => _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
         private ProceduralPart _pPart;
 
-        public Mesh SidesMesh
-        {
-            get { return PPart.SidesMesh; }
-        }
+        public Mesh SidesMesh { get => PPart.SidesMesh; }
 
-        public Mesh EndsMesh
-        {
-            get { return PPart.EndsMesh; }
-        }
+        public Mesh EndsMesh { get => PPart.EndsMesh; }
+
         #endregion
 
         #region Shape details
 
         public float Volume
         {
-            get { return _volume; }
+            get => _volume;
             protected set
             {
                 // ReSharper disable once CompareOfFloatsByEqualityOperator
@@ -105,67 +89,198 @@ namespace ProceduralParts
 
         #region Events
 
-        // Events. These will get bound up automatically
+        // Find the ProceduralAbstractShape in Part p that is the same ProceduralAbstractShape as the param.
+        private ProceduralAbstractShape FindAbstractShapeModule(Part p, ProceduralAbstractShape type)
+        {
+            foreach (ProceduralAbstractShape s in p.FindModulesImplementing<ProceduralAbstractShape>())
+            {
+                if (s.GetType() == type.GetType())
+                    return s;
+            }
+            return null;
+        }
 
-        //[PartMessageEvent]
-        //public event PartVolumeChanged ChangeVolume;
+        /* Unknown, but in 1.6, symmetry callback happens before primary callback, AND obj is 
+         * NOT the previous value!
+         * 
+         * [LOG 14:15:29.840] [ProceduralShapeCylinder] OnShapeDimensionChangedSYMMETRY! so ignoring.  length from 6 to 6
+         * [LOG 14:15:29.841] [ProceduralShapeCylinder] OnShapeDimensionChangedSYMMETRY! so ignoring.  length from 6 to 6
+         * [LOG 14:15:29.842] [ProceduralShapeCylinder] OnShapeDimensionChanged override: length from 5 to 6
+         */
+        public virtual void OnShapeDimensionChanged(BaseField f, object obj)
+        {
+            if (f.GetValue(this).Equals(obj))
+                return;
+            Debug.Log($"{ModTag} OnShapeDimensionChanged: {f.name} from {obj} to {f.GetValue(this)}");
+            AdjustDimensionBounds();
+            UpdateShape();
+            UpdateInterops();
+            TranslateAttachmentsAndNodes(f, obj);
+            foreach (Part p in part.symmetryCounterparts)
+            {
+                if (FindAbstractShapeModule(p, this) is ProceduralAbstractShape pm)
+                {
+                    pm.AdjustDimensionBounds();
+                    pm.UpdateShape();
+                    pm.UpdateInterops();
+                    pm.TranslateAttachmentsAndNodes(f, obj);
+                }
+                else
+                {
+                    Debug.LogError($"{ModTag} Failed to find expected {this.GetType()} partModule");
+                }
+            }
+        }
 
-		public void ChangeVolume(string volName, double newVolume)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<string> ("volName", volName);
-			data.Set<double> ("newTotalVolume", newVolume);
-			part.SendEvent ("OnPartVolumeChanged", data, 0);
-		}
+        public abstract float CalculateVolume();
+        public abstract void AdjustDimensionBounds();
+        public abstract void TranslateAttachmentsAndNodes(BaseField f, object obj);
 
-        //[PartMessageEvent]
-        //public event ChangeTextureScaleDelegate ChangeTextureScale;
+        public virtual void HandleLengthChange(float length, float oldLength)
+        {
+            float trans = length - oldLength;
+            foreach (AttachNode node in part.attachNodes)
+            {
+                // Our nodes are relative to part center 0,0,0.  position.y > 0 are top nodes.
+                float direction = (node.position.y > 0) ? 1 : -1;
+                Vector3 translation = direction * (trans / 2) * Vector3.up;
+                if (node.nodeType == AttachNode.NodeType.Stack)
+                {
+                    TranslateNode(node, translation);
+                    if (node.attachedPart is Part pushTarget)
+                    {
+                        TranslatePart(pushTarget, translation);
+                    }
+                }
+            }
 
-        //[PartMessageEvent]
-        //public event PartAttachNodeSizeChanged ChangeAttachNodeSize;
+            // Now push our surface-attached children based on their relative (offset) length.
+            foreach (Part p in part.children)
+            {
+                if (p.FindAttachNodeByPart(part) is AttachNode node && node.nodeType == AttachNode.NodeType.Surface)
+                {
+                    GetAttachmentNodeLocation(node, out Vector3 worldSpace, out Vector3 localToHere, out ShapeCoordinates coord);
+                    float ratio = length / oldLength;
+                    coord.y *= ratio;
+                    MovePartByAttachNode(node, coord);
+                }
+            }
+        }
 
-		public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
-		{
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<AttachNode> ("node", node);
-			data.Set<float> ("minDia", minDia);
-			data.Set<float> ("area", area);
-			part.SendEvent ("OnPartAttachNodeSizeChanged", data, 0);
-		}
+        public void TranslatePart(Part pushTarget, Vector3 translation)
+        {
+            // If the attached part is a child of ours, push it directly.
+            // If it is our parent, then we need to find the eldest grandparent and push that, and also ourselves
+            if (pushTarget == this.part.parent)
+            {
+                this.part.transform.Translate(-translation, Space.Self);    // Push ourselves normally
+                float sibMult = part.symmetryCounterparts == null ? 1f : 1f / (part.symmetryCounterparts.Count + 1);
+                pushTarget = GetEldestParent(this.part);
+                translation *= sibMult; // Push once for each symmetry sibling, so scale the parent push.
+            }
+            // Convert to world space, to deal with bizarre orientation relationships.
+            // (ex: pushTarget is inverted, and our top node connects to its top node)
+            Vector3 worldSpaceTranslation = part.transform.TransformVector(translation);
+            pushTarget.transform.Translate(worldSpaceTranslation, Space.World);
+        }
 
-        //[PartMessageEvent]
-        //public event PartModelChanged ModelChanged;
+        public virtual void HandleDiameterChange(float diameter, float oldDiameter)
+        {
+            // Adjust our own surface attach node, and translate ourselves.
+            if (part.srfAttachNode is AttachNode srf)
+            {
+                GetAttachmentNodeLocation(srf, out Vector3 _, out Vector3 _, out ShapeCoordinates coord);
+                coord.r *= diameter / oldDiameter;
+                Vector3 newNodeLocalPos = FromCylindricCoordinates(coord);
+                Vector3 localTranslate = newNodeLocalPos - srf.position;
+                Debug.Log($"{ModTag} Moved surface attachment node from {srf.position} (local) to {newNodeLocalPos}");
+                if (srf.attachedPart is Part)
+                {
+                    // We are surface-attached, so translate ourselves.
+                    part.transform.Translate(-localTranslate, Space.Self);
+                    Debug.Log($"{ModTag} Translated ourselves by {-localTranslate}");
+                }
+                MoveNode(srf, newNodeLocalPos);
+            }
+            // Nothing to do for stack-attached nodes.
+            foreach (Part p in part.children)
+            {
+                if (p.FindAttachNodeByPart(part) is AttachNode node && node.nodeType == AttachNode.NodeType.Surface)
+                {
+                    GetAttachmentNodeLocation(node, out Vector3 worldSpace, out Vector3 localToHere, out ShapeCoordinates coord);
+                    float ratio = diameter / oldDiameter;
+                    coord.r *= ratio;
+                    MovePartByAttachNode(node, coord);
+                }
+            }
+        }
 
-		private void ModelChanged()
-		{
-			part.SendEvent ("OnPartModelChanged", null, 0);
-		}
+        public abstract bool SeekVolume(float targetVolume);
 
-        //[PartMessageEvent]
-        //public event PartColliderChanged ColliderChanged;
+        public virtual bool SeekVolume(float targetVolume, BaseField scaledField)
+        {
+            float maxLength = (scaledField.uiControlEditor as UI_FloatEdit).maxValue;
+            float minLength = (scaledField.uiControlEditor as UI_FloatEdit).minValue;
+            float precision = (scaledField.uiControlEditor as UI_FloatEdit).incrementSlide;
+            float length = (float)scaledField.GetValue(this);
+            float targetLength = length * targetVolume / Volume;
+            targetLength = System.Convert.ToSingle(System.Math.Round(targetLength / precision)) * precision;
+            float clampedTargetLength = Mathf.Max(minLength, Mathf.Min(maxLength, targetLength));
+            bool closeEnough = Mathf.Abs((clampedTargetLength / targetLength) - 1) < 0.01;
+            scaledField.SetValue(targetLength, this);
+            OnShapeDimensionChanged(scaledField, length);
+            MonoUtilities.RefreshContextWindows(part);
+            return closeEnough;
+        }
 
-		private void ColliderChanged()
-		{
-			part.SendEvent ("OnPartColliderChanged", null, 0);
-		}
-		
+        public virtual void GetAttachmentNodeLocation(AttachNode node, out Vector3 worldSpace, out Vector3 localSpace, out ShapeCoordinates coord)
+        {
+            worldSpace = node.owner.transform.TransformPoint(node.position);
+            localSpace = part.transform.InverseTransformPoint(worldSpace);
+            coord = new ShapeCoordinates();
+            GetCylindricCoordinates(localSpace, coord);
+        }
+
+        public virtual void MovePartByAttachNode(AttachNode node, ShapeCoordinates coord)
+        {
+            Vector3 oldWorldSpace = node.owner.transform.TransformPoint(node.position);
+            Vector3 target = FromCylindricCoordinates(coord);
+            Vector3 newWorldspace = part.transform.TransformPoint(target);
+            node.owner.transform.Translate(newWorldspace - oldWorldSpace, Space.World);
+        }
+
+        public Part GetEldestParent(Part p) => (p.parent is null) ? p : GetEldestParent(p.parent);
+
+        public void ChangeVolume(string volName, double newVolume)
+        {
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<string> ("volName", volName);
+            data.Set<double> ("newTotalVolume", newVolume);
+            Debug.Log($"{ModTag} Invoking OnPartVolumeChanged for {part} volName:{volName} vol:{newVolume}");
+            part.SendEvent ("OnPartVolumeChanged", data, 0);
+        }
+
+        public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
+        {
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<AttachNode> ("node", node);
+            data.Set<float> ("minDia", minDia);
+            data.Set<float> ("area", area);
+            part.SendEvent ("OnPartAttachNodeSizeChanged", data, 0);
+        }
+
         protected void RaiseChangeTextureScale(string meshName, Material material, Vector2 targetScale)
         {
-            //ChangeTextureScale(meshName, material, targetScale);
-
-			var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-			data.Set<string> ("meshName", meshName);
-			data.Set<Material> ("material", material);
-			data.Set<Vector2> ("targetScale", targetScale);
-			part.SendEvent ("OnChangeTextureScale", data, 0);
-
+            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
+            data.Set<string> ("meshName", meshName);
+            data.Set<Material> ("material", material);
+            data.Set<Vector2> ("targetScale", targetScale);
+            part.SendEvent ("OnChangeTextureScale", data, 0);
         }
         
-        protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area)
-        {
-            ChangeAttachNodeSize(node, minDia, area);
-        }
-
+        protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area) => ChangeAttachNodeSize(node, minDia, area);
+        private void ModelChanged() => part.SendEvent("OnPartModelChanged", null, 0);
+        private void ColliderChanged() => part.SendEvent("OnPartColliderChanged", null, 0);
         protected void RaiseModelAndColliderChanged()
         {
             ModelChanged();
@@ -175,29 +290,6 @@ namespace ProceduralParts
         #endregion
 
         #region Callbacks
-
-        private bool forceNextUpdate = true;
-
-        public void ForceNextUpdate()
-        {
-            forceNextUpdate = true;
-        }
-
-        public override void OnSave(ConfigNode node)
-        {
-            // Force saved value for enabled to be true.
-            node.SetValue("isEnabled", "True");
-        }
-
-        public override void OnUpdate()
-        {
-            OnUpdateEditor();
-        }
-        public void Update()
-        {
-            if (HighLogic.LoadedSceneIsEditor)
-                OnUpdateEditor();
-        }
 
         public void UpdateInterops()
         {
@@ -212,33 +304,7 @@ namespace ProceduralParts
 
         public abstract void UpdateTFInterops();
 
-        public void OnUpdateEditor()
-        {
-            try
-            {
-                bool wasForce = forceNextUpdate;
-                forceNextUpdate = false;
-
-                UpdateShape(wasForce);
-
-                if (wasForce)
-                {
-                    ChangeVolume(volumeName, Volume);
-                    if (HighLogic.LoadedSceneIsEditor)
-                        GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
-                }
-
-                if (HighLogic.LoadedScene == GameScenes.LOADING)
-                    FixEditorIconScale();
-            }
-            catch (Exception ex)
-            {
-                print(ex);
-                enabled = false;
-            }
-        }
-
-        private void FixEditorIconScale()
+        internal void FixEditorIconScale()
         {
             var meshBounds = CalculateBounds(part.partInfo.iconPrefab.gameObject);
             if (meshBounds.extents == Vector3.zero)
@@ -254,13 +320,12 @@ namespace ProceduralParts
             iconMainTrans.localPosition -= meshBounds.center;
         }
 
-
         //Code from PartIconFixer addon
         private static Bounds CalculateBounds(GameObject go)
         {
             var renderers = go.GetComponentsInChildren<Renderer>(true).ToList();
 
-            if (renderers.Count == 0) return default(Bounds);
+            if (renderers.Count == 0) return default;
 
             var boundsList = new List<Bounds>();
 
@@ -316,90 +381,110 @@ namespace ProceduralParts
         /// <summary>
         /// Called to update the compShape.
         /// </summary>
-        protected abstract void UpdateShape(bool force);
+        internal abstract void UpdateShape(bool force=true);
+
+        internal abstract void InitializeAttachmentNodes();
+
+        internal virtual void InitializeAttachmentNodes(float length, float diameter)
+        {
+            InitializeStackAttachmentNodes(length);
+            InitializeSurfaceAttachmentNode(length, diameter);
+            part.SendEvent ("OnPartNodeMoved");
+        }
+
+        internal virtual void InitializeStackAttachmentNodes(float length)
+        {
+//            Debug.Log($"{ModTag} InitializeStackAttachmentNodes for {this} length {length}");
+            foreach (AttachNode node in part.attachNodes)
+            {
+                if (node.owner != part)
+                    node.owner = part;
+                float direction = (node.position.y > 0) ? 1 : -1;
+                Vector3 translation = direction * (length / 2) * Vector3.up;
+                if (node.nodeType == AttachNode.NodeType.Stack)
+                    MoveNode(node, translation);
+            }
+        }
+
+        internal virtual void InitializeSurfaceAttachmentNode(float length, float diameter)
+        {
+//            Debug.Log($"{ModTag} InitializeSurfaceAttachmentNode for {this} diameter {diameter}");
+            if (part.srfAttachNode is AttachNode node)
+            {
+                if (node.owner != part)
+                    node.owner = part;
+                ShapeCoordinates coord = new ShapeCoordinates();
+                PPart.CurrentShape.GetCylindricCoordinates(node.position, coord);
+                coord.r = diameter / 2;
+                MoveNode(node, PPart.CurrentShape.FromCylindricCoordinates(coord));
+            }
+        }
+
+        private void TranslateNode(AttachNode node, Vector3 translation) => MoveNode(node, node.position + translation);
+        private void MoveNode(AttachNode node, Vector3 destination)
+        {
+            if (Vector3.Distance(node.position, destination) > 0.01f)
+            {
+//                Debug.Log($"{ModTag} MoveNode() moved {node.id} from {node.position} to {destination} = {part.transform.TransformPoint(destination)} (worldspace)");
+                if (node.nodeTransform is Transform)
+                {
+                    node.nodeTransform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                    node.nodeTransform.Translate(destination, Space.Self);
+                }
+                else
+                {
+                    node.position = destination;
+                }
+                node.originalPosition = node.position;
+                part.SendEvent ("OnPartNodeMoved");
+            }
+        }
 
         #endregion
 
-        #region Attachments
-
-        /// <summary>
-        /// Add object attached to the surface of this part.
-        /// Base classes should proportionally move the location and orientation (rotation) as the part stretches.
-        /// The return value will be passed back to removeTankAttachment when i's detached
-        /// </summary>
-        /// <param name="attach">Transform offset follower for the attachment</param>
-        /// <param name="normalized">If true, the current offset of the attachment is in 'normalized' offset
-        /// - where i would be in space on a unit length and diameter cylinder. This method will relocate the object.</param>
-        /// <returns>Object used to track the attachment for Remove method</returns>
-        public abstract object AddAttachment(TransformFollower attach, bool normalized);
-
-        /// <summary>
-        /// Remove object attached to the surface of this part.
-        /// </summary>
-        /// <param name="data">Data returned from child method</param>
-        /// <param name="normalize">If true, the transform positon follower will be relocated to a 'normalized' 
-        /// offset - where i would appear on a unit length and diameter cylinder</param>
-        public abstract TransformFollower RemoveAttachment(object data, bool normalize);
+        #region ShapeCoordinates
 
         public class ShapeCoordinates
         {
-            public enum RMode
-            {
-                OFFSET_FROM_SHAPE_CENTER,
-                OFFSET_FROM_SHAPE_RADIUS,
-                RELATIVE_TO_SHAPE_RADIUS
-            }
-
-            public enum YMode
-            {
-                OFFSET_FROM_SHAPE_CENTER,
-                OFFSET_FROM_SHAPE_TOP,
-                OFFSET_FROM_SHAPE_BOTTOM,
-                RELATIVE_TO_SHAPE
-            }
-
-            public RMode RadiusMode = RMode.OFFSET_FROM_SHAPE_RADIUS;
-            public YMode HeightMode = YMode.RELATIVE_TO_SHAPE;
-
             public float u;
             public float y;
             public float r;
 
-            public override string ToString()
-            {
-                return "(u: " + u + " y: " + y + " r: " + r + ") R: " +RadiusMode + "Y: " + HeightMode;
-            }
+            public override string ToString() => $"(u: {u} y: {y} r: {r})";
         }
 
-        public abstract void GetCylindricCoordinates(Vector3 position, ShapeCoordinates coords);
+        public virtual void GetCylindricCoordinates(Vector3 position, ShapeCoordinates coords)
+        {
+            Vector2 direction = new Vector2(position.x, position.z);
+            coords.y = position.y;
+            coords.r = direction.magnitude;
 
-        public abstract Vector3 FromCylindricCoordinates(ShapeCoordinates coords);
+            float theta = Mathf.Atan2(-direction.y, direction.x);
+            coords.u = (Mathf.InverseLerp(-Mathf.PI, Mathf.PI, theta) + 0.5f) % 1.0f;
+            if (float.IsNaN(coords.u))
+                coords.u = 0f;
+        }
+
+        public virtual Vector3 FromCylindricCoordinates(ShapeCoordinates coords)
+        {
+            Vector3 position = new Vector3();
+            position.y = coords.y;
+
+            float radius = coords.r;
+            float theta = Mathf.Lerp(0, Mathf.PI * 2f, coords.u);
+
+            position.x = Mathf.Cos(theta) * radius;
+            position.z = -Mathf.Sin(theta) * radius;
+            return position;
+        }
+
+        public abstract void NormalizeCylindricCoordinates(ShapeCoordinates coords);
+        public abstract void UnNormalizeCylindricCoordinates(ShapeCoordinates coords);
 
         #endregion
 
-        public float GetCurrentCostMult()
-        {
-            return costMultiplier;
-        }
+        public float GetCurrentCostMult() => costMultiplier;
 
         public abstract void UpdateTechConstraints();
-
-        protected void RefreshPartEditorWindow()
-        {
-            var window = FindObjectsOfType<UIPartActionWindow>().FirstOrDefault(w => w.part == part);
-            if (window != null)
-                window.displayDirty = true;
-        }
-
-        protected float TruncateForSlider(float value, float incrementDirection)
-        {
-            var truncateFunc = GetTruncateFunc(incrementDirection);
-            return truncateFunc.Invoke(value, SliderPrecision);
-        }
-
-        protected Func<float, float, float> GetTruncateFunc(float incrementDirection)
-        {
-            return incrementDirection < 0 ? (Func<float, float, float>)MathUtils.Floor : MathUtils.Ceiling;
-        }
     }
 }

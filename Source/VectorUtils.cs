@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ProceduralParts
 {
@@ -18,7 +14,5 @@ namespace ProceduralParts
         {
             return new Vector4(v.x, v.y, v.z, w);
         }
-
-
     }
 }
