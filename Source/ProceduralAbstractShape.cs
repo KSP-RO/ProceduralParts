@@ -229,7 +229,7 @@ namespace ProceduralParts
             bool closeEnough = Mathf.Abs((clampedTargetLength / targetLength) - 1) < 0.01;
             scaledField.SetValue(targetLength, this);
             OnShapeDimensionChanged(scaledField, length);
-            MonoUtilities.RefreshContextWindows(part);
+            MonoUtilities.RefreshPartContextWindow(part);
             return closeEnough;
         }
 

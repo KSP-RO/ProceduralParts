@@ -95,7 +95,7 @@ namespace ProceduralParts
                 length = Mathf.Max(length, edt.maxValue);
             }
             OnShapeDimensionChanged(f, obj);
-            MonoUtilities.RefreshContextWindows(part);
+            MonoUtilities.RefreshPartContextWindow(part);
         }
 
         internal override void UpdateShape(bool force = true)

@@ -35,7 +35,6 @@ namespace ProceduralParts
                 new Callback<BaseField, object>(ClampFillet) +
                 new Callback<BaseField, object>(OnShapeDimensionChanged);
 
-
             Fields[nameof(length)].uiControlEditor.onFieldChanged =
                 new Callback<BaseField, object>(ClampFillet) +
                 new Callback<BaseField, object>(OnShapeDimensionChanged);
@@ -91,7 +90,7 @@ namespace ProceduralParts
             if (fillet > Mathf.Min(diameter, length))
             {
                 fillet = Mathf.Min(diameter, length);
-                MonoUtilities.RefreshContextWindows(part);
+                MonoUtilities.RefreshPartContextWindow(part);
             }
         }
 

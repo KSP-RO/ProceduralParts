@@ -12,6 +12,7 @@ namespace ProceduralParts
         public static readonly string ModTag = "[ProceduralParts]";
         public const string PAWGroupName = "ProcParts";
         public const string PAWGroupDisplayName = "ProceduralParts";
+        private const float TranslateTolerance = 0.01f;
 
         internal LegacyTextureHandler legacyTextureHandler;
 
@@ -174,7 +175,7 @@ namespace ProceduralParts
                         Vector3 selfWorld = part.transform.TransformPoint(node.position);
                         Vector3 peerWorld = p.transform.TransformPoint(peer.position);
                         Vector3 delta = selfWorld - peerWorld;
-                        if (delta.magnitude > 0.1)
+                        if (delta.magnitude > TranslateTolerance)
                         {
                             Debug.Log($"{ModTag} FixStackAttachments() for {part} @{RelativePos(selfW, root)}(rr), peer {p} @{RelativePos(peerW, root)}(rr)");
                             Debug.Log($"{ModTag} Attachment {node.id} on {node.owner} @{selfWorld}(w), REALIGNING TO: {peer.id} on {peer.owner} @{peerWorld}(w). Delta: {delta}");
