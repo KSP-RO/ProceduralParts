@@ -314,6 +314,7 @@ namespace ProceduralParts
                 if (part.Resources.Get(tr.name) is PartResource pr)
                 {
                     double maxAmount = CalculateMaxResourceAmount(tr);
+                    pr.amount = Math.Round(pr.amount * maxAmount / pr.maxAmount, 4);
                     pr.maxAmount = maxAmount;
                     pr.amount = Math.Min(pr.amount, maxAmount);
                 }
