@@ -101,10 +101,12 @@ namespace ProceduralParts
             isInitialized = true;
             InitializeObjects();
             InitializeShapes();
-            InitializeTechLimits();
 
             if (HighLogic.LoadedSceneIsEditor)
+            {
+                InitializeTechLimits();
                 legacyTextureHandler.ValidateSelectedTexture();
+            }
 
             if (shape is ProceduralAbstractShape)
                 shape.UpdateShape();
@@ -155,7 +157,6 @@ namespace ProceduralParts
 
         public override void OnStartFinished(StartState state)
         {
-            Debug.Log($"{ModTag} OnStartFinished for {this}");
             shape.InitializeAttachmentNodes();
             UpdateTexture();
             FixStackAttachments();
@@ -177,11 +178,11 @@ namespace ProceduralParts
                         Vector3 delta = selfWorld - peerWorld;
                         if (delta.magnitude > TranslateTolerance)
                         {
-                            Debug.Log($"{ModTag} FixStackAttachments() for {part} @{RelativePos(selfW, root)}(rr), peer {p} @{RelativePos(peerW, root)}(rr)");
-                            Debug.Log($"{ModTag} Attachment {node.id} on {node.owner} @{selfWorld}(w), REALIGNING TO: {peer.id} on {peer.owner} @{peerWorld}(w). Delta: {delta}");
+//                            Debug.Log($"{ModTag} FixStackAttachments() for {part} @{RelativePos(selfW, root)}(rr), peer {p} @{RelativePos(peerW, root)}(rr)");
+//                            Debug.Log($"{ModTag} Attachment {node.id} on {node.owner} @{selfWorld}(w), REALIGNING TO: {peer.id} on {peer.owner} @{peerWorld}(w). Delta: {delta}");
                             Part partToTranslate = (part.parent == p) ? part : p;   // Move child closer to parent  (translating parent also translates child!)
                             float dir = (partToTranslate == p) ? 1 : -1;            // delta = Movement of the peer, so invert if moving the parent
-                            Debug.Log($"{ModTag} {(translateParts ? string.Empty : "(DISABLED)")} Translating {partToTranslate} by {RelativeDir(dir * delta, root)}(rr)");
+//                            Debug.Log($"{ModTag} {(translateParts ? string.Empty : "(DISABLED)")} Translating {partToTranslate} by {RelativeDir(dir * delta, root)}(rr)");
                             if (translateParts)
                             {
                                 //partToTranslate.transform.Translate(dir * delta, Space.World);
@@ -674,14 +675,29 @@ namespace ProceduralParts
         [KSPEvent(guiActive = false, active = true)]
         public void OnPartColliderChanged()
         {
-            if (HighLogic.LoadedSceneIsFlight || (HighLogic.LoadedSceneIsEditor && updateDragCubesInEditor))
+            if (HighLogic.LoadedSceneIsFlight)
+                UpdateDragCubes();
+            else if (HighLogic.LoadedSceneIsEditor && updateDragCubesInEditor)
+                StartCoroutine(UpdateDragCubesCR());
+        }
+
+        private void UpdateDragCubes()
+        {
+            DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
+            part.DragCubes.ClearCubes();
+            part.DragCubes.Cubes.Add(dragCube);
+            part.DragCubes.ResetCubeWeights();
+            part.DragCubes.ForceUpdate(true, true, false);
+        }
+
+        private System.Collections.IEnumerator UpdateDragCubesCR()
+        {
+            yield return new WaitForFixedUpdate();
+            while (part == part.localRoot && part != EditorLogic.RootPart)
             {
-                DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
-                part.DragCubes.ClearCubes();
-                part.DragCubes.Cubes.Add(dragCube);
-                part.DragCubes.ResetCubeWeights();
-                part.DragCubes.ForceUpdate(true, true, false);
+                yield return new WaitForSeconds(1);
             }
+            UpdateDragCubes();
         }
 
         private void DragCubeFixer()
@@ -690,7 +706,7 @@ namespace ProceduralParts
              * Exactly when FlightIntegrator does this is unpredictable, so we resort to the OnFlightReady event.
             */
             Debug.Log($"{ModTag} DragCubeFixer rebuilding root part drag cubes");
-            OnPartColliderChanged();
+            UpdateDragCubes();
             GameEvents.onVesselWasModified.Fire(part.vessel);
         }
 
