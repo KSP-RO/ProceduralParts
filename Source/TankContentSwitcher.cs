@@ -228,7 +228,6 @@ namespace ProceduralParts
         {
             string volumeName = data.Get<string>("volName");
             double volume = data.Get<double>("newTotalVolume");
-            Debug.Log($"{ModTag} {this} OnPartVolumeChanged for {volumeName} to {volume}");
 
             if (volumeName != tankVolumeName)
             {
@@ -247,13 +246,10 @@ namespace ProceduralParts
 
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
-
-            DirtyPAW();
         }
 
         private void OnTankTypeChanged(BaseField f, object obj)
         {
-            Debug.Log($"{ModTag} OnTankTypeChanged for {this}, to {f.GetValue(this)} from {obj}");
             UpdateTankMass();
             string s = obj as string;
             if (!string.IsNullOrEmpty(s) && tankTypeOptions.ContainsKey(s) && tankTypeOptions[s] is TankTypeOption oldTTO)
@@ -282,7 +278,6 @@ namespace ProceduralParts
             }
             Fields[nameof(volumeDisplay)].guiActiveEditor = SelectedTankType.isStructural ? false : tankVolumeName != null;
             UpdateMassDisplay();
-            DirtyPAW();
         }
 
         private void UpdateTankMass()
@@ -300,10 +295,9 @@ namespace ProceduralParts
             {
                 double resourceMass = part.Resources.Cast<PartResource>().Sum(r => r.maxAmount * r.info.density);
                 float totalMass = mass + Convert.ToSingle(resourceMass);
-                if (SelectedTankType.isStructural)
-                    massDisplay = MathUtils.FormatMass(totalMass);
-                else
-                    massDisplay = "Dry: " + MathUtils.FormatMass(part.mass) + " / Wet: " + MathUtils.FormatMass(totalMass);
+                massDisplay = (SelectedTankType.isStructural) ?
+                                MathUtils.FormatMass(totalMass) :
+                                $"Dry: {MathUtils.FormatMass(part.mass)} / Wet: {MathUtils.FormatMass(totalMass)}";
             }
         }
 
@@ -336,16 +330,5 @@ namespace ProceduralParts
 
         public ProceduralPart PPart => _pPart ?? (_pPart = GetComponent<ProceduralPart>());
         private ProceduralPart _pPart;
-
-        private void DirtyPAW()
-        {
-            foreach (UIPartActionWindow window in UIPartActionController.Instance.windows)
-            {
-                if (window.part == this.part)
-                {
-                    window.displayDirty = true;
-                }
-            }
-        }
     }
 }
