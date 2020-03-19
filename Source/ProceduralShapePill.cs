@@ -137,6 +137,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool forceUpdate=true)
         {
+            part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             LinkedList<ProfilePoint> points = new LinkedList<ProfilePoint>();
 

@@ -57,6 +57,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
+            part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             Vector2 norm = new Vector2(1, 0);
 

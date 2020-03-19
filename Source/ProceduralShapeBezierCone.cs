@@ -100,6 +100,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
+            part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             WriteBezier();
         }

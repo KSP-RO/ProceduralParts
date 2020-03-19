@@ -25,6 +25,7 @@ namespace ProceduralParts
 
         public bool IsAvailable => string.IsNullOrEmpty(techRequired) || ResearchAndDevelopment.GetTechnologyState(techRequired) == RDTech.State.Available;
         public bool IsObsolete => !string.IsNullOrEmpty(techObsolete) && ResearchAndDevelopment.GetTechnologyState(techObsolete) == RDTech.State.Available;
+        public virtual Vector3 CoMOffset => Vector3.zero;
 
         #region Config data
         [KSPField]

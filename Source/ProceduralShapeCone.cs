@@ -6,6 +6,7 @@ namespace ProceduralParts
     public class ProceduralShapeCone : ProceduralAbstractSoRShape
     {
         private static readonly string ModTag = "[ProceduralShapeCone]";
+        public override Vector3 CoMOffset => _CoMOffset();
 
         #region Config parameters
 
@@ -153,6 +154,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
+            part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             Vector2 norm = new Vector2(length, (bottomDiameter - topDiameter) / 2f);
             norm.Normalize();
@@ -214,6 +216,15 @@ namespace ProceduralParts
             return (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
         }
         public override bool SeekVolume(float targetVolume) => SeekVolume(targetVolume, Fields[nameof(length)]);
+
+        private Vector3 _CoMOffset()
+        {
+            //h * (B^2 + 2BT + 3T^2) / 4 * (B^2 + BT + T^2)
+            float num = Mathf.Pow(bottomDiameter, 2) + (2 * bottomDiameter * topDiameter) + (3 * Mathf.Pow(topDiameter, 2));
+            float denom = 4 * (Mathf.Pow(bottomDiameter, 2) + (bottomDiameter * topDiameter) + Mathf.Pow(topDiameter, 2));
+            Vector3 res = new Vector3(0, length * ((num / denom) - 0.5f), 0);
+            return res;
+        }
 
         public override void UpdateTFInterops()
         {
