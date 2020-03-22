@@ -1,5 +1,34 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 2.0.1 ===
+CoM offset handling for cone-like shapes
+Bugfix: Flickering of parts when attaching in stack symmetry
+Bugfix: TankContentSwitcher not maintaining fill ratio when resizing
+
+=== 2.0.0 ===
+1.3.19.1 Feature Set, built for KSP 1.8/1.9
+
+=== 1.3.21 ===
+(Unknown, external release, 1.8+)
+
+=== 1.3.20 ===
+(Unknown, external release, 1.8+)
+
+===  1.3.19.1 ==
+Significant Rewrite.  1.3.19.x limited to KSP 1.7 builds
+
+Change Gist:
+
+Backwards-compatible with previous TextureSet handling and external texture packs
+TexturesUnlimited support, and many new textures to go with it
+Reworked part initialization process (Awake/Load/Start, etc)
+Fix incorrect drag cubes on root node, particularly during reverts
+Redesigned to use UI Editor callbacks instead of detecting changes in Update cycles
+Removed minVolume handling, and aspect ratio handling
+Best effort automatic [length] resizing to achieve a target utilization
+Completely redesigned attachment node handling.
+Add 1.7 PAW group features
+
 ===  1.3.19  ===
 Fix reroot surface attachment
 
