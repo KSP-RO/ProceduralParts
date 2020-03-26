@@ -28,25 +28,23 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            UpdateTechConstraints();
             base.OnStart(state);
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                UpdateTechConstraints();
+                Fields[nameof(diameter)].uiControlEditor.onFieldChanged = ClampFillet;
+                Fields[nameof(diameter)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
 
-            Fields[nameof(diameter)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(ClampFillet) +
-                new Callback<BaseField, object>(OnShapeDimensionChanged);
+                Fields[nameof(length)].uiControlEditor.onFieldChanged = ClampFillet;
+                Fields[nameof(length)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
 
-            Fields[nameof(length)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(ClampFillet) +
-                new Callback<BaseField, object>(OnShapeDimensionChanged);
+                Fields[nameof(fillet)].uiControlEditor.onFieldChanged = ClampFillet;
+                Fields[nameof(fillet)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
 
-            Fields[nameof(fillet)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(ClampFillet) +
-                new Callback<BaseField, object>(OnShapeDimensionChanged);
-
-            Fields[nameof(diameter)].uiControlEditor.onSymmetryFieldChanged =
-            Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
-            Fields[nameof(fillet)].uiControlEditor.onSymmetryFieldChanged =
-                new Callback<BaseField, object>(ClampFillet);
+                Fields[nameof(diameter)].uiControlEditor.onSymmetryFieldChanged =
+                Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
+                Fields[nameof(fillet)].uiControlEditor.onSymmetryFieldChanged = ClampFillet;
+            }
         }
 
         public override void UpdateTechConstraints()

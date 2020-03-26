@@ -48,11 +48,13 @@ namespace ProceduralParts
         {
             InitializeSelectedShape();
             base.OnStart(state);
-
-            Fields[nameof(selectedShape)].guiActiveEditor = PPart.allowCurveTweaking;
-            UI_ChooseOption opt = Fields[nameof(selectedShape)].uiControlEditor as UI_ChooseOption;
-            opt.options = shapePresets.Keys.ToArray();
-            opt.onSymmetryFieldChanged = opt.onFieldChanged = new Callback<BaseField, object>(OnShapeSelectionChanged);
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                Fields[nameof(selectedShape)].guiActiveEditor = PPart.allowCurveTweaking;
+                UI_ChooseOption opt = Fields[nameof(selectedShape)].uiControlEditor as UI_ChooseOption;
+                opt.options = shapePresets.Keys.ToArray();
+                opt.onSymmetryFieldChanged = opt.onFieldChanged = OnShapeSelectionChanged;
+            }
         }
 
         private void InitializeSelectedShape()

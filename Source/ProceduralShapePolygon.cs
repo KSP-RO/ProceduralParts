@@ -111,17 +111,14 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            UpdateTechConstraints();
             base.OnStart(state);
-
-            Fields[nameof(cornerCount)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(OnShapeDimensionChanged);
-
-            Fields[nameof(diameter)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(OnShapeDimensionChanged);
-
-            Fields[nameof(length)].uiControlEditor.onFieldChanged =
-                new Callback<BaseField, object>(OnShapeDimensionChanged);
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                UpdateTechConstraints();
+                Fields[nameof(cornerCount)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
+                Fields[nameof(diameter)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
+                Fields[nameof(length)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
+            }
         }
 
         public override void UpdateTechConstraints()
