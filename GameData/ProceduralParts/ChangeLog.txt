@@ -1,4 +1,6 @@
 ============= Changelog for ProceduralParts  =========
+=== 2.0.2 ===
+Hotfix: v2.0.1 shape parameters reset after flight scene load.
 
 === 2.0.1 ===
 CoM offset handling for cone-like shapes

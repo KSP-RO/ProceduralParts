@@ -12,28 +12,12 @@ namespace ProceduralParts
     /// </summary>
     public class DecouplerTweaker : PartModule, IPartMassModifier
     {
-		#region IPartMassModifier implementation
+        #region IPartMassModifier implementation
 
-		public float GetModuleMass (float defaultMass, ModifierStagingSituation sit)
-		{
-			if (density > 0)
-				return mass - defaultMass;
-			else
-				return 0.0f;
-		}
-
-		public ModifierChangeWhen GetModuleMassChangeWhen ()
-		{
-			return ModifierChangeWhen.FIXED;
-		}
+        public float GetModuleMass(float defaultMass, ModifierStagingSituation sit) => density > 0 ? mass - defaultMass : 0;
+        public ModifierChangeWhen GetModuleMassChangeWhen() => ModifierChangeWhen.FIXED;
 
 		#endregion
-
-        public override void OnAwake()
-        {
-            base.OnAwake();
-            //PartMessageService.Register(this);
-        }
 
         /// <summary>
         /// In career mode, if this tech is not available then the option to have separators is not present
@@ -57,130 +41,103 @@ namespace ProceduralParts
         /// Density of the decoupler. This is for use with Procedural Parts. Listens for ChangeVolume message
         /// </summary>
         [KSPField]
-        public float density = 0.0f;
+        public float density = 0;
 
         /// <summary>
         /// If specified, this will set a maximum impulse based on the diameter of the node.
         /// </summary>
         [KSPField]
-        public float maxImpulseDiameterRatio = 0.0f;
+        public float maxImpulseDiameterRatio = 0;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Style:"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Style:", groupName = ProceduralPart.PAWGroupName),
          UI_Toggle(disabledText = "Decoupler", enabledText = "Separator")]
         public bool isOmniDecoupler = false;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Impulse", guiUnits = "kNs", guiFormat = "F1"),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.1f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall=0, incrementSlide = 0.1f)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Impulse", groupName = ProceduralPart.PAWGroupName),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.1f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall = 0, incrementSlide = 0.1f, unit = " kN", sigFigs = 1)]
         public float ejectionImpulse;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="F3")]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="F3", groupName = ProceduralPart.PAWGroupName)]
         public float mass = 0;
 
         private ModuleDecouple decouple;
-
         internal const float ImpulsePerForceUnit = 0.02f;
 
         public override void OnStart(StartState state)
         {
-            if (!FindDecoupler())
+            decouple = part.FindModuleImplementing<ModuleDecouple>();
+            if (decouple == null)
             {
-                Debug.LogError("Unable to find any decoupler modules");
+                Debug.LogError($"[ProceduralParts] No ModuleDecouple found on {part}");
                 isEnabled = enabled = false;
                 return;
             }
 
             if (HighLogic.LoadedSceneIsEditor)
             {
-                // ReSharper disable once CompareOfFloatsByEqualityOperator
-                if (mass != 0)
-                    UpdateMass(mass);
-
-                Fields["isOmniDecoupler"].guiActiveEditor =
+                Fields[nameof(isOmniDecoupler)].guiActiveEditor =
                     string.IsNullOrEmpty(separatorTechRequired) || ResearchAndDevelopment.GetTechnologyState(separatorTechRequired) == RDTech.State.Available;
 
-                // ReSharper disable once CompareOfFloatsByEqualityOperator
                 if (ejectionImpulse == 0)
-                    ejectionImpulse = (float)Math.Round(decouple.ejectionForce * ImpulsePerForceUnit, 1);
+                    ejectionImpulse = Mathf.Round(decouple.ejectionForce * ImpulsePerForceUnit);
 
-                UI_FloatEdit ejectionImpulseEdit = (UI_FloatEdit)Fields["ejectionImpulse"].uiControlEditor;
-                ejectionImpulseEdit.maxValue = maxImpulse;
+                (Fields[nameof(ejectionImpulse)].uiControlEditor as UI_FloatEdit).maxValue = maxImpulse;
             }
             else if (HighLogic.LoadedSceneIsFlight)
             {
                 decouple.isOmniDecoupler = isOmniDecoupler;
+                decouple.ejectionForce = ejectionImpulse / TimeWarp.fixedDeltaTime;
+                GameEvents.onTimeWarpRateChanged.Add(OnTimeWarpRateChanged);
             }
         }
 
-        private bool FindDecoupler()
-        {
-            if(decouple == null)
-                decouple = part.Modules["ModuleDecouple"] as ModuleDecouple;
-            return decouple != null;
-        }
+        public void OnDestroy() => GameEvents.onTimeWarpRateChanged.Remove(OnTimeWarpRateChanged);
 
-        public override void OnUpdate()
+        private bool updatingTimeWarp = false;
+        public void OnTimeWarpRateChanged() => StartCoroutine(TimeWarpRateChangedCR());
+        private System.Collections.IEnumerator TimeWarpRateChangedCR()
         {
-            if (HighLogic.LoadedSceneIsFlight && TimeWarp.fixedDeltaTime > 0 && FindDecoupler())
-                decouple.ejectionForce = ejectionImpulse / TimeWarp.fixedDeltaTime;
+            if (!updatingTimeWarp)
+            {
+                float prevWarp = 0;
+                updatingTimeWarp = true;
+                while (HighLogic.LoadedSceneIsFlight && TimeWarp.fixedDeltaTime != prevWarp && decouple)
+                {
+                    decouple.ejectionForce = ejectionImpulse / TimeWarp.fixedDeltaTime;
+                    prevWarp = TimeWarp.fixedDeltaTime;
+                    yield return new WaitForFixedUpdate();
+                }
+                updatingTimeWarp = false;
+            }
         }
 
         // Plugs into procedural parts.
-        //[PartMessageListener(typeof(PartAttachNodeSizeChanged), scenes:GameSceneFilter.AnyEditor)]
         //public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
-		[KSPEvent(guiActive = false, active = true)]
+        [KSPEvent(guiActive = false, active = true)]
 		public void OnPartAttachNodeSizeChanged(BaseEventDetails data)
         {
-			if (!HighLogic.LoadedSceneIsEditor)
-				return;
-
-			AttachNode node = data.Get<AttachNode>("node");
-			float minDia = data.Get<float>("minDia");
-
-            // ReSharper disable once CompareOfFloatsByEqualityOperator
-            if (node.id != textureMessageName || maxImpulseDiameterRatio == 0)
-                return;
-
-            UI_FloatEdit ejectionImpulseEdit = (UI_FloatEdit)Fields["ejectionImpulse"].uiControlEditor;
-            float oldRatio = ejectionImpulse / ejectionImpulseEdit.maxValue;
-
-            maxImpulse = Mathf.Round(maxImpulseDiameterRatio * minDia);
-            ejectionImpulseEdit.maxValue = maxImpulse;
-
-            ejectionImpulse = Mathf.Round(maxImpulse * oldRatio / 0.1f) * 0.1f;
+            if (HighLogic.LoadedSceneIsEditor &&
+                data.Get<AttachNode>("node") is AttachNode node &&
+                data.Get<float>("minDia") is float minDia &&
+                node.id == textureMessageName &&
+                maxImpulseDiameterRatio >= float.Epsilon &&
+                Fields[nameof(ejectionImpulse)].uiControlEditor is UI_FloatEdit ejectionImpulseEdit)
+            {
+                maxImpulse = Mathf.Round(maxImpulseDiameterRatio * minDia);
+                float oldRatio = ejectionImpulse / ejectionImpulseEdit.maxValue;
+                ejectionImpulseEdit.maxValue = maxImpulse;
+                ejectionImpulse = Convert.ToSingle(Math.Round(maxImpulse * oldRatio, 1));
+            }
         }
 
-        //[PartMessageListener(typeof(PartVolumeChanged), scenes: GameSceneFilter.AnyEditor)]
-        //public void ChangeVolume(string volumeName, float volume)
-		[KSPEvent(guiActive = false, active = true)]
+		[KSPEvent(active = true)]
 		public void OnPartVolumeChanged(BaseEventDetails data)
         {
-			if (!HighLogic.LoadedSceneIsEditor)
-				return;
-
-			double volume = data.Get<double> ("newTotalVolume");
-
-            if (density > 0)
+            if (HighLogic.LoadedSceneIsEditor && density > 0 && data.Get<double>("newTotalVolume") is double volume)
             {
-                UpdateMass((float)(density * volume));
+                mass = Convert.ToSingle(density * volume);
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
             }
         }
-
-        private void UpdateMass(float updateMass)
-        {
-            mass = updateMass;
-            BaseField fld = Fields["mass"];
-            if (updateMass < 0.1)
-            {
-                fld.guiUnits = "g";
-                fld.guiFormat = "F2";
-            }
-            else
-            {
-                fld.guiUnits = "T";
-                fld.guiFormat = "F3";
-            }
-        }
     }
-
 }
