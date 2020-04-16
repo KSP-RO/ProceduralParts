@@ -15,6 +15,7 @@ namespace ProceduralParts
         private const float TranslateTolerance = 0.01f;
 
         internal LegacyTextureHandler legacyTextureHandler;
+        internal TUTexturePickerGUI texturePickerGUI;
 
         #region Initialization
 
@@ -24,9 +25,14 @@ namespace ProceduralParts
         [KSPField(isPersistant = true)]
         private Vector3 tempColliderSize;
 
+        [KSPField(guiActiveEditor = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, guiName = "Texture Selector GUI"),
+         UI_Toggle(disabledText = "Show", enabledText = "Hide", scene = UI_Scene.Editor, affectSymCounterparts = UI_Scene.None)]
+        public bool showTUPickerGUI = false;
+
         private BoxCollider tempCollider;
         private bool isInitialized = false;
         public static bool installedFAR = false;
+        public static bool installedTU = false;
         public static bool staticallyInitialized = false;
         public static void StaticInit()
         {
@@ -35,15 +41,12 @@ namespace ProceduralParts
             if (AssemblyLoader.loadedAssemblies.FirstOrDefault(a => a.assembly.GetName().Name == "TestFlight") is AssemblyLoader.LoadedAssembly tfAssembly)
                 tfInterface = Type.GetType("TestFlightCore.TestFlightInterface, TestFlightCore", false);
             installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
+            installedTU = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "TexturesUnlimited");
             TextureSet.LoadTextureSets(LegacyTextureHandler.textureSets);
             staticallyInitialized = true;
         }
 
-        public override void OnAwake()
-        {
-            StaticInit();
-            base.OnAwake();
-        }
+        public override void OnAwake() => StaticInit();
 
         public void Update()
         {
@@ -106,6 +109,8 @@ namespace ProceduralParts
             {
                 InitializeTechLimits();
                 legacyTextureHandler.ValidateSelectedTexture();
+                texturePickerGUI = new TUTexturePickerGUI(this);
+                Fields[nameof(showTUPickerGUI)].guiActiveEditor = installedTU && !forceLegacyTextures;
             }
 
             if (shape is ProceduralAbstractShape)
@@ -123,29 +128,30 @@ namespace ProceduralParts
                     forceLegacyTextures = true;
                     Fields[nameof(forceLegacyTextures)].guiActiveEditor = false;
                 }
+                Fields[nameof(forceLegacyTextures)].uiControlEditor.onFieldChanged = OnForceLegacyTextureChanged;
 
                 BaseField field = Fields[nameof(textureSet)];
-                UI_ChooseOption opt = (UI_ChooseOption)field.uiControlEditor;
+                UI_ChooseOption opt = field.uiControlEditor as UI_ChooseOption;
                 opt.options = LegacyTextureHandler.textureSets.Keys.ToArray();
-                opt.onSymmetryFieldChanged = opt.onFieldChanged = new Callback<BaseField, object>(OnTextureChanged);
+                opt.onSymmetryFieldChanged = opt.onFieldChanged = OnTextureChanged;
 
                 BaseField capTextureField = Fields[nameof(capTextureIndex)];
-                opt = (UI_ChooseOption)capTextureField.uiControlEditor;
+                opt = capTextureField.uiControlEditor as UI_ChooseOption;
                 opt.options = Enum.GetNames(typeof(LegacyTextureHandler.CapTextureMode));
-                opt.onSymmetryFieldChanged = opt.onFieldChanged = new Callback<BaseField, object>(OnTextureChanged);
+                opt.onSymmetryFieldChanged = opt.onFieldChanged = OnTextureChanged;
 
                 Fields[nameof(shapeName)].guiActiveEditor = availableShapes.Count > 1;
                 opt = Fields[nameof(shapeName)].uiControlEditor as UI_ChooseOption;
                 opt.options = availableShapes.Keys.ToArray();
                 // The onSymmetryFieldChanged callbacks do not have the correct previous object assigned.
                 // Since this matters, we need to handle it ourselves.
-                opt.onFieldChanged = new Callback<BaseField, object>(OnShapeSelectionChanged);
+                opt.onFieldChanged = OnShapeSelectionChanged;
 
                 Fields[nameof(costDisplay)].guiActiveEditor = displayCost;
 
                 GameEvents.onVariantApplied.Add(OnVariantApplied);
+                GameEvents.onGameSceneSwitchRequested.Add(OnEditorExit);
             }
-            base.OnStart(state);
 
             if (tempCollider != null)
             {
@@ -162,52 +168,17 @@ namespace ProceduralParts
             FixStackAttachments();
         }
 
-        private void FixStackAttachments(bool translateParts = false)
-        {
-            foreach (AttachNode node in this.part.attachNodes)
-            {
-                if (node.attachedPart is Part p)
-                {
-                    Vector3 selfW = part.transform.TransformPoint(Vector3.zero);
-                    Vector3 peerW = p.transform.TransformPoint(Vector3.zero);
-                    Part root = HighLogic.LoadedSceneIsFlight ? vessel.rootPart : EditorLogic.fetch.ship.Parts.First();
-                    if (node.FindOpposingNode() is AttachNode peer)
-                    {
-                        Vector3 selfWorld = part.transform.TransformPoint(node.position);
-                        Vector3 peerWorld = p.transform.TransformPoint(peer.position);
-                        Vector3 delta = selfWorld - peerWorld;
-                        if (delta.magnitude > TranslateTolerance)
-                        {
-//                            Debug.Log($"{ModTag} FixStackAttachments() for {part} @{RelativePos(selfW, root)}(rr), peer {p} @{RelativePos(peerW, root)}(rr)");
-//                            Debug.Log($"{ModTag} Attachment {node.id} on {node.owner} @{selfWorld}(w), REALIGNING TO: {peer.id} on {peer.owner} @{peerWorld}(w). Delta: {delta}");
-                            Part partToTranslate = (part.parent == p) ? part : p;   // Move child closer to parent  (translating parent also translates child!)
-                            float dir = (partToTranslate == p) ? 1 : -1;            // delta = Movement of the peer, so invert if moving the parent
-//                            Debug.Log($"{ModTag} {(translateParts ? string.Empty : "(DISABLED)")} Translating {partToTranslate} by {RelativeDir(dir * delta, root)}(rr)");
-                            if (translateParts)
-                            {
-                                //partToTranslate.transform.Translate(dir * delta, Space.World);
-                                partToTranslate.orgPos = partToTranslate.transform.position += (dir * delta);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Vector3 RelativePos(Vector3 worldPos, Part origin) => origin.transform.InverseTransformPoint(worldPos);
-        Vector3 RelativeDir(Vector3 worldDir, Part origin) => origin.transform.InverseTransformDirection(worldDir);
-
         public void OnDestroy()
         {
             GameEvents.onFlightReady.Remove(DragCubeFixer);
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onVariantApplied.Remove(OnVariantApplied);
+            GameEvents.onGameSceneSwitchRequested.Remove(OnEditorExit);
         }
-
-        public void OnTextureChanged(BaseField f, object obj)
-        {
-            UpdateTexture();
-        }
+        public void OnGUI() => texturePickerGUI?.OnGUI();
+        private void OnEditorExit(GameEvents.FromToAction<GameScenes, GameScenes> _) => showTUPickerGUI = false;
+        private void OnForceLegacyTextureChanged(BaseField f, object obj) => Fields[nameof(showTUPickerGUI)].guiActiveEditor = installedTU && !forceLegacyTextures;
+        public void OnTextureChanged(BaseField f, object obj) => UpdateTexture();
 
         // onSymmetryFieldChanged() callback has the incorrect value for parameter obj
         // So we manually invoke things for our symmetry counterparts.
@@ -232,6 +203,41 @@ namespace ProceduralParts
                 FixStackAttachments();
             }
         }
+
+        private void FixStackAttachments(bool translateParts = false)
+        {
+            foreach (AttachNode node in this.part.attachNodes)
+            {
+                if (node.attachedPart is Part p)
+                {
+                    Vector3 selfW = part.transform.TransformPoint(Vector3.zero);
+                    Vector3 peerW = p.transform.TransformPoint(Vector3.zero);
+                    Part root = HighLogic.LoadedSceneIsFlight ? vessel.rootPart : EditorLogic.fetch.ship.Parts.First();
+                    if (node.FindOpposingNode() is AttachNode peer)
+                    {
+                        Vector3 selfWorld = part.transform.TransformPoint(node.position);
+                        Vector3 peerWorld = p.transform.TransformPoint(peer.position);
+                        Vector3 delta = selfWorld - peerWorld;
+                        if (delta.magnitude > TranslateTolerance)
+                        {
+                            //                            Debug.Log($"{ModTag} FixStackAttachments() for {part} @{RelativePos(selfW, root)}(rr), peer {p} @{RelativePos(peerW, root)}(rr)");
+                            //                            Debug.Log($"{ModTag} Attachment {node.id} on {node.owner} @{selfWorld}(w), REALIGNING TO: {peer.id} on {peer.owner} @{peerWorld}(w). Delta: {delta}");
+                            Part partToTranslate = (part.parent == p) ? part : p;   // Move child closer to parent  (translating parent also translates child!)
+                            float dir = (partToTranslate == p) ? 1 : -1;            // delta = Movement of the peer, so invert if moving the parent
+                                                                                    //                            Debug.Log($"{ModTag} {(translateParts ? string.Empty : "(DISABLED)")} Translating {partToTranslate} by {RelativeDir(dir * delta, root)}(rr)");
+                            if (translateParts)
+                            {
+                                //partToTranslate.transform.Translate(dir * delta, Space.World);
+                                partToTranslate.orgPos = partToTranslate.transform.position += (dir * delta);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Vector3 RelativePos(Vector3 worldPos, Part origin) => origin.transform.InverseTransformPoint(worldPos);
+        Vector3 RelativeDir(Vector3 worldDir, Part origin) => origin.transform.InverseTransformDirection(worldDir);
 
         #endregion
 
@@ -545,6 +551,7 @@ namespace ProceduralParts
             shape.UpdateShape();
             if (HighLogic.LoadedSceneIsEditor) 
             {
+                shape.ChangeVolume(shape.volumeName, shape.Volume);
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
             }
             UpdateTexture();
