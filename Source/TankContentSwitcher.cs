@@ -64,7 +64,7 @@ namespace ProceduralParts
 
                 UI_ChooseOption options = Fields[nameof(tankType)].uiControlEditor as UI_ChooseOption;
                 options.options = tankTypeOptions.Keys.ToArray();
-                options.onFieldChanged += OnTankTypeChanged;
+                options.onFieldChanged += OnTankTypeChangedWithSymmetry;
             }
             tankVolume = PPart?.CurrentShape ? PPart.CurrentShape.Volume : 0;
             volumeDisplay = tankVolume.ToStringSI(4, 3, "L");
@@ -246,6 +246,14 @@ namespace ProceduralParts
 
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+        }
+
+        private void OnTankTypeChangedWithSymmetry(BaseField f, object obj)
+        {
+            OnTankTypeChanged(f, obj);
+            foreach (Part p in part.symmetryCounterparts)
+                p.FindModuleImplementing<TankContentSwitcher>()?.OnTankTypeChanged(f, obj);
+            MonoUtilities.RefreshPartContextWindow(part);
         }
 
         private void OnTankTypeChanged(BaseField f, object obj)
