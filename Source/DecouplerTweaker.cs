@@ -17,7 +17,7 @@ namespace ProceduralParts
         public float GetModuleMass(float defaultMass, ModifierStagingSituation sit) => density > 0 ? mass - defaultMass : 0;
         public ModifierChangeWhen GetModuleMassChangeWhen() => ModifierChangeWhen.FIXED;
 
-		#endregion
+        #endregion
 
         /// <summary>
         /// In career mode, if this tech is not available then the option to have separators is not present
@@ -55,7 +55,7 @@ namespace ProceduralParts
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Impulse", groupName = ProceduralPart.PAWGroupName),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.1f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall = 0, incrementSlide = 0.1f, unit = " kN", sigFigs = 1)]
-        public float ejectionImpulse;
+        public float ejectionImpulse = 0;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="F3", groupName = ProceduralPart.PAWGroupName)]
         public float mass = 0;
@@ -78,13 +78,14 @@ namespace ProceduralParts
                 Fields[nameof(isOmniDecoupler)].guiActiveEditor =
                     string.IsNullOrEmpty(separatorTechRequired) || ResearchAndDevelopment.GetTechnologyState(separatorTechRequired) == RDTech.State.Available;
 
-                if (ejectionImpulse == 0)
+                if (ejectionImpulse == 0 || float.IsNaN(ejectionImpulse))
                     ejectionImpulse = Mathf.Round(decouple.ejectionForce * ImpulsePerForceUnit);
 
                 (Fields[nameof(ejectionImpulse)].uiControlEditor as UI_FloatEdit).maxValue = maxImpulse;
             }
             else if (HighLogic.LoadedSceneIsFlight)
             {
+                if (float.IsNaN(ejectionImpulse)) ejectionImpulse = 0;
                 decouple.isOmniDecoupler = isOmniDecoupler;
                 decouple.ejectionForce = ejectionImpulse / TimeWarp.fixedDeltaTime;
                 GameEvents.onTimeWarpRateChanged.Add(OnTimeWarpRateChanged);
@@ -114,7 +115,7 @@ namespace ProceduralParts
         // Plugs into procedural parts.
         //public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
         [KSPEvent(guiActive = false, active = true)]
-		public void OnPartAttachNodeSizeChanged(BaseEventDetails data)
+        public void OnPartAttachNodeSizeChanged(BaseEventDetails data)
         {
             if (HighLogic.LoadedSceneIsEditor &&
                 data.Get<AttachNode>("node") is AttachNode node &&
@@ -123,6 +124,7 @@ namespace ProceduralParts
                 maxImpulseDiameterRatio >= float.Epsilon &&
                 Fields[nameof(ejectionImpulse)].uiControlEditor is UI_FloatEdit ejectionImpulseEdit)
             {
+                minDia = Mathf.Max(minDia, 0.001f); // Disallow values too small
                 maxImpulse = Mathf.Round(maxImpulseDiameterRatio * minDia);
                 float oldRatio = ejectionImpulse / ejectionImpulseEdit.maxValue;
                 ejectionImpulseEdit.maxValue = maxImpulse;
@@ -130,8 +132,8 @@ namespace ProceduralParts
             }
         }
 
-		[KSPEvent(active = true)]
-		public void OnPartVolumeChanged(BaseEventDetails data)
+        [KSPEvent(active = true)]
+        public void OnPartVolumeChanged(BaseEventDetails data)
         {
             if (HighLogic.LoadedSceneIsEditor && density > 0 && data.Get<double>("newTotalVolume") is double volume)
             {
