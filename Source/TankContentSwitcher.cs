@@ -319,6 +319,12 @@ namespace ProceduralParts
                     pr.amount = Math.Round(pr.amount * maxAmount / pr.maxAmount, 4);
                     pr.maxAmount = maxAmount;
                     pr.amount = Math.Min(pr.amount, maxAmount);
+                    if (part.PartActionWindow?.ListItems.FirstOrDefault(x => (x as UIPartActionResourceEditor)?.Resource == pr) is UIPartActionResourceEditor pare)
+                    {
+                        pare.resourceMax.text = KSPUtil.LocalizeNumber(pr.maxAmount, "F1");
+                        pare.UpdateItem();
+                        pare.slider.onValueChanged.Invoke(pare.slider.value);
+                    }
                 }
                 else
                 {
