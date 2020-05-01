@@ -1,6 +1,14 @@
 ============= Changelog for ProceduralParts  =========
+=== 2.0.3 ===
+TankContextSwitcher updates current and max resource capacity immediately when changing volume
+PAW Groups and internal fixes to the DecouplerTweaker
+Added simple GUI alternative to the KSPTextureSwitch chooser with TexturesUnlimited
+Bugfix: CTD when decoupling with a decoupler that was ever "too small" and calculated NaN ejectionForce
+Bugfix: TankContentSwitcher NRE when switching to Mixed fuel types with symmetry parts attached
+Bugfix: Volumes now always recalculate when changing shape, not just first visit to a shape
+
 === 2.0.2 ===
-Hotfix: v2.0.1 shape parameters reset after flight scene load.
+Hotfix: v2.0.1 shape parameters reset after flight scene load
 
 === 2.0.1 ===
 CoM offset handling for cone-like shapes
