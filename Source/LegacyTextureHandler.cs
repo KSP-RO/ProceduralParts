@@ -123,5 +123,13 @@ namespace ProceduralParts
                     break;
             }
         }
+        public void ChangeTextureScale(string meshName, Vector2 targetScale)
+        {
+            if (meshName == "sides" && targetScale != null)
+            {
+                sideTextureScale = targetScale;
+                UpdateTexture();
+            }
+        }
     }
 }

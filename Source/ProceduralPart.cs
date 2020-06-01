@@ -469,6 +469,13 @@ namespace ProceduralParts
                 legacyTextureHandler.UpdateTexture();
         }
 
+        [KSPEvent(active = true)]
+        public void OnChangeTextureScale(BaseEventDetails data) 
+        {
+            if (ApplyLegacyTextures())
+                legacyTextureHandler.ChangeTextureScale(data.Get<string>("meshName"), data.Get<Vector2>("targetScale"));
+        }
+
         #endregion
 
         #region Tank shape
