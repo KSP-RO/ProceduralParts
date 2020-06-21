@@ -58,7 +58,7 @@ namespace ProceduralParts
 
         #region Objects
 
-        public ProceduralPart PPart { get => _pPart ?? (_pPart = GetComponent<ProceduralPart>()); }
+        public ProceduralPart PPart { get => _pPart ??= GetComponent<ProceduralPart>(); }
         private ProceduralPart _pPart;
 
         public Mesh SidesMesh { get => PPart.SidesMesh; }
@@ -220,16 +220,16 @@ namespace ProceduralParts
 
         public virtual bool SeekVolume(float targetVolume, BaseField scaledField)
         {
+            float orig = (float) scaledField.GetValue(this);
             float maxLength = (scaledField.uiControlEditor as UI_FloatEdit).maxValue;
             float minLength = (scaledField.uiControlEditor as UI_FloatEdit).minValue;
             float precision = (scaledField.uiControlEditor as UI_FloatEdit).incrementSlide;
-            float length = (float)scaledField.GetValue(this);
-            float targetLength = length * targetVolume / Volume;
-            targetLength = System.Convert.ToSingle(System.Math.Round(targetLength / precision)) * precision;
-            float clampedTargetLength = Mathf.Max(minLength, Mathf.Min(maxLength, targetLength));
-            bool closeEnough = Mathf.Abs((clampedTargetLength / targetLength) - 1) < 0.01;
-            scaledField.SetValue(targetLength, this);
-            OnShapeDimensionChanged(scaledField, length);
+            float scaledValue = orig * targetVolume / Volume;
+            scaledValue = Convert.ToSingle(Math.Round(scaledValue / precision)) * precision;
+            float clampedScaledValue = Mathf.Clamp(scaledValue, minLength, maxLength);
+            bool closeEnough = Mathf.Abs((clampedScaledValue / scaledValue) - 1) < 0.01;
+            scaledField.SetValue(clampedScaledValue, this);
+            OnShapeDimensionChanged(scaledField, orig);
             MonoUtilities.RefreshPartContextWindow(part);
             return closeEnough;
         }
@@ -468,9 +468,7 @@ namespace ProceduralParts
 
         public virtual Vector3 FromCylindricCoordinates(ShapeCoordinates coords)
         {
-            Vector3 position = new Vector3();
-            position.y = coords.y;
-
+            Vector3 position = new Vector3(0, coords.y, 0);
             float radius = coords.r;
             float theta = Mathf.Lerp(0, Mathf.PI * 2f, coords.u);
 

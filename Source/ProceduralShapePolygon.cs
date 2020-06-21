@@ -6,7 +6,7 @@ namespace ProceduralParts
 {
     class ProceduralShapePolygon : ProceduralAbstractShape
     {
-        private static readonly string ModTag = "[ProceduralShapePolygon]";
+        private const string ModTag = "[ProceduralShapePolygon]";
         internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, diameter);
 
         #region Config parameters
@@ -125,19 +125,17 @@ namespace ProceduralParts
         {
             Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
             UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
-            lengthEdit.maxValue = PPart.lengthMax;
-            lengthEdit.minValue = PPart.lengthMin;
             lengthEdit.incrementLarge = PPart.lengthLargeStep;
             lengthEdit.incrementSmall = PPart.lengthSmallStep;
-            length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
 
             Fields[nameof(diameter)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
             UI_FloatEdit diameterEdit = Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit;
-            diameterEdit.maxValue = PPart.diameterMax;
-            diameterEdit.minValue = PPart.diameterMin;
             diameterEdit.incrementLarge = PPart.diameterLargeStep;
             diameterEdit.incrementSmall = PPart.diameterSmallStep;
-            diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
+
+            AdjustDimensionBounds();
+            length = Mathf.Clamp(length, lengthEdit.minValue, lengthEdit.maxValue);
+            diameter = Mathf.Clamp(diameter, diameterEdit.minValue, diameterEdit.maxValue);
         }
 
         #endregion
@@ -159,12 +157,16 @@ namespace ProceduralParts
 
         public override void AdjustDimensionBounds()
         {
-            if (float.IsPositiveInfinity(PPart.volumeMax)) return;
+            float maxLength = PPart.lengthMax;
+            float maxDiameter = PPart.diameterMax;
+            float minLength = PPart.lengthMin;
+            float minDiameter = PPart.diameterMin;
 
             if (CalculateVolume(Area, PPart.lengthMax) > PPart.volumeMax)
-            {
-                (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = PPart.volumeMax / Area;
-            }
+                maxLength = PPart.volumeMax / Area;
+            if (CalculateVolume(Area, PPart.lengthMin) < PPart.volumeMin)
+                minLength = PPart.volumeMin / Area;
+
             SimPart sim = new SimPart
             {
                 cornerCount = cornerCount,
@@ -173,10 +175,29 @@ namespace ProceduralParts
                 outerDiameter = OuterDiameter
             };
             if (sim.VolumeCalculated > PPart.volumeMax)
+                maxDiameter = sim.GetInnerDiameterFromArea(PPart.volumeMax / length);
+
+            sim = new SimPart
             {
-                float maxDiameter = sim.GetInnerDiameterFromArea(PPart.volumeMax / length);
-                (Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit).maxValue = maxDiameter;
-            }
+                cornerCount = cornerCount,
+                diameter = PPart.diameterMin,
+                length = length,
+                outerDiameter = OuterDiameter
+            };
+            if (sim.VolumeCalculated < PPart.volumeMin)
+                minDiameter = sim.GetInnerDiameterFromArea(PPart.volumeMin / length);
+
+            maxLength = Mathf.Clamp(maxLength, PPart.lengthMin, PPart.lengthMax);
+            maxDiameter = Mathf.Clamp(maxDiameter, PPart.diameterMin, PPart.diameterMax);
+
+            minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);
+            minDiameter = Mathf.Clamp(minDiameter, PPart.diameterMin, PPart.diameterMax - PPart.diameterSmallStep);
+
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = maxLength;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = minLength;
+            (Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit).maxValue = maxDiameter;
+            (Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit).minValue = minDiameter;
+
         }
 
         public override float CalculateVolume() => VolumeCalculated;

@@ -7,7 +7,7 @@ namespace ProceduralParts
 {
     public class ProceduralShapeBezierCone : ProceduralShapeCone
     {
-        private static readonly string ModTag = "[ProceduralShapeBezierCone]";
+        private const string ModTag = "[ProceduralShapeBezierCone]";
 
         #region Config parameters
 
@@ -29,7 +29,7 @@ namespace ProceduralParts
             "Straight", "Round #1", "Round #2", "Peaked #1", "Peaked #2", "Sharp #1", "Sharp #2"
         };
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Curve", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Curve", groupName = ProceduralPart.PAWGroupName),
          UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedShape;
 
@@ -66,6 +66,12 @@ namespace ProceduralParts
             }
         }
 
+        public override void UpdateTechConstraints()
+        {
+            InitializeSelectedShape();
+            base.UpdateTechConstraints();
+        }
+
         private string LegacyFixup(ConfigNode node)
         {
             string ret = selectedShape;
@@ -89,12 +95,13 @@ namespace ProceduralParts
 
         public void OnShapeSelectionChanged(BaseField f, object obj)
         {
-            if (CalculateVolume() > PPart.volumeMax)
+            float v = CalculateVolume();
+            if (v > PPart.volumeMax || v < PPart.volumeMin)
             {
                 UI_FloatEdit edt = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
                 length = edt.minValue;
                 AdjustDimensionBounds();
-                length = Mathf.Max(length, edt.maxValue);
+                length = Mathf.Clamp(length, edt.minValue, edt.maxValue);
             }
             OnShapeDimensionChanged(f, obj);
             MonoUtilities.RefreshPartContextWindow(part);
@@ -109,36 +116,65 @@ namespace ProceduralParts
 
         public override void AdjustDimensionBounds()
         {
-            if (float.IsPositiveInfinity(PPart.volumeMax)) return;
+            float maxLength = PPart.lengthMax;
+            float maxBottomDiameter = PPart.diameterMax;
+            float maxTopDiameter = PPart.diameterMax;
+            float minLength = PPart.lengthMin;
+            float minBottomDiameter = PPart.diameterMin;
+            float minTopDiameter = PPart.diameterMin;
 
-            float maxBottomDiameter = bottomDiameter, maxTopDiameter = topDiameter, lenMax = length;
-            IterateVolumeLimits(ref maxTopDiameter, ref maxBottomDiameter, ref lenMax, IteratorIncrement);
+            if (PPart.volumeMax < float.PositiveInfinity)
+            {
+                maxBottomDiameter = bottomDiameter;
+                maxTopDiameter = topDiameter;
+                maxLength = length;
+                IterateVolumeLimits(ref maxTopDiameter, ref maxBottomDiameter, ref maxLength, PPart.volumeMax, IteratorIncrement);
+            }
+            if (PPart.volumeMin > 0)
+            {
+                minBottomDiameter = bottomDiameter;
+                minTopDiameter = topDiameter;
+                minLength = length;
+                IterateVolumeLimits(ref minTopDiameter, ref minBottomDiameter, ref minLength, PPart.volumeMin, IteratorIncrement);
+            }
+
+            maxLength = Mathf.Clamp(maxLength, PPart.lengthMin, PPart.lengthMax);
+            maxTopDiameter = Mathf.Clamp(maxTopDiameter, PPart.diameterMin, PPart.diameterMax);
+            maxBottomDiameter = Mathf.Clamp(maxBottomDiameter, PPart.diameterMin, PPart.diameterMax);
+            minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);
+            minTopDiameter = Mathf.Clamp(minTopDiameter, PPart.diameterMin, PPart.diameterMax - PPart.diameterSmallStep);
+            minBottomDiameter = Mathf.Clamp(minBottomDiameter, PPart.diameterMin, PPart.diameterMax - PPart.diameterSmallStep);
 
             (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxTopDiameter;
             (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxBottomDiameter;
-            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = lenMax;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = maxLength;
+            (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).minValue = minTopDiameter;
+            (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).minValue = minBottomDiameter;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = minLength;
         }
 
         // IteratorIncrement is approximately 1/1000.
         // For any sizable volume limit, simple iteration will be very slow.
         // Instead, search by variable increment.  Minimal harm in setting scale default high, because
         // early passes will terminate on first loop.
-        private void IterateVolumeLimits(ref float top, ref float bottom, ref float len, float inc, int scale=6)
+        private void IterateVolumeLimits(ref float top, ref float bottom, ref float len, float target, float inc, int scale=6)
         {
-            float originalTop = top, originalBottom = bottom, originalLen = len;
             if (inc <= 0) return;
+
+            float originalTop = top, originalBottom = bottom, originalLen = len;
+            top = bottom = len = 0;
             while (scale-- >= 0)
             {
                 float curInc = inc * Mathf.Pow(10, scale);
-                while (CalculateVolume(len + curInc, originalTop, originalBottom) < PPart.volumeMax && len < PPart.lengthMax)
+                while (CalculateVolume(len + curInc, originalTop, originalBottom) < target && len + curInc < PPart.lengthMax)
                 {
                     len += curInc;
                 }
-                while (CalculateVolume(originalLen, top + curInc, originalBottom) < PPart.volumeMax && top < PPart.diameterMax)
+                while (CalculateVolume(originalLen, top + curInc, originalBottom) < target && top + curInc < PPart.diameterMax)
                 {
                     top += curInc;
                 }
-                while (CalculateVolume(originalLen, originalTop, bottom + curInc) < PPart.volumeMax && bottom < PPart.diameterMax)
+                while (CalculateVolume(originalLen, originalTop, bottom + curInc) < target && bottom + curInc < PPart.diameterMax)
                 {
                     bottom += curInc;
                 }
@@ -182,10 +218,7 @@ namespace ProceduralParts
             return Mathf.PI * M_y;
         }
 
-        public override bool SeekVolume(float targetVolume)
-        {
-            throw new NotImplementedException($"SeekVolume not implemented for {ModTag}");
-        }
+        public override bool SeekVolume(float targetVolume) => SeekVolume(targetVolume, Fields[nameof(length)]);
 
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {

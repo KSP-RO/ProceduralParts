@@ -6,7 +6,7 @@ namespace ProceduralParts
     public class ProceduralShapeCone : ProceduralAbstractSoRShape
     {
         private static readonly string ModTag = "[ProceduralShapeCone]";
-        public override Vector3 CoMOffset => _CoMOffset();
+        public override Vector3 CoMOffset => CoMOffset_internal();
 
         #region Config parameters
 
@@ -100,11 +100,16 @@ namespace ProceduralParts
         {
             Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
             UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
-            lengthEdit.maxValue = PPart.lengthMax;
-            lengthEdit.minValue = PPart.lengthMin;
             lengthEdit.incrementLarge = PPart.lengthLargeStep;
             lengthEdit.incrementSmall = PPart.lengthSmallStep;
-            length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
+
+            UI_FloatEdit topDiameterEdit = Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit;
+            topDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+            topDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+
+            UI_FloatEdit bottomDiameterEdit = Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit;
+            bottomDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+            bottomDiameterEdit.incrementSmall = PPart.diameterSmallStep;
 
             if (PPart.diameterMin == PPart.diameterMax || (coneTopMode == ConeEndMode.Constant && coneBottomMode == ConeEndMode.Constant))
             {
@@ -118,31 +123,16 @@ namespace ProceduralParts
                     Fields[nameof(topDiameter)].guiActiveEditor = false;
                     Fields[nameof(bottomDiameter)].guiName = "Diameter";
                 }
-                else
-                {
-                    UI_FloatEdit topDiameterEdit = Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit;
-                    topDiameterEdit.incrementLarge = PPart.diameterLargeStep;
-                    topDiameterEdit.incrementSmall = PPart.diameterSmallStep;
-                    topDiameterEdit.maxValue = PPart.diameterMax;
-                    topDiameterEdit.minValue = (coneTopMode == ConeEndMode.CanZero && coneBottomMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
-                    topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
-                }
-
                 if (coneBottomMode == ConeEndMode.Constant)
                 {
                     Fields[nameof(bottomDiameter)].guiActiveEditor = false;
                     Fields[nameof(topDiameter)].guiName = "Diameter";
                 }
-                else
-                {
-                    UI_FloatEdit bottomDiameterEdit = Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit;
-                    bottomDiameterEdit.incrementLarge = PPart.diameterLargeStep;
-                    bottomDiameterEdit.incrementSmall = PPart.diameterSmallStep;
-                    bottomDiameterEdit.maxValue = PPart.diameterMax;
-                    bottomDiameterEdit.minValue = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
-                    bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
-                }
             }
+            AdjustDimensionBounds();
+            length = Mathf.Clamp(length, lengthEdit.minValue, lengthEdit.maxValue);
+            topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
+            bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
         }
 
         #endregion
@@ -164,10 +154,8 @@ namespace ProceduralParts
 
         public override void AdjustDimensionBounds()
         {
-            if (float.IsPositiveInfinity(PPart.volumeMax)) return;
-
             // V = (PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
-            // V = (PI * L * diamQuad / 12
+            // V = PI * L * diamQuad / 12
             // L = 12 * V / (PI * diamQuad)
             // diamQuad = 12 * V / (PI * L)
 
@@ -176,35 +164,80 @@ namespace ProceduralParts
             float maxBottomDiameter = PPart.diameterMax;
             float maxLength = PPart.lengthMax;
 
-            // Solutions for top and bottom diameter are the symmetric.
-            if (CalculateVolume(length, topDiameter, PPart.diameterMax) > PPart.volumeMax)
+            float minTopDiameter = (coneTopMode == ConeEndMode.CanZero && coneBottomMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
+            float minBottomDiameter = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
+            float minLength = PPart.lengthMin;
+
+            if (PPart.volumeMax < float.PositiveInfinity)
             {
-                float maxDiamQuad = PPart.volumeMax * 12 / (Mathf.PI * length);
-                float a = 1f;
-                float b = topDiameter;
-                float c = topDiameter * topDiameter - maxDiamQuad;
-                // = top^2 + (top*bot) + (bottom^2)
-                // top^2 + (top*bot) + (bottom^2-maxdiamquad) = 0
-                // -b +/- sqrt(b^2-4ac)/2a
-                float det = Mathf.Sqrt((b * b) - (4 * a * c));
-                maxBottomDiameter = (det - b) / (a * 2);
+                // Solutions for top and bottom diameter are the symmetric.
+                if (CalculateVolume(length, topDiameter, PPart.diameterMax) > PPart.volumeMax)
+                {
+                    float maxDiamQuad = PPart.volumeMax * 12 / (Mathf.PI * length);
+                    float a = 1f;
+                    float b = topDiameter;
+                    float c = topDiameter * topDiameter - maxDiamQuad;
+                    // = top^2 + (top*bot) + (bottom^2)
+                    // top^2 + (top*bot) + (bottom^2-maxdiamquad) = 0
+                    // -b +/- sqrt(b^2-4ac)/2a
+                    float det = Mathf.Sqrt((b * b) - (4 * a * c));
+                    maxBottomDiameter = (det - b) / (a * 2);
+                }
+                if (CalculateVolume(length, PPart.diameterMax, bottomDiameter) > PPart.volumeMax)
+                {
+                    float maxDiamQuad = PPart.volumeMax * 12 / (Mathf.PI * length);
+                    float a = 1f;
+                    float b = bottomDiameter;
+                    float c = bottomDiameter * bottomDiameter - maxDiamQuad;
+                    float det = Mathf.Sqrt((b * b) - (4 * a * c));
+                    maxTopDiameter = (det - b) / (a * 2);
+                }
+                if (CalculateVolume(PPart.lengthMax, topDiameter, bottomDiameter) > PPart.volumeMax)
+                    maxLength = 12 * PPart.volumeMax / (Mathf.PI * diamQuad);
             }
-            if (CalculateVolume(length, PPart.diameterMax, bottomDiameter) > PPart.volumeMax)
+            if (PPart.volumeMin > 0)
             {
-                float maxDiamQuad = PPart.volumeMax * 12 / (Mathf.PI * length);
-                float a = 1f;
-                float b = bottomDiameter;
-                float c = bottomDiameter * bottomDiameter - maxDiamQuad;
-                float det = Mathf.Sqrt((b * b) - (4 * a * c));
-                maxTopDiameter = (det - b) / (a * 2);
+                // Solutions for top and bottom diameter are the symmetric.
+                if (CalculateVolume(length, topDiameter, PPart.diameterMin) < PPart.volumeMin)
+                {
+                    float minDiamQuad = PPart.volumeMin * 12 / (Mathf.PI * length);
+                    float a = 1f;
+                    float b = topDiameter;
+                    float c = topDiameter * topDiameter - minDiamQuad;
+                    // = top^2 + (top*bot) + (bottom^2)
+                    // top^2 + (top*bot) + (bottom^2-maxdiamquad) = 0
+                    // -b +/- sqrt(b^2-4ac)/2a
+                    float det = Mathf.Sqrt((b * b) - (4 * a * c));
+                    minBottomDiameter = (det - b) / (a * 2);
+                }
+                if (CalculateVolume(length, PPart.diameterMin, bottomDiameter) < PPart.volumeMin)
+                {
+                    float minDiamQuad = PPart.volumeMin * 12 / (Mathf.PI * length);
+                    float a = 1f;
+                    float b = bottomDiameter;
+                    float c = bottomDiameter * bottomDiameter - minDiamQuad;
+                    float det = Mathf.Sqrt((b * b) - (4 * a * c));
+                    minTopDiameter = (det - b) / (a * 2);
+                }
+                if (CalculateVolume(PPart.lengthMin, topDiameter, bottomDiameter) < PPart.volumeMin)
+                    minLength = 12 * PPart.volumeMin / (Mathf.PI * diamQuad);
             }
-            if (CalculateVolume(PPart.diameterMax, topDiameter, bottomDiameter) > PPart.volumeMax)
-            {
-                maxLength = 12 * PPart.volumeMax / (Mathf.PI * diamQuad);
-            }
+
+            maxLength = Mathf.Clamp(maxLength, PPart.lengthMin, PPart.lengthMax);
+            maxTopDiameter = Mathf.Clamp(maxTopDiameter, PPart.diameterMin, PPart.diameterMax);
+            maxBottomDiameter = Mathf.Clamp(maxBottomDiameter, PPart.diameterMin, PPart.diameterMax);
+
+            minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);
+            minTopDiameter = Mathf.Clamp(minTopDiameter, PPart.diameterMin, PPart.diameterMax - PPart.diameterSmallStep);
+            minBottomDiameter = Mathf.Clamp(minBottomDiameter, PPart.diameterMin, PPart.diameterMax - PPart.diameterSmallStep);
+
             (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxTopDiameter;
             (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxBottomDiameter;
             (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = maxLength;
+
+            (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).minValue = minTopDiameter;
+            (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).minValue = minBottomDiameter;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = minLength;
         }
 
         public override float CalculateVolume() => CalculateVolume(length, topDiameter, bottomDiameter);
@@ -214,7 +247,7 @@ namespace ProceduralParts
         }
         public override bool SeekVolume(float targetVolume) => SeekVolume(targetVolume, Fields[nameof(length)]);
 
-        private Vector3 _CoMOffset()
+        private Vector3 CoMOffset_internal()
         {
             //h * (B^2 + 2BT + 3T^2) / 4 * (B^2 + BT + T^2)
             float num = Mathf.Pow(bottomDiameter, 2) + (2 * bottomDiameter * topDiameter) + (3 * Mathf.Pow(topDiameter, 2));
@@ -248,11 +281,11 @@ namespace ProceduralParts
 
         private void HandleDiameterChange(BaseField f, object obj)
         {
-            if ((f.name == nameof(topDiameter) || f.name == nameof(bottomDiameter)) && obj is float)
+            if ((f.name == nameof(topDiameter) || f.name == nameof(bottomDiameter)) && obj is float prevDiam)
             {
                 // Nothing to do for stack-attached nodes.
-                float oldTopDiameter = (f.name == nameof(topDiameter)) ? (float)obj : topDiameter;
-                float oldBottomDiameter = (f.name == nameof(bottomDiameter)) ? (float)obj : bottomDiameter;
+                float oldTopDiameter = (f.name == nameof(topDiameter)) ? prevDiam : topDiameter;
+                float oldBottomDiameter = (f.name == nameof(bottomDiameter)) ? prevDiam : bottomDiameter;
                 foreach (Part p in part.children)
                 {
                     if (p.FindAttachNodeByPart(part) is AttachNode node && node.nodeType == AttachNode.NodeType.Surface)

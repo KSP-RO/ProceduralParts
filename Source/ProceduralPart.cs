@@ -372,6 +372,9 @@ namespace ProceduralParts
         public float lengthSmallStep = 0.125f;
 
         [KSPField]
+        public float volumeMin = 0;
+
+        [KSPField]
         public float volumeMax = 0;
 
         /// <summary>
@@ -402,12 +405,13 @@ namespace ProceduralParts
             needsTechInit = false;
             currentLimit = new TechLimit
             {
-                diameterMax = this.diameterMax,
-                diameterMin = this.diameterMin,
-                lengthMax = this.lengthMax,
-                lengthMin = this.lengthMin,
-                volumeMax = this.volumeMax,
-                allowCurveTweaking = true
+                diameterMax = diameterMax,
+                diameterMin = diameterMin,
+                lengthMax = lengthMax,
+                lengthMin = lengthMin,
+                volumeMin = volumeMin,
+                volumeMax = volumeMax,
+                allowCurveTweaking = allowCurveTweaking,
             };
 
             if (HighLogic.CurrentGame is Game &&
@@ -432,7 +436,7 @@ namespace ProceduralParts
             currentLimit.Validate();
             SetFromLimit(currentLimit);
 
-            Debug.Log($"{ModTag} TechLimits applied: diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volumeMax={volumeMax:G3} )");
+            Debug.Log($"{ModTag} {currentLimit}");
 
             foreach (ProceduralAbstractShape shape in GetComponents<ProceduralAbstractShape>())
                 shape.UpdateTechConstraints();
@@ -444,6 +448,7 @@ namespace ProceduralParts
             diameterMin = limit.diameterMin;
             lengthMax = limit.lengthMax;
             lengthMin = limit.lengthMin;
+            volumeMin = limit.volumeMin;
             volumeMax = limit.volumeMax;
             allowCurveTweaking = limit.allowCurveTweaking;
         }
@@ -555,6 +560,7 @@ namespace ProceduralParts
             }
 
             shape.isEnabled = shape.enabled = true;
+            shape.AdjustDimensionBounds();
             shape.UpdateShape();
             if (HighLogic.LoadedSceneIsEditor) 
             {

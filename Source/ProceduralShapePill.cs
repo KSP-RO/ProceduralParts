@@ -10,16 +10,16 @@ namespace ProceduralParts
 
         #region Config parameters
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Diameter", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Diameter", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float diameter = 1.25f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fillet", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-		 UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Fillet", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float fillet = 1f;
 
         #endregion
@@ -51,26 +51,22 @@ namespace ProceduralParts
         {
             Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
             UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
-            lengthEdit.maxValue = PPart.lengthMax;
-            lengthEdit.minValue = PPart.lengthMin;
             lengthEdit.incrementLarge = PPart.lengthLargeStep;
             lengthEdit.incrementSmall = PPart.lengthSmallStep;
-            length = Mathf.Clamp(length, PPart.lengthMin, PPart.lengthMax);
 
             Fields[nameof(diameter)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
             UI_FloatEdit diameterEdit = Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit;
-            diameterEdit.maxValue = PPart.diameterMax;
-            diameterEdit.minValue = PPart.diameterMin;
             diameterEdit.incrementLarge = PPart.diameterLargeStep;
             diameterEdit.incrementSmall = PPart.diameterSmallStep;
-            diameter = Mathf.Clamp(diameter, PPart.diameterMin, PPart.diameterMax);
 
             Fields[nameof(fillet)].guiActiveEditor = PPart.allowCurveTweaking;
             UI_FloatEdit filletEdit = Fields[nameof(fillet)].uiControlEditor as UI_FloatEdit;
-            filletEdit.maxValue = Mathf.Min(length, diameter);
-            filletEdit.minValue = 0;
             filletEdit.incrementLarge = PPart.diameterLargeStep;
             filletEdit.incrementSmall = PPart.diameterSmallStep;
+
+            AdjustDimensionBounds();
+            length = Mathf.Clamp(length, lengthEdit.minValue, lengthEdit.maxValue);
+            diameter = Mathf.Clamp(diameter, diameterEdit.minValue, diameterEdit.maxValue);
             fillet = Mathf.Clamp(fillet, filletEdit.minValue, filletEdit.maxValue);
         }
 
@@ -94,12 +90,6 @@ namespace ProceduralParts
 
         public override void AdjustDimensionBounds()
         {
-            if (float.IsPositiveInfinity(PPart.volumeMax))
-            {
-                (Fields[nameof(fillet)].uiControlEditor as UI_FloatEdit).maxValue = Mathf.Min(diameter, length);
-                return;
-            }
-
             // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for d
             // simplify d = ((-3 pi^2 f^2+12 pi f^2) ± sqrt(3 pi) sqrt(3 pi^3 f^4-24 pi^2 f^4+48 pi f^4+24 pi^2 f^3 l-80 pi f^3 l+192 l v))/(12 pi l) 
             // d = (-3 (pi-4) pi f^2 ± sqrt(3 pi) sqrt(3 (pi-4)^2 pi f^4+8 pi (3 pi-10) f^3 l+192 l v)) / (12 pi l)
@@ -112,21 +102,45 @@ namespace ProceduralParts
             // I'm pretty sure only the +ve value is required, but make the -ve possible too.
             float maxDiameter = (t1 + t2) > 0 ? (t1 + t2) / de : (t1 - t2) / de;
             float maxLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * PPart.volumeMax) / (6f * Pi * pow(diameter, 2));
-            float maxFillet = fillet;
-            IterateVolumeLimits(length, diameter, ref maxFillet, IteratorIncrement);
+            float maxFillet = Mathf.Min(diameter, length);
+
+            float t2min = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * PPart.volumeMin);
+            float minDiameter = (t1 + t2min) > 0 ? (t1 + t2min) / de : (t1 - t2min) / de;
+            float minLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * PPart.volumeMin) / (6f * Pi * pow(diameter, 2));
+            float minFillet = 0;
+
+            if (PPart.volumeMax < float.PositiveInfinity)
+                IterateVolumeLimits(length, diameter, ref minFillet, PPart.volumeMax, IteratorIncrement);
+            if (PPart.volumeMin > 0)
+                IterateVolumeLimits(length, diameter, ref maxFillet, PPart.volumeMin, IteratorIncrement);
+
+            maxLength = Mathf.Clamp(maxLength, PPart.lengthMin, PPart.lengthMax);
+            maxDiameter = Mathf.Clamp(maxDiameter, PPart.diameterMin, PPart.diameterMax);
+
+            minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);
+            minDiameter = Mathf.Clamp(minDiameter, PPart.diameterMin, PPart.diameterMax - PPart.diameterSmallStep);
 
             (Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit).maxValue = maxDiameter;
             (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = maxLength;
             (Fields[nameof(fillet)].uiControlEditor as UI_FloatEdit).maxValue = maxFillet;
+
+            (Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit).minValue = minDiameter;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = minLength;
+            (Fields[nameof(fillet)].uiControlEditor as UI_FloatEdit).minValue = minFillet;
         }
 
-        private void IterateVolumeLimits(float length, float diameter, ref float fillet, float inc, int scale = 6)
+        // Variant from ProceduralShapeBezierCone.IterateVolumeLimits()
+        private void IterateVolumeLimits(float length, float diameter, ref float fillet, float target, float inc, int scale = 6)
         {
+            // Increasing fillet decreases volume
+            // Seek the fillet setting that gives the requested volume, or hits its limit
             if (inc <= 0) return;
+            fillet = 0;
+            float maxFillet = Mathf.Min(length, diameter);
             while (scale-- >= 0)
             {
                 float curInc = inc * Mathf.Pow(10, scale);
-                while (CalculateVolume(length, diameter, fillet + curInc) < PPart.volumeMax && fillet < Mathf.Min(length, diameter))
+                while (CalculateVolume(length, diameter, fillet + curInc) > target && fillet + curInc < maxFillet)
                 {
                     fillet += curInc;
                 }
@@ -209,7 +223,22 @@ namespace ProceduralParts
 
         public override bool SeekVolume(float targetVolume)
         {
-            throw new NotImplementedException($"SeekVolume not implemented for {ModTag}");
+            BaseField field = Fields[nameof(length)];
+            float orig = (float) field.GetValue(this);
+            float maxLength = (field.uiControlEditor as UI_FloatEdit).maxValue;
+            float minLength = (field.uiControlEditor as UI_FloatEdit).minValue;
+            float precision = (field.uiControlEditor as UI_FloatEdit).incrementSlide;
+
+            // Solve length directly, taken from AdjustDimensionBounds
+            float targetLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * targetVolume) / (6f * Pi * pow(diameter, 2));
+            targetLength = Convert.ToSingle(Math.Round(targetLength / precision)) * precision;
+            float clampedTargetLength = Mathf.Clamp(targetLength, minLength, maxLength);
+            bool closeEnough = Mathf.Abs((clampedTargetLength / targetLength) - 1) < 0.01;
+
+            field.SetValue(targetLength, this);
+            OnShapeDimensionChanged(field, orig);
+            MonoUtilities.RefreshPartContextWindow(part);
+            return closeEnough;
         }
 
         public override void UpdateTFInterops()
