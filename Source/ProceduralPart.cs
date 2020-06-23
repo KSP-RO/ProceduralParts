@@ -34,6 +34,9 @@ namespace ProceduralParts
         public static bool installedFAR = false;
         public static bool installedTU = false;
         public static bool staticallyInitialized = false;
+        public bool TUEnabled => installedTU && part.GetComponent("KSPTextureSwitch") is Component;
+        public float Volume => CurrentShape.Volume;
+
         public static void StaticInit()
         {
             if (staticallyInitialized) return;
@@ -123,11 +126,10 @@ namespace ProceduralParts
 
             if (HighLogic.LoadedSceneIsEditor)
             {
-                if (!(part.GetComponent("KSPTextureSwitch") is Component))  // TU not enabled/installed for this part
-                {
+                if (!TUEnabled)
                     forceLegacyTextures = true;
-                    Fields[nameof(forceLegacyTextures)].guiActiveEditor = false;
-                }
+                SetTextureFieldVisibility();
+
                 Fields[nameof(forceLegacyTextures)].uiControlEditor.onFieldChanged = OnForceLegacyTextureChanged;
 
                 BaseField field = Fields[nameof(textureSet)];
@@ -177,7 +179,7 @@ namespace ProceduralParts
         }
         public void OnGUI() => texturePickerGUI?.OnGUI();
         private void OnEditorExit(GameEvents.FromToAction<GameScenes, GameScenes> _) => showTUPickerGUI = false;
-        private void OnForceLegacyTextureChanged(BaseField f, object obj) => Fields[nameof(showTUPickerGUI)].guiActiveEditor = installedTU && !forceLegacyTextures;
+        private void OnForceLegacyTextureChanged(BaseField f, object obj) { SetTextureFieldVisibility(); UpdateTexture(); }
         public void OnTextureChanged(BaseField f, object obj) => UpdateTexture();
 
         // onSymmetryFieldChanged() callback has the incorrect value for parameter obj
@@ -457,17 +459,40 @@ namespace ProceduralParts
 
         #region Textures (deprecated)
 
-        public bool ApplyLegacyTextures() => forceLegacyTextures || !(part.GetComponent("KSPTextureSwitch") is Component);
+        public bool ApplyLegacyTextures() => forceLegacyTextures || !TUEnabled;
 
-        [KSPField(guiName = "Legacy Textures", guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false),
+        [KSPField(guiName = "Legacy Textures", isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false),
          UI_Toggle(disabledText = "Disabled", enabledText = "Enabled", scene = UI_Scene.Editor)]
         public bool forceLegacyTextures = false;
 
-        [KSPField(guiName = "Texture", guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(guiName = "Texture", isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string textureSet = "Original";
 
-        [KSPField(guiName = "Ends Texture", guiActiveEditor = true, isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(guiName = "Ends Texture", isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public int capTextureIndex = 0;
+
+        private void SetTextureFieldVisibility()
+        {
+            Fields[nameof(forceLegacyTextures)].guiActiveEditor = TUEnabled;
+            Fields[nameof(showTUPickerGUI)].guiActiveEditor = !forceLegacyTextures;
+            Fields[nameof(textureSet)].guiActiveEditor = forceLegacyTextures;
+            Fields[nameof(capTextureIndex)].guiActiveEditor = forceLegacyTextures;
+            if (TUEnabled)
+            {
+                foreach (PartModule pm in part.Modules)
+                {
+                    if (pm.moduleName == "KSPTextureSwitch" 
+                        && pm.Fields["transformName"] is BaseField f
+                        && f.GetValue(pm) is string s
+                        && (s.Equals("sides") || s.Equals("ends"))
+                        && pm.Fields["currentTextureSet"] is BaseField visibleField)
+                    {
+                        visibleField.guiActiveEditor = !forceLegacyTextures;
+                    }
+                }
+            }
+        }
+
         private void UpdateTexture()
         {
             if (ApplyLegacyTextures())
@@ -572,7 +597,8 @@ namespace ProceduralParts
             UpdateTFInterops();
         }
 
-        public bool SeekVolume(float targetVolume) => shape.SeekVolume(targetVolume);
+        public bool SeekVolume(float targetVolume) => shape.SeekVolume(targetVolume, 0);
+        public bool SeekVolume(float targetVolume, int dir=0) => shape.SeekVolume(targetVolume, dir);
 
         #endregion
 
