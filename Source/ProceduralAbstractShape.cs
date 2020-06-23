@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -216,16 +215,25 @@ namespace ProceduralParts
             }
         }
 
-        public abstract bool SeekVolume(float targetVolume);
+        public float RoundToDirection(float val, int dir)
+        {
+            if (dir < 0)
+                return Mathf.Floor(val);
+            else if (dir == 0)
+                return Mathf.Round(val);
+            else
+                return Mathf.Ceil(val);
+        }
 
-        public virtual bool SeekVolume(float targetVolume, BaseField scaledField)
+        public abstract bool SeekVolume(float targetVolume, int dir=0);
+        public virtual bool SeekVolume(float targetVolume, BaseField scaledField, int dir=0)
         {
             float orig = (float) scaledField.GetValue(this);
             float maxLength = (scaledField.uiControlEditor as UI_FloatEdit).maxValue;
             float minLength = (scaledField.uiControlEditor as UI_FloatEdit).minValue;
             float precision = (scaledField.uiControlEditor as UI_FloatEdit).incrementSlide;
             float scaledValue = orig * targetVolume / Volume;
-            scaledValue = Convert.ToSingle(Math.Round(scaledValue / precision)) * precision;
+            scaledValue = RoundToDirection(scaledValue / precision, dir) * precision;
             float clampedScaledValue = Mathf.Clamp(scaledValue, minLength, maxLength);
             bool closeEnough = Mathf.Abs((clampedScaledValue / scaledValue) - 1) < 0.01;
             scaledField.SetValue(clampedScaledValue, this);

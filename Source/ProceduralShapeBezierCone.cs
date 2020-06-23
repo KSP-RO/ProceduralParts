@@ -218,7 +218,7 @@ namespace ProceduralParts
             return Mathf.PI * M_y;
         }
 
-        public override bool SeekVolume(float targetVolume) => SeekVolume(targetVolume, Fields[nameof(length)]);
+        public override bool SeekVolume(float targetVolume, int dir=0) => SeekVolume(targetVolume, Fields[nameof(length)], dir);
 
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {

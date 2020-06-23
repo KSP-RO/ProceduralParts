@@ -104,7 +104,7 @@ namespace ProceduralParts
             return diameter * diameter * 0.25f * Mathf.PI * length;
         }
 
-        public override bool SeekVolume(float targetVolume) => SeekVolume(targetVolume, Fields[nameof(length)]);
+        public override bool SeekVolume(float targetVolume, int dir) => SeekVolume(targetVolume, Fields[nameof(length)], dir);
 
         public override void UpdateTFInterops()
         {

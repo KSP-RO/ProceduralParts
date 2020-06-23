@@ -221,7 +221,7 @@ namespace ProceduralParts
             return Mathf.PI / 24f * (6f * diameter * diameter * length + 3f * (Mathf.PI - 4) * diameter * fillet * fillet + (10f - 3f * Mathf.PI) * fillet * fillet * fillet);
         }
 
-        public override bool SeekVolume(float targetVolume)
+        public override bool SeekVolume(float targetVolume, int dir=0)
         {
             BaseField field = Fields[nameof(length)];
             float orig = (float) field.GetValue(this);
@@ -231,7 +231,7 @@ namespace ProceduralParts
 
             // Solve length directly, taken from AdjustDimensionBounds
             float targetLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * targetVolume) / (6f * Pi * pow(diameter, 2));
-            targetLength = Convert.ToSingle(Math.Round(targetLength / precision)) * precision;
+            targetLength = RoundToDirection(targetLength / precision, dir) * precision;
             float clampedTargetLength = Mathf.Clamp(targetLength, minLength, maxLength);
             bool closeEnough = Mathf.Abs((clampedTargetLength / targetLength) - 1) < 0.01;
 

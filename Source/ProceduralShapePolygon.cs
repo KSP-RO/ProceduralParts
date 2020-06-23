@@ -202,7 +202,7 @@ namespace ProceduralParts
 
         public override float CalculateVolume() => VolumeCalculated;
         private float CalculateVolume(float area, float length) => area * length;
-        public override bool SeekVolume(float targetVolume) => SeekVolume(targetVolume, Fields[nameof(length)]);
+        public override bool SeekVolume(float targetVolume, int dir) => SeekVolume(targetVolume, Fields[nameof(length)], dir);
 
         public override void UpdateTFInterops()
         {
