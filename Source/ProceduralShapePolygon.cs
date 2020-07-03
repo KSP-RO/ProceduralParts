@@ -157,15 +157,11 @@ namespace ProceduralParts
 
         public override void AdjustDimensionBounds()
         {
-            float maxLength = PPart.lengthMax;
             float maxDiameter = PPart.diameterMax;
-            float minLength = PPart.lengthMin;
             float minDiameter = PPart.diameterMin;
 
-            if (CalculateVolume(Area, PPart.lengthMax) > PPart.volumeMax)
-                maxLength = PPart.volumeMax / Area;
-            if (CalculateVolume(Area, PPart.lengthMin) < PPart.volumeMin)
-                minLength = PPart.volumeMin / Area;
+            float maxLength = PPart.volumeMax / Area;
+            float minLength = PPart.volumeMin / Area;
 
             SimPart sim = new SimPart
             {

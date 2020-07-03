@@ -71,20 +71,10 @@ namespace ProceduralParts
             float t = PPart.volumeMax * 4f / Mathf.PI;
             float tMin = PPart.volumeMin * 4f / Mathf.PI;
 
-            float maxDiameter = PPart.diameterMax;
-            float maxLength = PPart.lengthMax;
-            float minDiameter = PPart.diameterMin;
-            float minLength = PPart.lengthMin;
-
-            if (CalculateVolume(length, PPart.diameterMax) > PPart.volumeMax)
-                maxDiameter = Mathf.Sqrt(t / length);
-            if (CalculateVolume(PPart.lengthMax, diameter) > PPart.volumeMax)
-                maxLength = t / (diameter * diameter);
-
-            if (CalculateVolume(length, PPart.diameterMin) < PPart.volumeMin)
-                minDiameter = Mathf.Sqrt(tMin / length);
-            if (CalculateVolume(PPart.lengthMin, diameter) < PPart.volumeMin)
-                minLength = tMin / (diameter * diameter);
+            float maxDiameter = Mathf.Sqrt(t / length);
+            float maxLength = t / (diameter * diameter);
+            float minDiameter = Mathf.Sqrt(tMin / length);
+            float minLength = tMin / (diameter * diameter);
 
             maxLength = Mathf.Clamp(maxLength, PPart.lengthMin, PPart.lengthMax);
             maxDiameter = Mathf.Clamp(maxDiameter, PPart.diameterMin, PPart.diameterMax);

@@ -95,24 +95,33 @@ namespace ProceduralParts
             // d = (-3 (pi-4) pi f^2 ± sqrt(3 pi) sqrt(3 (pi-4)^2 pi f^4+8 pi (3 pi-10) f^3 l+192 l v)) / (12 pi l)
             // l = (-3 (pi-4) pi d f^2+pi (3 pi-10) f^3+24 v)/(6 pi d^2) 
 
-            float t1 = -3 * (Mathf.PI - 4f) * Mathf.PI * fillet * fillet;
-            float t2 = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * PPart.volumeMax);
-            float de = (12f * Mathf.PI * length);
-
-            // I'm pretty sure only the +ve value is required, but make the -ve possible too.
-            float maxDiameter = (t1 + t2) > 0 ? (t1 + t2) / de : (t1 - t2) / de;
-            float maxLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * PPart.volumeMax) / (6f * Pi * pow(diameter, 2));
+            float maxDiameter = PPart.diameterMax;
+            float maxLength = PPart.lengthMax;
             float maxFillet = Mathf.Min(diameter, length);
 
-            float t2min = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * PPart.volumeMin);
-            float minDiameter = (t1 + t2min) > 0 ? (t1 + t2min) / de : (t1 - t2min) / de;
-            float minLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * PPart.volumeMin) / (6f * Pi * pow(diameter, 2));
+            float minDiameter = PPart.diameterMin;
+            float minLength = PPart.lengthMin;
             float minFillet = 0;
 
+            float t1 = -3 * (Mathf.PI - 4f) * Mathf.PI * fillet * fillet;
+            float de = 12f * Mathf.PI * length;
             if (PPart.volumeMax < float.PositiveInfinity)
+            {
+                float t2 = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * PPart.volumeMax);
+
+                // I'm pretty sure only the +ve value is required, but make the -ve possible too.
+                maxDiameter = (t1 + t2) > 0 ? (t1 + t2) / de : (t1 - t2) / de;
+                maxLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * PPart.volumeMax) / (6f * Pi * pow(diameter, 2));
                 IterateVolumeLimits(length, diameter, ref minFillet, PPart.volumeMax, IteratorIncrement);
+            }
+
             if (PPart.volumeMin > 0)
+            {
+                float t2min = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * PPart.volumeMin);
+                minDiameter = (t1 + t2min) > 0 ? (t1 + t2min) / de : (t1 - t2min) / de;
+                minLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * PPart.volumeMin) / (6f * Pi * pow(diameter, 2));
                 IterateVolumeLimits(length, diameter, ref maxFillet, PPart.volumeMin, IteratorIncrement);
+            }
 
             maxLength = Mathf.Clamp(maxLength, PPart.lengthMin, PPart.lengthMax);
             maxDiameter = Mathf.Clamp(maxDiameter, PPart.diameterMin, PPart.diameterMax);
