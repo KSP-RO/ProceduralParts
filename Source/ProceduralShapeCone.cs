@@ -168,6 +168,9 @@ namespace ProceduralParts
             float minBottomDiameter = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
             float minLength = PPart.lengthMin;
 
+            float minBottomDiameterOrig = minBottomDiameter;
+            float minTopDiameterOrig = minTopDiameter;
+
             if (PPart.volumeMax < float.PositiveInfinity)
             {
                 // Solutions for top and bottom diameter are the symmetric.
@@ -228,8 +231,8 @@ namespace ProceduralParts
             maxBottomDiameter = Mathf.Clamp(maxBottomDiameter, PPart.diameterMin, PPart.diameterMax);
 
             minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);
-            minTopDiameter = Mathf.Clamp(minTopDiameter, PPart.diameterMin, PPart.diameterMax - PPart.diameterSmallStep);
-            minBottomDiameter = Mathf.Clamp(minBottomDiameter, PPart.diameterMin, PPart.diameterMax - PPart.diameterSmallStep);
+            minTopDiameter = Mathf.Clamp(minTopDiameter, minTopDiameterOrig, PPart.diameterMax - PPart.diameterSmallStep);
+            minBottomDiameter = Mathf.Clamp(minBottomDiameter, minBottomDiameterOrig, PPart.diameterMax - PPart.diameterSmallStep);
 
             (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxTopDiameter;
             (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxBottomDiameter;
