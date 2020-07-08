@@ -53,8 +53,8 @@ namespace ProceduralParts
          UI_Toggle(disabledText = "Decoupler", enabledText = "Separator")]
         public bool isOmniDecoupler = false;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Impulse", groupName = ProceduralPart.PAWGroupName),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.1f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall = 0, incrementSlide = 0.1f, unit = " kN", sigFigs = 1)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Impulse", guiUnits = " kN", guiFormat = "F1", groupName = ProceduralPart.PAWGroupName),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.1f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall = 1, incrementSlide = 0.1f, unit = " kN", sigFigs = 1)]
         public float ejectionImpulse = 0;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="F3", groupName = ProceduralPart.PAWGroupName)]
@@ -127,8 +127,9 @@ namespace ProceduralParts
                 minDia = Mathf.Max(minDia, 0.001f); // Disallow values too small
                 maxImpulse = Mathf.Round(maxImpulseDiameterRatio * minDia);
                 float oldRatio = ejectionImpulse / ejectionImpulseEdit.maxValue;
+                if (!float.IsPositiveInfinity(ejectionImpulseEdit.maxValue))
+                    ejectionImpulse = Convert.ToSingle(Math.Round(maxImpulse * oldRatio, 1));
                 ejectionImpulseEdit.maxValue = maxImpulse;
-                ejectionImpulse = Convert.ToSingle(Math.Round(maxImpulse * oldRatio, 1));
             }
         }
 
