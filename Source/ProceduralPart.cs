@@ -597,7 +597,6 @@ namespace ProceduralParts
             UpdateTFInterops();
         }
 
-        public bool SeekVolume(float targetVolume) => shape.SeekVolume(targetVolume, 0);
         public bool SeekVolume(float targetVolume, int dir=0) => shape.SeekVolume(targetVolume, dir);
 
         #endregion
