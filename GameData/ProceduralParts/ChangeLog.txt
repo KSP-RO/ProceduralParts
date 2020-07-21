@@ -1,4 +1,7 @@
 ============= Changelog for ProceduralParts  =========
+=== 2.0.5 ===
+Hotfix: Calling AdjustDimensionBounds from a volume changed handler breaks bezier shape mesh
+
 === 2.0.4 ===
 Expand SeekVolume support to work with pill and bezier curve shapes
 SeekVolume method prototype changed: optional parameter for rounding (floor/nearest/ceiling).
