@@ -111,6 +111,8 @@ namespace ProceduralParts
         {
             part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
+            SetControlPoints(length, topDiameter, bottomDiameter);
+            // Ensure correct control points if something called AdjustDimensionBounds or CalculateVolume when handling volume change event
             WriteBezier();
         }
 
@@ -186,26 +188,7 @@ namespace ProceduralParts
 
         public override float CalculateVolume(float length, float topDiameter, float bottomDiameter)
         {
-            // So we have a rotated bezier curve from bottom to top.
-            // There are four control points, the bottom (p0) and the top ones (p3) are obvious
-            p0 = new Vector2(bottomDiameter, -length / 2f);
-            p3 = new Vector2(topDiameter, length / 2f);
-            float[] shape = shapePresets[selectedShape];
-            if (shape is null)
-                throw new InvalidProgramException();
-
-            // Pretty obvious below what the shape points mean
-            if (bottomDiameter < topDiameter)
-            {
-                p1 = new Vector2(Mathf.Lerp(p0.x, p3.x, shape[0]), Mathf.Lerp(p0.y, p3.y, shape[1]));
-                p2 = new Vector2(Mathf.Lerp(p0.x, p3.x, shape[2]), Mathf.Lerp(p0.y, p3.y, shape[3]));
-            }
-            else
-            {
-                p2 = new Vector2(Mathf.Lerp(p3.x, p0.x, shape[0]), Mathf.Lerp(p3.y, p0.y, shape[1]));
-                p1 = new Vector2(Mathf.Lerp(p3.x, p0.x, shape[2]), Mathf.Lerp(p3.y, p0.y, shape[3]));
-            }
-
+            SetControlPoints(length, topDiameter, bottomDiameter);
             // The maths for the area under the bezier can be calculated using 
             // pappus's centroid theroem: http://mathworld.wolfram.com/PappussCentroidTheorem.html
             // V = 2pi * Area of lamina * x geometric centroid y axis
@@ -255,6 +238,29 @@ namespace ProceduralParts
 
         #region Control point calculation
         private Vector2 p0, p1, p2, p3;
+
+        private void SetControlPoints(float length, float topDiameter, float bottomDiameter)
+        {
+            // So we have a rotated bezier curve from bottom to top.
+            // There are four control points, the bottom (p0) and the top ones (p3) are obvious
+            p0 = new Vector2(bottomDiameter, -length / 2f);
+            p3 = new Vector2(topDiameter, length / 2f);
+            float[] shape = shapePresets[selectedShape];
+            if (shape is null)
+                throw new InvalidProgramException();
+
+            // Pretty obvious below what the shape points mean
+            if (bottomDiameter < topDiameter)
+            {
+                p1 = new Vector2(Mathf.Lerp(p0.x, p3.x, shape[0]), Mathf.Lerp(p0.y, p3.y, shape[1]));
+                p2 = new Vector2(Mathf.Lerp(p0.x, p3.x, shape[2]), Mathf.Lerp(p0.y, p3.y, shape[3]));
+            }
+            else
+            {
+                p2 = new Vector2(Mathf.Lerp(p3.x, p0.x, shape[0]), Mathf.Lerp(p3.y, p0.y, shape[1]));
+                p1 = new Vector2(Mathf.Lerp(p3.x, p0.x, shape[2]), Mathf.Lerp(p3.y, p0.y, shape[3]));
+            }
+        }
 
         private Vector3 CalcMomentOfInertiaNoDensity()
         {
