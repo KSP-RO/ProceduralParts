@@ -1,4 +1,7 @@
 ============= Changelog for ProceduralParts  =========
+=== 2.0.6 ===
+Hotfix: NaN TechLimits in career
+
 === 2.0.5 ===
 Hotfix: Calling AdjustDimensionBounds from a volume changed handler breaks bezier shape mesh
 
