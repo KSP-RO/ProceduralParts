@@ -7,17 +7,17 @@ namespace ProceduralParts
         [Persistent]
         public string name;
         [Persistent]
-        public float diameterMin = float.NaN;
+        public float diameterMin = float.PositiveInfinity;
         [Persistent]
-        public float diameterMax = float.NaN;
+        public float diameterMax = 0.001f;
         [Persistent]
-        public float lengthMin = float.NaN;
+        public float lengthMin = float.PositiveInfinity;
         [Persistent]
-        public float lengthMax = float.NaN;
+        public float lengthMax = 0.001f;
         [Persistent]
-        public float volumeMin = float.NaN;
+        public float volumeMin = float.PositiveInfinity;
         [Persistent]
-        public float volumeMax = float.NaN;
+        public float volumeMax = 0.01f;
         [Persistent]
         public bool allowCurveTweaking = true;
 
