@@ -37,6 +37,18 @@ namespace ProceduralParts
         public bool TUEnabled => installedTU && part.GetComponent("KSPTextureSwitch") is Component;
         public float Volume => CurrentShape.Volume;
 
+        [KSPField] public float diameterMax = float.PositiveInfinity;
+        [KSPField] public float lengthMax = float.PositiveInfinity;
+        [KSPField] public float volumeMax = float.PositiveInfinity;
+        [KSPField] public float diameterMin = 0.01f;
+        [KSPField] public float lengthMin = 0.01f;
+        [KSPField] public float volumeMin = 0;
+        [KSPField] public float diameterLargeStep = 1.25f;
+        [KSPField] public float diameterSmallStep = 0.125f;
+        [KSPField] public float lengthLargeStep = 1.0f;
+        [KSPField] public float lengthSmallStep = 0.125f;
+        [KSPField] public bool allowCurveTweaking = true;
+
         public static void StaticInit()
         {
             if (staticallyInitialized) return;
@@ -51,20 +63,12 @@ namespace ProceduralParts
 
         public override void OnAwake() => StaticInit();
 
-        public void Update()
-        {
-            if (HighLogic.LoadedSceneIsEditor && needsTechInit) InitializeTechLimits();
-        }
-
         public override void OnLoad(ConfigNode node)
         {
-            if (HighLogic.LoadedScene == GameScenes.LOADING)
-                LoadTechLimits(node);
-
             // An existing vessel part or .craft file that has never set this value before, but not the availablePart
             if (HighLogic.LoadedScene != GameScenes.LOADING && !node.HasValue(nameof(forceLegacyTextures)))
                 forceLegacyTextures = true;
-
+            if (node.name == "CURRENTUPGRADE") return;
             if (HighLogic.LoadedSceneIsFlight)
             {
                 // Create a temporary collider for KSP so that it can set the craft on the ground properly
@@ -110,7 +114,9 @@ namespace ProceduralParts
 
             if (HighLogic.LoadedSceneIsEditor)
             {
-                InitializeTechLimits();
+                Debug.Log($"{ModTag} TechLimits: diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volume=({volumeMin:G3}, {volumeMax:G3})");
+                foreach (ProceduralAbstractShape shape in GetComponents<ProceduralAbstractShape>())
+                    shape.UpdateTechConstraints();
                 legacyTextureHandler.ValidateSelectedTexture();
                 texturePickerGUI = new TUTexturePickerGUI(this);
                 Fields[nameof(showTUPickerGUI)].guiActiveEditor = installedTU && !forceLegacyTextures;
@@ -343,116 +349,6 @@ namespace ProceduralParts
             // If we don't do this, the partCollider doesn't work properly.
             partCollider.enabled = false;
             partCollider.enabled = true;
-        }
-
-        #endregion
-
-        #region Maximum dimensions and shape constraints
-
-        [KSPField]
-        public float diameterMax = 0;
-
-        [KSPField]
-        public float diameterMin = 0.01f;
-
-        [KSPField]
-        public float diameterLargeStep = 1.25f;
-
-        [KSPField]
-        public float diameterSmallStep = 0.125f;
-
-        [KSPField]
-        public float lengthMax = 0;
-
-        [KSPField]
-        public float lengthMin = 0.01f;
-
-        [KSPField]
-        public float lengthLargeStep = 1.0f;
-
-        [KSPField]
-        public float lengthSmallStep = 0.125f;
-
-        [KSPField]
-        public float volumeMin = 0;
-
-        [KSPField]
-        public float volumeMax = 0;
-
-        /// <summary>
-        /// Set to false if user is not allowed to tweak the fillet / curve Id.
-        /// </summary>
-        [KSPField]
-        public bool allowCurveTweaking = true;
-
-        private readonly List<TechLimit> techLimits = new List<TechLimit>();
-        public TechLimit currentLimit;
-        private bool needsTechInit;
-
-        private void LoadTechLimits(ConfigNode node)
-        {
-            foreach (ConfigNode tNode in node.GetNodes("TECHLIMIT"))
-            {
-                TechLimit limit = new TechLimit();
-                limit.Load(tNode);
-                techLimits.Add(limit);
-            }
-        }
-
-        private void InitializeTechLimits()
-        {
-            techLimits.Clear();
-            techLimits.AddRange(part.partInfo.partPrefab.FindModuleImplementing<ProceduralPart>().techLimits);
-
-            needsTechInit = false;
-            currentLimit = new TechLimit
-            {
-                diameterMax = diameterMax,
-                diameterMin = diameterMin,
-                lengthMax = lengthMax,
-                lengthMin = lengthMin,
-                volumeMin = volumeMin,
-                volumeMax = volumeMax,
-                allowCurveTweaking = allowCurveTweaking,
-            };
-
-            if (HighLogic.CurrentGame is Game &&
-                (HighLogic.CurrentGame.Mode == Game.Modes.CAREER || HighLogic.CurrentGame.Mode == Game.Modes.SCIENCE_SANDBOX))
-            {
-                if (ResearchAndDevelopment.Instance is null)
-                {
-                    Debug.LogError($"{ModTag} InitializeTechLimits() but R&D Instance is null!");
-                    needsTechInit = true;
-                    return;
-                }
-
-                foreach (TechLimit limit in techLimits)
-                {
-                    if (ResearchAndDevelopment.GetTechnologyState(limit.name) == RDTech.State.Available)
-                        currentLimit.ApplyLimit(limit);
-                }
-            } else
-            {
-                Debug.Log($"{ModTag} Skipping Tech Limits because Game is {HighLogic.CurrentGame?.Mode}");
-            }
-            currentLimit.Validate();
-            SetFromLimit(currentLimit);
-
-            Debug.Log($"{ModTag} {currentLimit}");
-
-            foreach (ProceduralAbstractShape shape in GetComponents<ProceduralAbstractShape>())
-                shape.UpdateTechConstraints();
-        }
-
-        private void SetFromLimit(TechLimit limit)
-        {
-            diameterMax = limit.diameterMax;
-            diameterMin = limit.diameterMin;
-            lengthMax = limit.lengthMax;
-            lengthMin = limit.lengthMin;
-            volumeMin = limit.volumeMin;
-            volumeMax = limit.volumeMax;
-            allowCurveTweaking = limit.allowCurveTweaking;
         }
 
         #endregion
