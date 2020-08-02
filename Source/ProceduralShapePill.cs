@@ -108,18 +108,18 @@ namespace ProceduralParts
             if (PPart.volumeMax < float.PositiveInfinity)
             {
                 float t2 = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * PPart.volumeMax);
-
-                // I'm pretty sure only the +ve value is required, but make the -ve possible too.
-                maxDiameter = (t1 + t2) > 0 ? (t1 + t2) / de : (t1 - t2) / de;
-                maxLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * PPart.volumeMax) / (6f * Pi * pow(diameter, 2));
+                float x = (t1 + t2) > 0 ? (t1 + t2) / de : (t1 - t2) / de;
+                maxDiameter = !float.IsNaN(x) ? x : maxDiameter;
+                maxLength = ((-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2)) + (Pi * ((3f * Pi) - 10f) * pow(fillet, 3)) + (24f * PPart.volumeMax)) / (6f * Pi * pow(diameter, 2));
                 IterateVolumeLimits(length, diameter, ref minFillet, PPart.volumeMax, IteratorIncrement);
             }
 
             if (PPart.volumeMin > 0)
             {
                 float t2min = sqrt(3f * Pi) * sqrt(3f * pow(Pi - 4f, 2) * Pi * pow(fillet, 4) + 8f * Pi * (3f * Pi - 10f) * pow(fillet, 3) * length + 192f * length * PPart.volumeMin);
-                minDiameter = (t1 + t2min) > 0 ? (t1 + t2min) / de : (t1 - t2min) / de;
-                minLength = (-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2) + Pi * (3f * Pi - 10f) * pow(fillet, 3) + 24f * PPart.volumeMin) / (6f * Pi * pow(diameter, 2));
+                float x = (t1 + t2min) > 0 ? (t1 + t2min) / de : (t1 - t2min) / de;
+                minDiameter = !float.IsNaN(x) ? x : minDiameter;
+                minLength = ((-3f * (Pi - 4f) * Pi * diameter * pow(fillet, 2)) + (Pi * ((3f * Pi) - 10f) * pow(fillet, 3)) + (24f * PPart.volumeMin)) / (6f * Pi * pow(diameter, 2));
                 IterateVolumeLimits(length, diameter, ref maxFillet, PPart.volumeMin, IteratorIncrement);
             }
 
