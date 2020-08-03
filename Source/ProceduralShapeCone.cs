@@ -131,8 +131,10 @@ namespace ProceduralParts
             }
             AdjustDimensionBounds();
             length = Mathf.Clamp(length, lengthEdit.minValue, lengthEdit.maxValue);
-            topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
-            bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
+            if (coneTopMode != ConeEndMode.Constant)
+                topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
+            if (coneBottomMode != ConeEndMode.Constant)
+                bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
         }
 
         #endregion
