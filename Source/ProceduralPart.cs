@@ -65,10 +65,10 @@ namespace ProceduralParts
 
         public override void OnLoad(ConfigNode node)
         {
+            if (node.name == "CURRENTUPGRADE") return;
             // An existing vessel part or .craft file that has never set this value before, but not the availablePart
             if (HighLogic.LoadedScene != GameScenes.LOADING && !node.HasValue(nameof(forceLegacyTextures)))
                 forceLegacyTextures = true;
-            if (node.name == "CURRENTUPGRADE") return;
             if (HighLogic.LoadedSceneIsFlight)
             {
                 // Create a temporary collider for KSP so that it can set the craft on the ground properly
