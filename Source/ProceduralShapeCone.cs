@@ -65,7 +65,7 @@ namespace ProceduralParts
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
-            if (!HighLogic.LoadedSceneIsFlight)
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
             {
                 try
                 {
