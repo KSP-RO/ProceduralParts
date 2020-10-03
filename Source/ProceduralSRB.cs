@@ -96,9 +96,18 @@ namespace ProceduralParts
                     uiDeflection.onFieldChanged += HandleBellDeflectionChange;
                     // onSymmetryFieldChanged is buggy here, will call handler for symmetry counterparts ourselves
                     
-                    UI_Control uiThrust = Fields[nameof(thrust)].uiControlEditor;
-                    uiThrust.onFieldChanged += HandleThrustChange;
-                    uiThrust.onSymmetryFieldChanged += HandleThrustChange;
+                    if (UsingME)
+                    {
+                        UI_Control uiBurnTimeME = Fields[nameof(burnTimeME)].uiControlEditor;
+                        uiBurnTimeME.onFieldChanged += HandleThrustChange;
+                        uiBurnTimeME.onSymmetryFieldChanged += HandleThrustChange;
+                    }
+                    else
+                    {
+                        UI_Control uiThrust = Fields[nameof(thrust)].uiControlEditor;
+                        uiThrust.onFieldChanged += HandleThrustChange;
+                        uiThrust.onSymmetryFieldChanged += HandleThrustChange;    
+                    }                    
                 }
             }
             catch (Exception ex)
