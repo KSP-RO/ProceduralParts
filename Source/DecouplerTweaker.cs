@@ -126,6 +126,7 @@ namespace ProceduralParts
             {
                 minDia = Mathf.Max(minDia, 0.001f); // Disallow values too small
                 maxImpulse = Mathf.Round(maxImpulseDiameterRatio * minDia);
+                maxImpulse = Math.Max(maxImpulse, ejectionImpulseEdit.minValue);
                 float oldRatio = ejectionImpulse / ejectionImpulseEdit.maxValue;
                 if (!float.IsPositiveInfinity(ejectionImpulseEdit.maxValue))
                     ejectionImpulse = Convert.ToSingle(Math.Round(maxImpulse * oldRatio, 1));
