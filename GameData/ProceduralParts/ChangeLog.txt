@@ -1,4 +1,19 @@
 ============= Changelog for ProceduralParts  =========
+=== 2.1.1 ===
+Bugfix: SRB configuration and compatibility with RealFuels.
+Bugfix: RealFuels compatibility patching order; nose cone and structural part should not get RF tanks
+Bugfix: Decoupler ejection impulse inconsistency when loading .craft.
+
+=== 2.1.0 ===
+Replace custom TECHLIMITS with stock PARTUPGRADE system
+When upgrading an existing career, you may need to purchase the part size upgrades in R&D for previously unlocked tech nodes.
+In sandbox play, you will need to enable "All Part Upgrades Applied In Sandbox" in the Difficulty settings, Advanced tab.
+
+Bugfix: Cone end sizes defined by the part are not restricted by the tech-based size limits.
+Bugfix: Part configs were out of sync with newer code assumptions (#267)
+
+Thanks to @Lafreakshow and @Chryseus for the help discovering issues and debugging the test releases!
+
 === 2.0.6 ===
 Hotfix: NaN TechLimits in career
 
