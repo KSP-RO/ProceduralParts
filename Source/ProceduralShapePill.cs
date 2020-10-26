@@ -245,6 +245,14 @@ namespace ProceduralParts
             bool closeEnough = Mathf.Abs((clampedTargetLength / targetLength) - 1) < 0.01;
 
             field.SetValue(targetLength, this);
+            foreach (Part p in part.symmetryCounterparts)
+            {
+                // Propagate the change to other parts in symmetry group
+                if (FindAbstractShapeModule(p, this) is ProceduralAbstractShape pm)
+                {
+                    field.SetValue(targetLength, pm);
+                }
+            }
             OnShapeDimensionChanged(field, orig);
             MonoUtilities.RefreshPartContextWindow(part);
             return closeEnough;

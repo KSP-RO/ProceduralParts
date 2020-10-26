@@ -90,7 +90,7 @@ namespace ProceduralParts
         #region Events
 
         // Find the ProceduralAbstractShape in Part p that is the same ProceduralAbstractShape as the param.
-        private ProceduralAbstractShape FindAbstractShapeModule(Part p, ProceduralAbstractShape type)
+        protected ProceduralAbstractShape FindAbstractShapeModule(Part p, ProceduralAbstractShape type)
         {
             foreach (ProceduralAbstractShape s in p.FindModulesImplementing<ProceduralAbstractShape>())
             {
@@ -237,6 +237,14 @@ namespace ProceduralParts
             float clampedScaledValue = Mathf.Clamp(scaledValue, minLength, maxLength);
             bool closeEnough = Mathf.Abs((clampedScaledValue / scaledValue) - 1) < 0.01;
             scaledField.SetValue(clampedScaledValue, this);
+            foreach (Part p in part.symmetryCounterparts)
+            {
+                // Propagate the change to other parts in symmetry group
+                if (FindAbstractShapeModule(p, this) is ProceduralAbstractShape pm)
+                {
+                    scaledField.SetValue(clampedScaledValue, pm);
+                }
+            }
             OnShapeDimensionChanged(scaledField, orig);
             MonoUtilities.RefreshPartContextWindow(part);
             return closeEnough;
