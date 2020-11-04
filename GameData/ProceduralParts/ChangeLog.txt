@@ -1,4 +1,7 @@
 ============= Changelog for ProceduralParts  =========
+=== 2.1.2 ===
+Bugfix: SeekVolume updates symmetry counterpart field values directly
+
 === 2.1.1 ===
 Bugfix: SRB configuration and compatibility with RealFuels.
 Bugfix: RealFuels compatibility patching order; nose cone and structural part should not get RF tanks
