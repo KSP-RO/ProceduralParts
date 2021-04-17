@@ -58,6 +58,8 @@ namespace ProceduralParts
             installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
             installedTU = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "TexturesUnlimited");
             TextureSet.LoadTextureSets(LegacyTextureHandler.textureSets);
+            // "All Part Upgrades Applied In Sandbox" required for this mod to be usable in sandbox
+            HighLogic.CurrentGame.Parameters.CustomParams<GameParameters.AdvancedParams>().PartUpgradesInSandbox = true;
             staticallyInitialized = true;
         }
 
