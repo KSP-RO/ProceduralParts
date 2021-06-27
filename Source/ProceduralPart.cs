@@ -34,6 +34,7 @@ namespace ProceduralParts
         public static bool installedFAR = false;
         public static bool installedTU = false;
         public static bool staticallyInitialized = false;
+        private static bool staticallyResetPartUpgrades = false;
         public bool TUEnabled => installedTU && part.GetComponent("KSPTextureSwitch") is Component;
         public float Volume => CurrentShape.Volume;
 
@@ -51,6 +52,10 @@ namespace ProceduralParts
 
         public static void StaticInit()
         {
+            // "All Part Upgrades Applied In Sandbox" required for this mod to be usable in sandbox
+            if (!staticallyResetPartUpgrades && HighLogic.CurrentGame != null)
+                staticallyResetPartUpgrades = HighLogic.CurrentGame.Parameters.CustomParams<GameParameters.AdvancedParams>().PartUpgradesInSandbox = true;
+
             if (staticallyInitialized) return;
 
             if (AssemblyLoader.loadedAssemblies.FirstOrDefault(a => a.assembly.GetName().Name == "TestFlight") is AssemblyLoader.LoadedAssembly tfAssembly)
@@ -58,8 +63,6 @@ namespace ProceduralParts
             installedFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
             installedTU = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "TexturesUnlimited");
             TextureSet.LoadTextureSets(LegacyTextureHandler.textureSets);
-            // "All Part Upgrades Applied In Sandbox" required for this mod to be usable in sandbox
-            HighLogic.CurrentGame.Parameters.CustomParams<GameParameters.AdvancedParams>().PartUpgradesInSandbox = true;
             staticallyInitialized = true;
         }
 
