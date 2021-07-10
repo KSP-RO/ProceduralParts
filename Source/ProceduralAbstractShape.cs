@@ -279,20 +279,20 @@ namespace ProceduralParts
 
         public void ChangeAttachNodeSize(AttachNode node, float minDia, float area)
         {
-            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-            data.Set<AttachNode> ("node", node);
-            data.Set<float> ("minDia", minDia);
-            data.Set<float> ("area", area);
-            part.SendEvent ("OnPartAttachNodeSizeChanged", data, 0);
+            var data = new BaseEventDetails(BaseEventDetails.Sender.USER);
+            data.Set("node", node);
+            data.Set<float>("minDia", minDia);
+            data.Set<float>("area", area);
+            part.SendEvent("OnPartAttachNodeSizeChanged", data, 0);
         }
 
         protected void RaiseChangeTextureScale(string meshName, Material material, Vector2 targetScale)
         {
-            var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
-            data.Set<string> ("meshName", meshName);
-            data.Set<Material> ("material", material);
-            data.Set<Vector2> ("targetScale", targetScale);
-            part.SendEvent ("OnChangeTextureScale", data, 0);
+            var data = new BaseEventDetails(BaseEventDetails.Sender.USER);
+            data.Set<string>("meshName", meshName);
+            data.Set("material", material);
+            data.Set("targetScale", targetScale);
+            part.SendEvent("OnChangeTextureScale", data, 0);
         }
         
         protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area) => ChangeAttachNodeSize(node, minDia, area);
@@ -406,7 +406,6 @@ namespace ProceduralParts
         {
             InitializeStackAttachmentNodes(length);
             InitializeSurfaceAttachmentNode(length, diameter);
-            part.SendEvent ("OnPartNodeMoved");
         }
 
         internal virtual void InitializeStackAttachmentNodes(float length)
@@ -453,7 +452,9 @@ namespace ProceduralParts
                     node.position = destination;
                 }
                 node.originalPosition = node.position;
-                part.SendEvent ("OnPartNodeMoved");
+                var data = new BaseEventDetails(BaseEventDetails.Sender.USER);
+                data.Set("node", node);
+                part.SendEvent("OnPartNodeMoved", data, 0);
             }
         }
 
