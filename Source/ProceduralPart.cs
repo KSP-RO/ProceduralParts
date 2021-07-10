@@ -112,16 +112,13 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            Debug.Log($"{ModTag} OnStart({state}) for {this}");
             isInitialized = true;
             InitializeObjects();
             InitializeShapes();
 
             if (HighLogic.LoadedSceneIsEditor)
             {
-                Debug.Log($"{ModTag} TechLimits: diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volume=({volumeMin:G3}, {volumeMax:G3})");
-                foreach (ProceduralAbstractShape shape in GetComponents<ProceduralAbstractShape>())
-                    shape.UpdateTechConstraints();
+                Debug.Log($"{ModTag} TechLimits: {part.name} diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volume=({volumeMin:G3}, {volumeMax:G3})");
                 legacyTextureHandler.ValidateSelectedTexture();
                 texturePickerGUI = new TUTexturePickerGUI(this);
                 Fields[nameof(showTUPickerGUI)].guiActiveEditor = installedTU && !forceLegacyTextures;
@@ -169,7 +166,7 @@ namespace ProceduralParts
             if (tempCollider != null)
             {
                 // delete the temporary collider, if there is one, probably too soon to do this
-                Component.Destroy(tempCollider);
+                Destroy(tempCollider);
                 tempCollider = null;
             }
         }
@@ -411,7 +408,7 @@ namespace ProceduralParts
 
         #region Tank shape
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Shape", groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Shape", groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string shapeName;
         public void SetShapeName(string s)
         {
@@ -437,7 +434,7 @@ namespace ProceduralParts
             }
             if (string.IsNullOrEmpty(shapeName) || !availableShapes.ContainsKey(shapeName))
             {
-                Debug.Log($"{ModTag} InitailizeShapes() Shape \"{shapeName}\" not available, defaulting to {availableShapes.Keys.First()}");
+                Debug.LogWarning($"{ModTag} InitailizeShapes() Shape \"{shapeName}\" not available, defaulting to {availableShapes.Keys.First()}");
                 shapeName = availableShapes.Keys.First();
             }
             shape = availableShapes[shapeName];
@@ -639,7 +636,7 @@ namespace ProceduralParts
         private System.Collections.IEnumerator UpdateDragCubesCR()
         {
             yield return new WaitForFixedUpdate();
-            while (part == part.localRoot && part != EditorLogic.RootPart)
+            while (HighLogic.LoadedSceneIsEditor && (part.localRoot != EditorLogic.RootPart || part.gameObject.layer == LayerMask.NameToLayer("TransparentFX")))
             {
                 yield return new WaitForSeconds(1);
             }

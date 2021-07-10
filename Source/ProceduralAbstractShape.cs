@@ -111,7 +111,7 @@ namespace ProceduralParts
         {
             if (f.GetValue(this).Equals(obj))
                 return;
-            Debug.Log($"{ModTag} OnShapeDimensionChanged: {f.name} from {obj} to {f.GetValue(this)}");
+            Debug.Log($"{ModTag} OnShapeDimensionChanged: {part.name} {f.name} from {obj} to {f.GetValue(this)}");
             AdjustDimensionBounds();
             UpdateShape();
             UpdateInterops();
@@ -273,7 +273,7 @@ namespace ProceduralParts
             var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
             data.Set<string> ("volName", volName);
             data.Set<double> ("newTotalVolume", newVolume);
-            Debug.Log($"{ModTag} Invoking OnPartVolumeChanged for {part} volName:{volName} vol:{newVolume}");
+            Debug.Log($"{ModTag} {part.name} OnPartVolumeChanged volName:{volName} vol:{newVolume:F4}");
             part.SendEvent ("OnPartVolumeChanged", data, 0);
         }
 
