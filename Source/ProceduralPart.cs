@@ -269,7 +269,10 @@ namespace ProceduralParts
         private void InitializeObjects()
         {
             Transform colliderTr = part.FindModelTransform(collisionName);
-            partCollider = colliderTr.GetComponent<MeshCollider>();
+            if (colliderTr != null)
+            {
+                partCollider = colliderTr.GetComponent<MeshCollider>();
+            }
             legacyTextureHandler = new LegacyTextureHandler(part, this);
             InitializeMeshes();
         }
@@ -293,6 +296,17 @@ namespace ProceduralParts
         #region Collider mesh management methods
 
         private MeshCollider partCollider;
+
+        /// <summary>
+        /// Delete the original collider. Use this if the part provides its own colliders instead of modifying the original one.
+        /// </summary>
+        public void deleteOriginalCollider()
+        {
+            if (partCollider != null)
+            {
+                partCollider.gameObject.DestroyGameObject();
+            }
+        }
 
         // The partCollider mesh. This must be called whenever the contents of the mesh changes, even if the object remains the same.
         public Mesh ColliderMesh
