@@ -105,6 +105,8 @@
     <Compile Include="ProceduralShapeBezierCone.cs" />
     <Compile Include="ProceduralShapePill.cs" />
     <Compile Include="ProceduralShapePolygon.cs" />
+    <Compile Include="ProceduralShapeHollowCylinder.cs" />
+    <Compile Include="ProceduralShapeHollowPill.cs" />
     <Compile Include="ProceduralShapeHollowCone.cs" />
     <Compile Include="ProceduralSRB.cs" />
     <Compile Include="ProceduralShapeCone.cs" />
