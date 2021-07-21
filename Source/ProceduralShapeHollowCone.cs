@@ -39,7 +39,7 @@ namespace ProceduralParts
 
         private float maxError = 0.01f;
 
-        public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / (Math.Max(bottomOuterDiameter, topOuterDiameter))), 12);
+        public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / (Math.Max(bottomOuterDiameter, topOuterDiameter))), 24);
 
         [KSPField]
         public string TopNodeName = "top";
@@ -89,16 +89,16 @@ namespace ProceduralParts
             bottomMaxInnerDiameter = Mathf.Clamp(bottomMaxInnerDiameter, PPart.diameterMin, PPart.diameterMax);
 
             bool bottomAllowedZero = topOuterDiameter > topInnerDiameter;
-            bottomMaxInnerDiameter = Mathf.Clamp(bottomMaxInnerDiameter, PPart.diameterMin, bottomOuterDiameter - (bottomAllowedZero ? 0f : PPart.diameterSmallStep));
-            bottomMinOuterDiameter = Mathf.Clamp(bottomMinOuterDiameter, bottomInnerDiameter + (bottomAllowedZero ? 0f : PPart.diameterSmallStep), bottomMaxOuterDiameter);
+            bottomMaxInnerDiameter = Mathf.Clamp(bottomMaxInnerDiameter, PPart.diameterMin, bottomOuterDiameter - (bottomAllowedZero ? 0f : PPart.diameterMin));
+            bottomMinOuterDiameter = Mathf.Clamp(bottomMinOuterDiameter, bottomInnerDiameter + (bottomAllowedZero ? 0f : PPart.diameterMin), bottomMaxOuterDiameter);
 
             // Clamp top diameters
             topMaxOuterDiameter = Mathf.Clamp(topMaxOuterDiameter, PPart.diameterMin, PPart.diameterMax);
             topMaxInnerDiameter = Mathf.Clamp(topMaxInnerDiameter, PPart.diameterMin, PPart.diameterMax);
 
             bool topAllowedZero = bottomOuterDiameter > bottomInnerDiameter;
-            topMaxInnerDiameter = Mathf.Clamp(topMaxInnerDiameter, PPart.diameterMin, topOuterDiameter - (topAllowedZero ? 0f : PPart.diameterSmallStep));
-            topMinOuterDiameter = Mathf.Clamp(topMinOuterDiameter, topInnerDiameter + (topAllowedZero ? 0f : PPart.diameterSmallStep), topMaxOuterDiameter);
+            topMaxInnerDiameter = Mathf.Clamp(topMaxInnerDiameter, PPart.diameterMin, topOuterDiameter - (topAllowedZero ? 0f : PPart.diameterMin));
+            topMinOuterDiameter = Mathf.Clamp(topMinOuterDiameter, topInnerDiameter + (topAllowedZero ? 0f : PPart.diameterMin), topMaxOuterDiameter);
 
             minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);
 
