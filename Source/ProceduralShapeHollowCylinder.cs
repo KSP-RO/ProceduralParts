@@ -25,7 +25,7 @@ namespace ProceduralParts
 
         private float maxError = 0.01f;
 
-        public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / outerDiameter), 12);
+        public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / outerDiameter), 24);
 
         [KSPField]
         public string TopNodeName = "top";
@@ -66,8 +66,8 @@ namespace ProceduralParts
             maxOuterDiameter = Mathf.Clamp(maxOuterDiameter, PPart.diameterMin, PPart.diameterMax);
             maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, PPart.diameterMax);
 
-            maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, outerDiameter - PPart.diameterSmallStep);
-            minOuterDiameter = Mathf.Clamp(minOuterDiameter, innerDiameter + PPart.diameterSmallStep, maxOuterDiameter);
+            maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, outerDiameter - PPart.diameterMin);
+            minOuterDiameter = Mathf.Clamp(minOuterDiameter, innerDiameter + PPart.diameterMin, maxOuterDiameter);
 
             minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);
 

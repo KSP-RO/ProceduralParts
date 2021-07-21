@@ -30,7 +30,7 @@ namespace ProceduralParts
 
         private float maxError = 0.01f;
 
-        public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / outerDiameter), 12);
+        public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / outerDiameter), 24);
 
         public float MajorRadius => (outerDiameter + innerDiameter) / 4;
         public float MinorRadius => (outerDiameter - innerDiameter) / 4;
@@ -98,9 +98,9 @@ namespace ProceduralParts
 
             maxOuterDiameter = Mathf.Clamp(maxOuterDiameter, PPart.diameterMin, PPart.diameterMax);
             maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, PPart.diameterMax);
-            maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, outerDiameter - PPart.diameterSmallStep);
+            maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, outerDiameter - PPart.diameterMin);
 
-            minOuterDiameter = Mathf.Clamp(minOuterDiameter, innerDiameter + PPart.diameterSmallStep, maxOuterDiameter);
+            minOuterDiameter = Mathf.Clamp(minOuterDiameter, innerDiameter + PPart.diameterMin, maxOuterDiameter);
 
             maxFillet = Mathf.Clamp(maxFillet, 0, length);
             maxFillet = Mathf.Clamp(maxFillet, 0, (outerDiameter - innerDiameter) / 2f);
