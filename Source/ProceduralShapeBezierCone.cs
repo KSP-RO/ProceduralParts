@@ -8,30 +8,42 @@ namespace ProceduralParts
     public class ProceduralShapeBezierCone : ProceduralShapeCone
     {
         private const string ModTag = "[ProceduralShapeBezierCone]";
+        private const string CustomShapeName = "Custom";
 
         #region Config parameters
 
-        private static readonly Dictionary<string, float[]> shapePresets = new Dictionary<string, float[]>
+        internal class ShapePreset
         {
-            { "Straight", new[] { 0.3f, 0.3f, 0.7f, 0.7f } },
-            { "Round #1", new[] { 0.4f, 0.001f, 1.0f, 0.6f } },
-            { "Round #2", new[] { 0.5f, 0.001f, 0.8f, 0.7f } },
-            { "Round #3", new[] { 1.0f, 0.0f, 1f, 0.5f} },
-            { "Peaked #1", new[] { 0.4f, 0.2f, 0.8f, 0.6f } },
-            { "Peaked #2", new[] { 0.3f, 0.2f, 1.0f, 0.5f } },
-            { "Sharp #1", new[] { 0.1f, 0.001f, 0.7f, 2f/3f } },
-            { "Sharp #2", new[] { 1f/3f, 0.3f, 1.0f, 0.9f } },
-            { "Waisted", new[] { 0f, 0.5f, 1.0f, 0.5f } },
-        };
+            [Persistent] public string name;
+            [Persistent] public string displayName;
+            [Persistent] public Vector4 points;
+        }
 
-        private static readonly string[] oldShapeNames =
-        {
-            "Straight", "Round #1", "Round #2", "Peaked #1", "Peaked #2", "Sharp #1", "Sharp #2"
-        };
+        internal static readonly Dictionary<string, ShapePreset> shapePresets = new Dictionary<string, ShapePreset>();
+        private ShapePreset selectedPreset;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Curve", groupName = ProceduralPart.PAWGroupName),
          UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedShape;
+
+        [KSPField(isPersistant = true)]
+        public Vector4 shapePoints;
+
+        [KSPField(guiName = "Curve.x", guiFormat = "F3", groupName = ProceduralPart.PAWGroupName)]
+        [UI_FloatEdit(incrementSlide = 0.01f, maxValue = 1, minValue = 0)]
+        public float curve_x;
+
+        [KSPField(guiName = "Curve.y", guiFormat = "F3", groupName = ProceduralPart.PAWGroupName)]
+        [UI_FloatEdit(incrementSlide = 0.01f, maxValue = 1, minValue = 0)]
+        public float curve_y;
+
+        [KSPField(guiName = "Curve.z", guiFormat = "F3", groupName = ProceduralPart.PAWGroupName)]
+        [UI_FloatEdit(incrementSlide = 0.01f, maxValue = 1, minValue = 0)]
+        public float curve_z;
+
+        [KSPField(guiName = "Curve.w", guiFormat = "F3", groupName = ProceduralPart.PAWGroupName)]
+        [UI_FloatEdit(incrementSlide = 0.01f, maxValue = 1, minValue = 0)]
+        public float curve_w;
 
         #endregion
 
@@ -40,8 +52,7 @@ namespace ProceduralParts
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
-            if (selectedShape is null)
-                selectedShape = LegacyFixup(node);
+            InitializeSelectedShape();
         }
 
         public override void OnStart(StartState state)
@@ -50,19 +61,54 @@ namespace ProceduralParts
             base.OnStart(state);
             if (HighLogic.LoadedSceneIsEditor)
             {
-                Fields[nameof(selectedShape)].guiActiveEditor = PPart.allowCurveTweaking;
                 UI_ChooseOption opt = Fields[nameof(selectedShape)].uiControlEditor as UI_ChooseOption;
-                opt.options = shapePresets.Keys.ToArray();
-                opt.onSymmetryFieldChanged = opt.onFieldChanged = OnShapeSelectionChanged;
+                opt.options = shapePresets.Values.Select(x => x.name).ToArray();
+                opt.display = shapePresets.Values.Select(x => x.displayName).ToArray();
+                opt.onSymmetryFieldChanged += OnShapeSelectionChanged;
+                opt.onFieldChanged += OnShapeSelectionChanged;
+
+                Fields[nameof(curve_x)].uiControlEditor.onFieldChanged += OnCurveChanged;
+                Fields[nameof(curve_y)].uiControlEditor.onFieldChanged += OnCurveChanged;
+                Fields[nameof(curve_z)].uiControlEditor.onFieldChanged += OnCurveChanged;
+                Fields[nameof(curve_w)].uiControlEditor.onFieldChanged += OnCurveChanged;
+
+                SetFieldVisibility();
             }
         }
 
         private void InitializeSelectedShape()
         {
+            InitializePresets();
             if (string.IsNullOrEmpty(selectedShape) || !shapePresets.ContainsKey(selectedShape))
             {
                 Debug.Log($"{ModTag} InitializeSelectedShape() Shape {selectedShape} not available, defaulting to {shapePresets.Keys.First()}");
                 selectedShape = shapePresets.Keys.First();
+            }
+            selectedPreset = shapePresets[selectedShape];
+            if (!selectedPreset.name.Equals(CustomShapeName))
+                shapePoints = selectedPreset.points;
+            else
+                (curve_x, curve_y, curve_z, curve_w) = (shapePoints.x, shapePoints.y, shapePoints.z, shapePoints.w);
+        }
+
+        private void InitializePresets()
+        {
+            if (shapePresets.Count == 0 &&
+                GameDatabase.Instance.GetConfigNode("ProceduralParts/ProceduralParts/ProceduralPartsSettings") is ConfigNode settings)
+            {
+                foreach (var shapeNode in settings.GetNodes("Shape"))
+                {
+                    var shape = new ShapePreset();
+                    if (ConfigNode.LoadObjectFromConfig(shape, shapeNode))
+                        shapePresets.Add(shape.name, shape);
+                }
+                var s = new ShapePreset
+                {
+                    name = CustomShapeName,
+                    displayName = CustomShapeName,
+                    points = Vector4.zero
+                };
+                shapePresets.Add(s.name, s);
             }
         }
 
@@ -72,28 +118,25 @@ namespace ProceduralParts
             base.UpdateTechConstraints();
         }
 
-        private string LegacyFixup(ConfigNode node)
-        {
-            string ret = selectedShape;
-            if (node.values.Contains("curveIdx") && selectedShape == null)
-            {
-                try
-                {
-                    int curveIdx = int.Parse(node.GetValue("curveIdx"));
-                    ret = oldShapeNames[curveIdx];
-                }
-                catch
-                {
-                }
-            }
-            return ret;
-        }
-
         #endregion
 
         #region Update handlers
 
+        private void OnCurveChanged(BaseField f, object obj)
+        {
+            shapePoints = new Vector4(curve_x, curve_y, curve_z, curve_w);
+            OnShapeChanged(f, obj);
+        }
+
         public void OnShapeSelectionChanged(BaseField f, object obj)
+        {
+            selectedPreset = shapePresets[selectedShape];
+            shapePoints = selectedPreset.points;
+            SetFieldVisibility();
+            OnShapeChanged(f, obj, true);
+        }
+
+        public void OnShapeChanged(BaseField f, object obj, bool forceRefresh = false)
         {
             float v = CalculateVolume();
             if (v > PPart.volumeMax || v < PPart.volumeMin)
@@ -104,7 +147,18 @@ namespace ProceduralParts
                 length = Mathf.Clamp(length, edt.minValue, edt.maxValue);
             }
             OnShapeDimensionChanged(f, obj);
-            MonoUtilities.RefreshPartContextWindow(part);
+            if (forceRefresh)
+                MonoUtilities.RefreshPartContextWindow(part);
+        }
+
+        private void SetFieldVisibility()
+        {
+            Fields[nameof(selectedShape)].guiActiveEditor = PPart.allowCurveTweaking;
+            bool showPointEditor = selectedPreset.name == CustomShapeName && PPart.allowCurveTweaking;
+            Fields[nameof(curve_x)].guiActiveEditor = showPointEditor;
+            Fields[nameof(curve_y)].guiActiveEditor = showPointEditor;
+            Fields[nameof(curve_z)].guiActiveEditor = showPointEditor;
+            Fields[nameof(curve_w)].guiActiveEditor = showPointEditor;
         }
 
         internal override void UpdateShape(bool force = true)
@@ -245,9 +299,7 @@ namespace ProceduralParts
             // There are four control points, the bottom (p0) and the top ones (p3) are obvious
             p0 = new Vector2(bottomDiameter, -length / 2f);
             p3 = new Vector2(topDiameter, length / 2f);
-            float[] shape = shapePresets[selectedShape];
-            if (shape is null)
-                throw new InvalidProgramException();
+            float[] shape = { shapePoints.x, shapePoints.y, shapePoints.z, shapePoints.w };
 
             // Pretty obvious below what the shape points mean
             if (bottomDiameter < topDiameter)
