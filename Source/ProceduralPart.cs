@@ -129,9 +129,6 @@ namespace ProceduralParts
             if (part.variants is ModulePartVariants)
                 part.variants.useMultipleDragCubes = false;
 
-            if (HighLogic.LoadedSceneIsFlight && vessel is Vessel && vessel.rootPart == part)
-                GameEvents.onFlightReady.Add(DragCubeFixer);
-
             if (HighLogic.LoadedSceneIsEditor)
             {
                 if (!TUEnabled)
@@ -180,7 +177,6 @@ namespace ProceduralParts
 
         public void OnDestroy()
         {
-            GameEvents.onFlightReady.Remove(DragCubeFixer);
             if (HighLogic.LoadedSceneIsEditor)
                 GameEvents.onVariantApplied.Remove(OnVariantApplied);
             GameEvents.onGameSceneSwitchRequested.Remove(OnEditorExit);
@@ -618,47 +614,14 @@ namespace ProceduralParts
         [KSPEvent(guiActive = false, active = true)]
         public void OnPartColliderChanged()
         {
-            if (HighLogic.LoadedSceneIsFlight)
-                UpdateDragCubes();
-            else if (HighLogic.LoadedSceneIsEditor && updateDragCubesInEditor)
-                StartCoroutine(UpdateDragCubesCR());
-        }
-
-        private void UpdateDragCubes()
-        {
-            DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(base.part);
-            part.DragCubes.ClearCubes();
-            part.DragCubes.Cubes.Add(dragCube);
-            part.DragCubes.ResetCubeWeights();
-            part.DragCubes.ForceUpdate(true, true, false);
-        }
-
-        private System.Collections.IEnumerator UpdateDragCubesCR()
-        {
-            yield return new WaitForFixedUpdate();
-            while (HighLogic.LoadedSceneIsEditor && (part.localRoot != EditorLogic.RootPart || part.gameObject.layer == LayerMask.NameToLayer("TransparentFX")))
-            {
-                yield return new WaitForSeconds(1);
-            }
-            UpdateDragCubes();
-        }
-
-        private void DragCubeFixer()
-        {
-            /* FlightIntegrator resets our dragcube after loading, so we need to rerender it.
-             * Exactly when FlightIntegrator does this is unpredictable, so we resort to the OnFlightReady event.
-            */
-            Debug.Log($"{ModTag} DragCubeFixer rebuilding root part drag cubes");
-            UpdateDragCubes();
-            GameEvents.onVesselWasModified.Fire(part.vessel);
+            if (!(HighLogic.LoadedSceneIsEditor && !updateDragCubesInEditor))
+                ProceduralTools.DragCubeTool.UpdateDragCubes(part);
         }
 
         public void UpdateProps()
         {
-            foreach (var pm in GetComponents<PartModule>())
-            {
-                if (pm is IProp prop) prop.UpdateProp();
-            }
+            foreach (var prop in GetComponents<IProp>())
+                prop.UpdateProp();
         }
 
         #region TestFlight
