@@ -164,24 +164,9 @@ namespace ProceduralParts
 
         private void GenerateColliders()
         {
-            // Create collider holder GO if one does not exist
-            var colliderHolderGO = gameObject.GetChild("ColliderHolder");
-            if (colliderHolderGO == null)
-            {
-                colliderHolderGO = new GameObject("ColliderHolder");
-                colliderHolderGO.transform.SetParent(gameObject.transform, false);
-            }
-            // Delete old colliders in the collider holder
-            foreach (var x in colliderHolderGO.GetComponentsInChildren<MeshCollider>())
-                if (x.name.Contains("Mesh_Collider_"))
-                {
-                    x.gameObject.DestroyGameObject();
-                }
             gameObject.GetComponentsInChildren<SphereCollider>().FirstOrDefault(c => c.name.Equals("Central_Sphere_Collider"))?.gameObject.DestroyGameObject();
 
-            // hollow part; uses multiple colliders, delete the original one
-            PPart.deleteOriginalCollider();
-
+            PPart.clearColliderHolder();
             // The first corner is at angle=0.
             // We want to start the colliders in between the corners.
             float offset = (360f / numSides) / 2 - 90f;
@@ -190,7 +175,7 @@ namespace ProceduralParts
             {
                 var go = new GameObject($"Mesh_Collider_{i}");
                 var coll = go.AddComponent<MeshCollider>();
-                go.transform.SetParent(colliderHolderGO.transform, false);
+                go.transform.SetParent(PPart.ColliderHolder.transform, false);
                 coll.convex = true;
                 coll.sharedMesh = GenerateColliderMesh();
                 var orientation = Quaternion.AngleAxis(90 + offset + (360f * i / numSides), Vector3.up);

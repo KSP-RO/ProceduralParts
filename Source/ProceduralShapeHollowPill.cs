@@ -209,20 +209,9 @@ namespace ProceduralParts
 
         private void GenerateColliders()
         {
-            var colliderHolderGO = gameObject.GetChild("ColliderHolder");
-            if (colliderHolderGO == null)
-            {
-                colliderHolderGO = new GameObject("ColliderHolder");
-                colliderHolderGO.transform.SetParent(gameObject.transform, false);
-            }
-            foreach (var x in colliderHolderGO.GetComponentsInChildren<MeshCollider>())
-                if (x.name.Contains("Mesh_Collider_"))
-                {
-                    x.gameObject.DestroyGameObject();
-                }
             gameObject.GetComponentsInChildren<SphereCollider>().FirstOrDefault(c => c.name.Equals("Central_Sphere_Collider"))?.gameObject.DestroyGameObject();
 
-            PPart.deleteOriginalCollider();
+            PPart.clearColliderHolder();
             // The first corner is at angle=0.
             // We want to start the capsules in between the corners.
             float offset = (360f / numSides) / 2;
@@ -232,7 +221,7 @@ namespace ProceduralParts
             {
                 var go = new GameObject($"Mesh_Collider_{i}");
                 var coll = go.AddComponent<MeshCollider>();
-                go.transform.SetParent(colliderHolderGO.transform, false);
+                go.transform.SetParent(PPart.ColliderHolder.transform, false);
                 coll.convex = true;
                 coll.sharedMesh = GenerateColliderMesh();
                 var prevCornerOrient = Quaternion.AngleAxis(360f * i / numSides, Vector3.up);

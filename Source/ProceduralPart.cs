@@ -272,7 +272,14 @@ namespace ProceduralParts
             if (colliderTr != null)
             {
                 partCollider = colliderTr.GetComponent<MeshCollider>();
+                partCollider.gameObject.DestroyGameObject();
             }
+            colliderHolder = gameObject.GetChild("ColliderHolder");
+            if (colliderHolder == null)
+            {
+                colliderHolder = new GameObject("ColliderHolder");
+            }
+            colliderHolder.transform.SetParent(gameObject.transform, false);
             legacyTextureHandler = new LegacyTextureHandler(part, this);
             InitializeMeshes();
         }
@@ -296,6 +303,7 @@ namespace ProceduralParts
         #region Collider mesh management methods
 
         private MeshCollider partCollider;
+        private GameObject colliderHolder;
 
         /// <summary>
         /// Delete the original collider. Use this if the part provides its own colliders instead of modifying the original one.
@@ -322,6 +330,22 @@ namespace ProceduralParts
                 partCollider.sharedMesh = value;
                 partCollider.enabled = false;
                 partCollider.enabled = true;
+            }
+        }
+
+        public GameObject ColliderHolder
+        {
+            get => colliderHolder;
+        }
+
+        /// <summary>
+        /// Clears the colliderHolder GameObject, deleting all colliders previously attached.
+        /// </summary>
+        public void clearColliderHolder()
+        {
+            foreach (Transform child in colliderHolder.transform)
+            {
+                child.gameObject.DestroyGameObject();
             }
         }
 

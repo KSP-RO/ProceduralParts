@@ -276,7 +276,13 @@ namespace ProceduralParts
             if (colliderMesh.triangles.Length / 3 > 255)
                 Debug.LogWarning("Collider mesh contains " + colliderMesh.triangles.Length / 3 + " triangles. Maximum allowed triangles: 255");
 
-            PPart.ColliderMesh = colliderMesh;
+            // Clear colliderHolder and attach new mesh
+            PPart.clearColliderHolder();
+            var colliderObject = new GameObject("Mesh_Collider");
+            var coll = colliderObject.AddComponent<MeshCollider>();
+            colliderObject.transform.SetParent(PPart.ColliderHolder.transform, false);
+            coll.convex = true;
+            coll.sharedMesh = colliderMesh;
 
             PPart.UpdateProps();
 
