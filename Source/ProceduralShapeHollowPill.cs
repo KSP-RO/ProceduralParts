@@ -12,11 +12,14 @@ namespace ProceduralParts
     {
         private const string ModTag = "[ProceduralShapeHollowPill]";
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Inner D", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(guiActiveEditor = true, guiName = "Diameters", groupName = ProceduralPart.PAWGroupName)]
+        private string diamTitleString = "";
+
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Inner", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float innerDiameter = 1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Outer D", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Outer", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float outerDiameter = 2f;
 
