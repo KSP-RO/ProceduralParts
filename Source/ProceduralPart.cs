@@ -279,7 +279,7 @@ namespace ProceduralParts
             {
                 colliderHolder = new GameObject("ColliderHolder");
             }
-            colliderHolder.transform.SetParent(gameObject.transform, false);
+            colliderHolder.transform.SetParent(gameObject.transform.FindDecendant(partModelName).transform, false);
             legacyTextureHandler = new LegacyTextureHandler(part, this);
             InitializeMeshes();
         }
@@ -304,17 +304,6 @@ namespace ProceduralParts
 
         private MeshCollider partCollider;
         private GameObject colliderHolder;
-
-        /// <summary>
-        /// Delete the original collider. Use this if the part provides its own colliders instead of modifying the original one.
-        /// </summary>
-        public void deleteOriginalCollider()
-        {
-            if (partCollider != null)
-            {
-                partCollider.gameObject.DestroyGameObject();
-            }
-        }
 
         // The partCollider mesh. This must be called whenever the contents of the mesh changes, even if the object remains the same.
         public Mesh ColliderMesh

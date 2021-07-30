@@ -209,8 +209,6 @@ namespace ProceduralParts
 
         private void GenerateColliders()
         {
-            gameObject.GetComponentsInChildren<SphereCollider>().FirstOrDefault(c => c.name.Equals("Central_Sphere_Collider"))?.gameObject.DestroyGameObject();
-
             PPart.clearColliderHolder();
             // The first corner is at angle=0.
             // We want to start the capsules in between the corners.
