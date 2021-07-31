@@ -19,17 +19,10 @@ namespace ProceduralParts
 
         #region Initialization
 
-        [KSPField(isPersistant = true)]
-        private Vector3 tempColliderCenter;
-
-        [KSPField(isPersistant = true)]
-        private Vector3 tempColliderSize;
-
         [KSPField(guiActiveEditor = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, guiName = "Texture Selector GUI"),
          UI_Toggle(disabledText = "Show", enabledText = "Hide", scene = UI_Scene.Editor, affectSymCounterparts = UI_Scene.None)]
         public bool showTUPickerGUI = false;
 
-        private BoxCollider tempCollider;
         private bool isInitialized = false;
         public static bool installedFAR = false;
         public static bool installedTU = false;
@@ -74,14 +67,6 @@ namespace ProceduralParts
             // An existing vessel part or .craft file that has never set this value before, but not the availablePart
             if (HighLogic.LoadedScene != GameScenes.LOADING && !node.HasValue(nameof(forceLegacyTextures)))
                 forceLegacyTextures = true;
-            if (HighLogic.LoadedSceneIsFlight)
-            {
-                // Create a temporary collider for KSP so that it can set the craft on the ground properly
-                tempCollider = gameObject.AddComponent<BoxCollider>();
-                tempCollider.center = tempColliderCenter;
-                tempCollider.size = tempColliderSize;
-                tempCollider.enabled = true;
-            }
         }
 
         public override string GetInfo()
@@ -158,13 +143,6 @@ namespace ProceduralParts
 
                 GameEvents.onVariantApplied.Add(OnVariantApplied);
                 GameEvents.onGameSceneSwitchRequested.Add(OnEditorExit);
-            }
-
-            if (tempCollider != null)
-            {
-                // delete the temporary collider, if there is one, probably too soon to do this
-                Destroy(tempCollider);
-                tempCollider = null;
             }
         }
 
@@ -616,24 +594,6 @@ namespace ProceduralParts
             return moduleCost;
         }
         #endregion
-
-        [KSPEvent(guiActive = false, active = true)]
-        public void OnPartModelChanged()
-        {
-            if(partCollider!=null)
-            {
-                tempColliderCenter = Vector3.zero;
-
-                Vector3 min = transform.InverseTransformPoint(partCollider.bounds.min);
-                Vector3 max = transform.InverseTransformPoint(partCollider.bounds.max);
-
-                tempColliderSize.x = Mathf.Max(max.x - min.x, 0.001f);
-                tempColliderSize.y = Mathf.Max(max.y - min.y, 0.001f);
-                tempColliderSize.z = Mathf.Max(max.z - min.z, 0.001f);
-
-                //Debug.Log(tempColliderSize);
-            }
-        }
 
         [KSPField]
         bool updateDragCubesInEditor = false;
