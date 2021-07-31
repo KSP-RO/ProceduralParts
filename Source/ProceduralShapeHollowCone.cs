@@ -37,9 +37,9 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float bottomOuterDiameter = 2f;
 
-        private float maxError = 0.01f;
+        private float maxError = 0.0125f;
 
-        public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / (Math.Max(bottomOuterDiameter, topOuterDiameter))), 24);
+        public int numSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt((Math.Max(bottomOuterDiameter, topOuterDiameter)))/(2f * maxError)), 24);
 
         [KSPField]
         public string TopNodeName = "top";
@@ -349,13 +349,14 @@ namespace ProceduralParts
 
         private void GenerateMeshes(float botRadius1, float botRadius2, float topRadius1, float topRadius2, float height, int nbSides)
         {
-            float verticalpointDensity = 8f;
-            int verticalPoints = (int)Math.Floor(Math.Max(Mathf.Abs(botRadius1 - topRadius1), Mathf.Abs(botRadius2 - topRadius2)) * verticalpointDensity) + 2;
-            UncheckedMesh sideMesh = new UncheckedMesh(verticalPoints * 2 * (nbSides + 1), (verticalPoints - 1) * 6 * (nbSides + 1));
-            GenerateSideVertices(sideMesh, true, botRadius1, botRadius2, topRadius1, topRadius2, height, nbSides, verticalPoints - 1, 0);
-            GenerateSideVertices(sideMesh, false, botRadius1, botRadius2, topRadius1, topRadius2, height, nbSides, verticalPoints - 1, verticalPoints * (nbSides + 1));
-            GenerateSideTriangles(sideMesh, true, nbSides, verticalPoints, 0, 0);
-            GenerateSideTriangles(sideMesh, false, nbSides, verticalPoints, verticalPoints * (nbSides + 1), (verticalPoints - 1) * 6 * (nbSides + 1));
+            float verticalpointDensity = 12f;
+            int outsideVerticalPoints = (int)Math.Floor(Mathf.Abs(botRadius1 - topRadius1) * verticalpointDensity) + 2;
+            int insideVerticalPoints = (int)Math.Floor(Mathf.Abs(botRadius2 - topRadius2) * verticalpointDensity) + 2;
+            UncheckedMesh sideMesh = new UncheckedMesh((outsideVerticalPoints + insideVerticalPoints) * (nbSides + 1), (outsideVerticalPoints + insideVerticalPoints - 2) * 3 * (nbSides + 1));
+            GenerateSideVertices(sideMesh, true, botRadius1, botRadius2, topRadius1, topRadius2, height, nbSides, outsideVerticalPoints - 1, 0);
+            GenerateSideVertices(sideMesh, false, botRadius1, botRadius2, topRadius1, topRadius2, height, nbSides, insideVerticalPoints - 1, outsideVerticalPoints * (nbSides + 1));
+            GenerateSideTriangles(sideMesh, true, nbSides, outsideVerticalPoints, 0, 0);
+            GenerateSideTriangles(sideMesh, false, nbSides, insideVerticalPoints, outsideVerticalPoints * (nbSides + 1), (outsideVerticalPoints - 1) * 6 * (nbSides + 1));
 
             var tankULength = numSides * NormSideLength * (topRadius1 + botRadius1) * 2;
             var tankVLength = length;

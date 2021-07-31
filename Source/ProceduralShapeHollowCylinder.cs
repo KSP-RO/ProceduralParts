@@ -26,9 +26,9 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
-        private float maxError = 0.01f;
+        private float maxError = 0.0125f;
 
-        public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / outerDiameter), 24);
+        public int numSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt(outerDiameter)/(2f * maxError)), 24);
 
         [KSPField]
         public string TopNodeName = "top";

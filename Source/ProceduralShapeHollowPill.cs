@@ -31,9 +31,9 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float fillet = 0f;
 
-        private float maxError = 0.01f;
+        private float maxError = 0.0125f;
 
-        public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / outerDiameter), 24);
+        public int numSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt(outerDiameter)/(2f * maxError)), 24);
 
         public float MajorRadius => (outerDiameter + innerDiameter) / 4;
         public float MinorRadius => (outerDiameter - innerDiameter) / 4;
@@ -238,7 +238,7 @@ namespace ProceduralParts
         private Mesh GenerateColliderMesh()
         {
             float maxColliderError = 0.1f;
-            int pointspercorner = (int)Math.Min(Math.Max(Mathf.PI / Mathf.Acos(1 - maxColliderError / Mathf.Max(fillet, maxColliderError)), 1), 30);
+            int pointspercorner = (int)Math.Min(Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt(fillet)/(2f * maxColliderError)), 1), 30);
             Mesh colliderMesh = new Mesh();
             Vector3[] vertices = new Vector3[2*pointspercorner*4];
             int[] triangles = new int[(pointspercorner*4+1)*3*2+2*3*(pointspercorner*4-2)];
@@ -311,8 +311,8 @@ namespace ProceduralParts
 
         private void GenerateMeshes(float radius1, float radius2, float height, float filletRadius, int nbSides)
         {
-            float maxMeshBendError = 0.01f;
-            int pointsperprofile = (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxMeshBendError / Mathf.Max(fillet, maxMeshBendError)), 2) * 2;
+            float maxMeshBendError = 0.05f;
+            int pointsperprofile = (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt(fillet)/(2f * maxMeshBendError)), 2) * 2;
             UncheckedMesh sideMesh = new UncheckedMesh(2*pointsperprofile*(nbSides+1), (pointsperprofile-1)*3*(nbSides+1)*2);
             GenerateSideVertices(sideMesh, true, radius1, radius2, height, filletRadius, pointsperprofile, nbSides, 0);
             GenerateSideVertices(sideMesh, false, radius1, radius2, height, filletRadius, pointsperprofile, nbSides, pointsperprofile*(nbSides+1));
