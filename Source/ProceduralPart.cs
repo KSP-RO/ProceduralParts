@@ -246,18 +246,15 @@ namespace ProceduralParts
 
         private void InitializeObjects()
         {
-            Transform colliderTr = part.FindModelTransform(collisionName);
-            if (colliderTr != null)
+            // Delete original collider
+            part.FindModelTransform(collisionName)?.gameObject.DestroyGameObject();
+            // Find or create ColliderHolder and attach to the StretchyTank
+            ColliderHolder = gameObject.GetChild("ColliderHolder");
+            if (ColliderHolder == null)
             {
-                partCollider = colliderTr.GetComponent<MeshCollider>();
-                partCollider.gameObject.DestroyGameObject();
+                ColliderHolder = new GameObject("ColliderHolder");
+                ColliderHolder.transform.SetParent(gameObject.transform.FindDecendant(partModelName).transform, false);
             }
-            colliderHolder = gameObject.GetChild("ColliderHolder");
-            if (colliderHolder == null)
-            {
-                colliderHolder = new GameObject("ColliderHolder");
-            }
-            colliderHolder.transform.SetParent(gameObject.transform.FindDecendant(partModelName).transform, false);
             legacyTextureHandler = new LegacyTextureHandler(part, this);
             InitializeMeshes();
         }
@@ -280,78 +277,17 @@ namespace ProceduralParts
 
         #region Collider mesh management methods
 
-        private MeshCollider partCollider;
-        private GameObject colliderHolder;
-
-        // The partCollider mesh. This must be called whenever the contents of the mesh changes, even if the object remains the same.
-        public Mesh ColliderMesh
-        {
-            get => partCollider.sharedMesh;
-            set
-            {
-                if (ownColliderMesh)
-                {
-                    Destroy(partCollider.sharedMesh);
-                    ownColliderMesh = false;
-                }
-                partCollider.sharedMesh = value;
-                partCollider.enabled = false;
-                partCollider.enabled = true;
-            }
-        }
-
-        public GameObject ColliderHolder
-        {
-            get => colliderHolder;
-        }
+        public GameObject ColliderHolder { get; private set;}
 
         /// <summary>
         /// Clears the colliderHolder GameObject, deleting all colliders previously attached.
         /// </summary>
         public void clearColliderHolder()
         {
-            foreach (Transform child in colliderHolder.transform)
+            foreach (Transform child in ColliderHolder.transform)
             {
                 child.gameObject.DestroyGameObject();
             }
-        }
-
-        [SerializeField]
-        private bool ownColliderMesh = true;
-
-        /// <summary>
-        /// Call by base classes to update the partCollider mesh.
-        /// </summary>
-        /// <param name="meshes">List of meshes to set the partCollider to</param>
-        public void SetColliderMeshes(params Mesh[] meshes)
-        {
-            if (ownColliderMesh)
-                Destroy(partCollider.sharedMesh);
-
-            if (meshes.Length == 1)
-            {
-                partCollider.sharedMesh = meshes[0];
-                ownColliderMesh = false;
-            }
-            else
-            {
-                CombineInstance[] combine = new CombineInstance[meshes.Length];
-                for (int i = 0; i < meshes.Length; ++i)
-                {
-                    combine[i] = new CombineInstance
-                    {
-                        mesh = meshes[i]
-                    };
-                }
-                Mesh colliderMesh = new Mesh();
-                colliderMesh.CombineMeshes(combine, true, false);
-                partCollider.sharedMesh = colliderMesh;
-                ownColliderMesh = true;
-            }
-
-            // If we don't do this, the partCollider doesn't work properly.
-            partCollider.enabled = false;
-            partCollider.enabled = true;
         }
 
         #endregion
