@@ -122,9 +122,9 @@ namespace ProceduralParts
         {
             // Using Pappus's centroid theorem: Volume = area of profile * path traveled by geometric centre of profile
             // area of profile: circle, pi * fillet * fillet / 4
-            //                  rectangle, height * (outerDiam - innerdiam) - fillet * fillet
+            //                  rectangle, height * (outerDiam - innerdiam) / 2 - fillet * fillet
             // path of geometric centre: 2 * pi * majorRadius
-            return ((Mathf.PI / 4f - 1f) * fillet * fillet + length * (outerDiameter - innerDiameter)) * 2 * Mathf.PI * MajorRadius;
+            return ((Mathf.PI / 4f - 1f) * fillet * fillet + length * (outerDiameter - innerDiameter) / 2) * 2 * Mathf.PI * MajorRadius;
         }
 
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
@@ -238,7 +238,7 @@ namespace ProceduralParts
         private Mesh GenerateColliderMesh()
         {
             float maxColliderError = 0.1f;
-            int pointspercorner = (int)Math.Min(Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt(fillet)/(2f * maxColliderError)), 1), 30);
+            int pointspercorner = (int)Math.Min(Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt(fillet)/(2f * maxColliderError)), 2), 30);
             Mesh colliderMesh = new Mesh();
             Vector3[] vertices = new Vector3[2*pointspercorner*4];
             int[] triangles = new int[(pointspercorner*4+1)*3*2+2*3*(pointspercorner*4-2)];
