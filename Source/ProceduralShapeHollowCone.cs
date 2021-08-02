@@ -248,7 +248,7 @@ namespace ProceduralParts
 
         private void GenerateColliders()
         {
-            PPart.clearColliderHolder();
+            PPart.ClearColliderHolder();
             // The first corner is at angle=0.
             // We want to start the colliders in between the corners.
             float offset = (360f / numSides) / 2 - 90f;
@@ -347,26 +347,26 @@ namespace ProceduralParts
             }
         }
 
-        private void GenerateMeshes(float botRadius1, float botRadius2, float topRadius1, float topRadius2, float height, int nbSides)
+        private void GenerateMeshes(float bottomOuterRadius, float bottomInnerRadius, float topOuterRadius, float topInnerRadius, float height, int nbSides)
         {
             float verticalpointDensity = 12f;
-            int outsideVerticalPoints = (int)Math.Floor(Mathf.Abs(botRadius1 - topRadius1) * verticalpointDensity) + 2;
-            int insideVerticalPoints = (int)Math.Floor(Mathf.Abs(botRadius2 - topRadius2) * verticalpointDensity) + 2;
+            int outsideVerticalPoints = (int)Math.Floor(Mathf.Abs(bottomOuterRadius - topOuterRadius) * verticalpointDensity) + 2;
+            int insideVerticalPoints = (int)Math.Floor(Mathf.Abs(bottomInnerRadius - topInnerRadius) * verticalpointDensity) + 2;
             UncheckedMesh sideMesh = new UncheckedMesh((outsideVerticalPoints + insideVerticalPoints) * (nbSides + 1), (outsideVerticalPoints + insideVerticalPoints - 2) * 3 * (nbSides + 1));
-            GenerateSideVertices(sideMesh, true, botRadius1, botRadius2, topRadius1, topRadius2, height, nbSides, outsideVerticalPoints - 1, 0);
-            GenerateSideVertices(sideMesh, false, botRadius1, botRadius2, topRadius1, topRadius2, height, nbSides, insideVerticalPoints - 1, outsideVerticalPoints * (nbSides + 1));
+            GenerateSideVertices(sideMesh, true, bottomOuterRadius, bottomInnerRadius, topOuterRadius, topInnerRadius, height, nbSides, outsideVerticalPoints - 1, 0);
+            GenerateSideVertices(sideMesh, false, bottomOuterRadius, bottomInnerRadius, topOuterRadius, topInnerRadius, height, nbSides, insideVerticalPoints - 1, outsideVerticalPoints * (nbSides + 1));
             GenerateSideTriangles(sideMesh, true, nbSides, outsideVerticalPoints, 0, 0);
             GenerateSideTriangles(sideMesh, false, nbSides, insideVerticalPoints, outsideVerticalPoints * (nbSides + 1), (outsideVerticalPoints - 1) * 6 * (nbSides + 1));
 
-            var tankULength = numSides * NormSideLength * (topRadius1 + botRadius1) * 2;
+            var tankULength = numSides * NormSideLength * (topOuterRadius + bottomOuterRadius) * 2;
             var tankVLength = length;
 
             RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(sideMesh, PPart.SidesIconMesh, SidesMesh);
 
             UncheckedMesh capMesh = new UncheckedMesh(4 * (nbSides + 1), 4 * (nbSides + 1));
-            GenerateCapVertices(capMesh, true, topRadius1, topRadius2, height, nbSides, 0);
-            GenerateCapVertices(capMesh, false, botRadius1, botRadius2, height, nbSides, 2 * (nbSides + 1));
+            GenerateCapVertices(capMesh, true, topOuterRadius, topInnerRadius, height, nbSides, 0);
+            GenerateCapVertices(capMesh, false, bottomOuterRadius, bottomInnerRadius, height, nbSides, 2 * (nbSides + 1));
             GenerateCapTriangles(capMesh, true, nbSides, 0, 0);
             GenerateCapTriangles(capMesh, false, nbSides, 2 * (nbSides + 1), 6 * (nbSides + 1));
             WriteToAppropriateMesh(capMesh, PPart.EndsIconMesh, EndsMesh);

@@ -167,7 +167,7 @@ namespace ProceduralParts
 
         private void GenerateColliders()
         {
-            PPart.clearColliderHolder();
+            PPart.ClearColliderHolder();
             // The first corner is at angle=0.
             // We want to start the colliders in between the corners.
             float offset = (360f / numSides) / 2 - 90f;
@@ -251,24 +251,24 @@ namespace ProceduralParts
             }
         }
 
-        private void GenerateMeshes(float radius1, float radius2, float height, int nbSides)
+        private void GenerateMeshes(float outerRadius, float innerRadius, float height, int nbSides)
         {
             int verticalPoints = 2;
             UncheckedMesh sideMesh = new UncheckedMesh(verticalPoints * 2 * (nbSides + 1), (verticalPoints - 1) * 6 * (nbSides + 1));
-            GenerateSideVertices(sideMesh, true, radius1, radius2, height, nbSides, verticalPoints - 1, 0);
-            GenerateSideVertices(sideMesh, false, radius1, radius2, height, nbSides, verticalPoints - 1, verticalPoints * (nbSides + 1));
+            GenerateSideVertices(sideMesh, true, outerRadius, innerRadius, height, nbSides, verticalPoints - 1, 0);
+            GenerateSideVertices(sideMesh, false, outerRadius, innerRadius, height, nbSides, verticalPoints - 1, verticalPoints * (nbSides + 1));
             GenerateSideTriangles(sideMesh, true, nbSides, verticalPoints, 0, 0);
             GenerateSideTriangles(sideMesh, false, nbSides, verticalPoints, verticalPoints * (nbSides + 1), (verticalPoints - 1) * 6 * (nbSides + 1));
 
-            var tankULength = numSides * NormSideLength * radius1 * 2;
+            var tankULength = numSides * NormSideLength * outerRadius * 2;
             var tankVLength = length;
 
             RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(sideMesh, PPart.SidesIconMesh, SidesMesh);
 
             UncheckedMesh capMesh = new UncheckedMesh(4 * (nbSides + 1), 4 * (nbSides + 1));
-            GenerateCapVertices(capMesh, true, radius1, radius2, height, nbSides, 0);
-            GenerateCapVertices(capMesh, false, radius1, radius2, height, nbSides, 2 * (nbSides + 1));
+            GenerateCapVertices(capMesh, true, outerRadius, innerRadius, height, nbSides, 0);
+            GenerateCapVertices(capMesh, false, outerRadius, innerRadius, height, nbSides, 2 * (nbSides + 1));
             GenerateCapTriangles(capMesh, true, nbSides, 0, 0);
             GenerateCapTriangles(capMesh, false, nbSides, 2 * (nbSides + 1), 6 * (nbSides + 1));
             WriteToAppropriateMesh(capMesh, PPart.EndsIconMesh, EndsMesh);

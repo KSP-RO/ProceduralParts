@@ -277,12 +277,12 @@ namespace ProceduralParts
 
         #region Collider mesh management methods
 
-        public GameObject ColliderHolder { get; private set;}
+        public GameObject ColliderHolder { get; private set; }
 
         /// <summary>
         /// Clears the colliderHolder GameObject, deleting all colliders previously attached.
         /// </summary>
-        public void clearColliderHolder()
+        public void ClearColliderHolder()
         {
             foreach (Transform child in ColliderHolder.transform)
             {

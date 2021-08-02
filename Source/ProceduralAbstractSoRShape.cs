@@ -277,7 +277,7 @@ namespace ProceduralParts
                 Debug.LogWarning("Collider mesh contains " + colliderMesh.triangles.Length / 3 + " triangles. Maximum allowed triangles: 255");
 
             // Clear colliderHolder and attach new mesh
-            PPart.clearColliderHolder();
+            PPart.ClearColliderHolder();
             var colliderObject = new GameObject("Mesh_Collider");
             var coll = colliderObject.AddComponent<MeshCollider>();
             colliderObject.transform.SetParent(PPart.ColliderHolder.transform, false);
