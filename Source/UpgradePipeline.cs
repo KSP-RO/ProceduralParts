@@ -37,6 +37,25 @@ namespace ProceduralParts
             }
             bezierNode.SetValue("selectedShape", selectedShape, true);
             bezierNode.SetValue("shapePoints", shapePoints, true);
+            Debug.Log($"[ProceduralParts] UpgradePipeline context {loadContext} updated part {NodeUtil.GetPartNodeNameValue(node, loadContext)} to {selectedShape}: {shapePoints}");
         }
     }
+
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/VABList/KCTVessel/ShipNode/PART")]
+    public class ShapeBezierConeUpgrade_KCT1 : ShapeBezierConeUpgrade { }
+
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/SPHList/KCTVessel/ShipNode/PART")]
+    public class ShapeBezierConeUpgrade_KCT2 : ShapeBezierConeUpgrade { }
+
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/VABWarehouse/KCTVessel/ShipNode/PART")]
+    public class ShapeBezierConeUpgrade_KCT3 : ShapeBezierConeUpgrade { }
+
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/SPHWarehouse/KCTVessel/ShipNode/PART")]
+    public class ShapeBezierConeUpgrade_KCT4 : ShapeBezierConeUpgrade { }
+
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/VABPlans/KCTVessel/ShipNode/PART")]
+    public class ShapeBezierConeUpgrade_KCT5 : ShapeBezierConeUpgrade { }
+
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/SPHPlans/KCTVessel/ShipNode/PART")]
+    public class ShapeBezierConeUpgrade_KCT6 : ShapeBezierConeUpgrade { }
 }
