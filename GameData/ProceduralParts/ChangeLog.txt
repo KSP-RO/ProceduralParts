@@ -1,4 +1,20 @@
 ============= Changelog for ProceduralParts  =========
+
+=== 2.2.1 ===
+Hotfix: Upgrade pipeline was triggering for .craft files even on UpgradeModules that didn't declare supporting it.
+
+=== 2.2.0 ===
+Make the bezier (smooth cone) shapes customizable! Presets can be configured via MM patch, or the new "Custom" subshape can be selected to directly enter the 4 control points.
+Refactored the SRB code... again.
+
+Bugfix: Several bugs with procedural SRBs and Realfuels integration.
+Bugfix: Procedural Decoupler can no longer get a runaway maximum impulse.
+Bugfix: Tank part costs now account for their default resources.
+QoL: Force the "apply upgrades in sandbox" setting active when loading the first game each session.
+Internals: Improve drag cube handling routines again.
+
+Hard-deprecate old deprecated components: proceduralConeLiquid and deprecatedThrustScaleFactor (SRBs)
+
 === 2.1.2 ===
 Bugfix: SeekVolume updates symmetry counterpart field values directly
 
