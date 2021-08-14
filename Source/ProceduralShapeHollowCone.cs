@@ -11,10 +11,6 @@ namespace ProceduralParts
 
         #region Config parameters
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-            UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
-        public float length = 1f;
-
         [KSPField(guiActiveEditor = true, guiName = "Top diameters", groupName = ProceduralPart.PAWGroupName)]
         private string topTitleString = "";
 
@@ -36,6 +32,10 @@ namespace ProceduralParts
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Outer", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float bottomOuterDiameter = 2f;
+
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+            UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+        public float length = 1f;
 
         private float maxError = 0.0125f;
 
@@ -142,13 +142,13 @@ namespace ProceduralParts
 
         public override void TranslateAttachmentsAndNodes(BaseField f, object obj)
         {
-            if (f.name == nameof(topOuterDiameter))
+            if (f.name == nameof(bottomOuterDiameter) && obj is float oldBottomDiameter)
             {
-                HandleDiameterChange(f, obj);
+                HandleDiameterChange((bottomOuterDiameter + topOuterDiameter) / 2, (oldBottomDiameter + topOuterDiameter) / 2);
             }
-            else if (f.name == nameof(bottomOuterDiameter))
+            if (f.name == nameof(topOuterDiameter) && obj is float oldTopDiameter)
             {
-                HandleDiameterChange(f, obj);
+                HandleDiameterChange((topOuterDiameter + bottomOuterDiameter) / 2, (oldTopDiameter + bottomOuterDiameter) / 2);
             }
             if (f.name == nameof(length) && obj is float oldLength)
             {
