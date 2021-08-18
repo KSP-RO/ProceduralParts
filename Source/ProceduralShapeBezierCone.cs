@@ -30,19 +30,19 @@ namespace ProceduralParts
         public Vector4 shapePoints;
 
         [KSPField(guiName = "Curve.x", guiFormat = "F3", groupName = ProceduralPart.PAWGroupName)]
-        [UI_FloatEdit(incrementSlide = 0.01f, maxValue = 1, minValue = 0)]
+        [UI_FloatEdit(incrementSlide = 0.01f, sigFigs = 2, maxValue = 1, minValue = 0)]
         public float curve_x;
 
         [KSPField(guiName = "Curve.y", guiFormat = "F3", groupName = ProceduralPart.PAWGroupName)]
-        [UI_FloatEdit(incrementSlide = 0.01f, maxValue = 1, minValue = 0)]
+        [UI_FloatEdit(incrementSlide = 0.01f, sigFigs = 2, maxValue = 1, minValue = 0)]
         public float curve_y;
 
         [KSPField(guiName = "Curve.z", guiFormat = "F3", groupName = ProceduralPart.PAWGroupName)]
-        [UI_FloatEdit(incrementSlide = 0.01f, maxValue = 1, minValue = 0)]
+        [UI_FloatEdit(incrementSlide = 0.01f, sigFigs = 2, maxValue = 1, minValue = 0)]
         public float curve_z;
 
         [KSPField(guiName = "Curve.w", guiFormat = "F3", groupName = ProceduralPart.PAWGroupName)]
-        [UI_FloatEdit(incrementSlide = 0.01f, maxValue = 1, minValue = 0)]
+        [UI_FloatEdit(incrementSlide = 0.01f, sigFigs = 2, maxValue = 1, minValue = 0)]
         public float curve_w;
 
         #endregion
