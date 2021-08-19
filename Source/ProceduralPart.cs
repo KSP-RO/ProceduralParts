@@ -237,7 +237,7 @@ namespace ProceduralParts
         public string endsName = "ends";
 
         [KSPField]
-        public string collisionName = "collisionMesh";
+        public string colliderHolder = "colliderHolder";
 
         public Mesh SidesMesh { get; private set; }
         public Mesh EndsMesh { get; private set; }
@@ -246,13 +246,11 @@ namespace ProceduralParts
 
         private void InitializeObjects()
         {
-            // Delete original collider
-            part.FindModelTransform(collisionName)?.gameObject.DestroyGameObject();
             // Find or create ColliderHolder and attach to the StretchyTank
-            ColliderHolder = gameObject.GetChild("ColliderHolder");
-            if (ColliderHolder == null)
+            ColliderHolder = gameObject.GetChild(colliderHolder);
+            if (ColliderHolder is null)
             {
-                ColliderHolder = new GameObject("ColliderHolder");
+                ColliderHolder = new GameObject(colliderHolder);
                 ColliderHolder.transform.SetParent(gameObject.transform.FindDecendant(partModelName).transform, false);
             }
             legacyTextureHandler = new LegacyTextureHandler(part, this);
@@ -287,6 +285,26 @@ namespace ProceduralParts
             foreach (Transform child in ColliderHolder.transform)
             {
                 child.gameObject.DestroyGameObject();
+            }
+        }
+
+        /// <summary>
+        /// Used for updating a single collider mesh. If the colliderHolder only has one child, that mesh is updated, otherwise the children are cleared and a new collider is generated.
+        /// </summary>
+        public void UpdateOrReplaceSingleCollider(Mesh colliderMesh)
+        {
+            if (ColliderHolder.transform.childCount == 1)
+            {
+                var currMeshColl = ColliderHolder.GetComponentInChildren<MeshCollider>();
+                currMeshColl.sharedMesh = colliderMesh;
+            } else
+            {
+                ClearColliderHolder();
+                var colliderObject = new GameObject("collisionMesh");
+                var coll = colliderObject.AddComponent<MeshCollider>();
+                colliderObject.transform.SetParent(ColliderHolder.transform, false);
+                coll.convex = true;
+                coll.sharedMesh = colliderMesh;
             }
         }
 
