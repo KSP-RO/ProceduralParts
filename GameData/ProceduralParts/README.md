@@ -32,7 +32,7 @@ Just extract the zip into your KSP folder and you should be away. Some of the in
 * There's a handful of deprecated parts as was previously used for real fuels. If you didn't use these parts, then you can safely delete the PartsDeprecated folder in the main install directory.
 
 ## Known Issues
-* Sometimes if the procedural part is the lowest part on the rocket, it may explode on the launch pad. Easily worked around with a launch clamp. This is fixable but will take more effort than its worth.
+* Known limitation: Setting the default shapeName in a part cfg to a hollow shape breaks surface attaching for a new part. Placing it and picking it up again fixes the issue.
 
 ## Custom Textures and Texture Packs 
 Procedural Parts is compatible with all texture packs for StretchySRBs. It's easy to [roll your own texture packs](https://github.com/Swamp-Ig/ProceduralParts/blob/master/Parts/STTextures.cfg) too. 
@@ -122,7 +122,6 @@ This will affect all parts.
 * Procedural command module, possibly with rescaling / tweakable IVA.
 
 ## Features That Are Not Planned
-* Shapes with 'holes' in them and concave shapes - including toroids. 
 * Procedural wings, procedural fairings - there's good mods for these already.
 * Procedural engines - May happen one day, but not a priority.
 
