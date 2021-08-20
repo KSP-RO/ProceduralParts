@@ -8,6 +8,7 @@ namespace ProceduralParts
     class ProceduralShapeHollowCone : ProceduralAbstractShape
     {
         private const string ModTag = "[ProceduralShapeHollowCone]";
+        public override Vector3 CoMOffset => CoMOffset_internal();
 
         #region Config parameters
 
@@ -213,6 +214,18 @@ namespace ProceduralParts
             topOuterDiameter = Mathf.Clamp(topOuterDiameter, topOuterDiameterEdit.minValue, topOuterDiameterEdit.maxValue);
             length = Mathf.Clamp(length, lengthEdit.minValue, lengthEdit.maxValue);
         }
+
+        private Vector3 CoMOffset_internal()
+        {
+            //h * ((BO^2 + 2*BO*TO + 3*TO^2) - (BI^2 + 2*BI*TI + 3*TI^2)) / 4 * ((BO^2 + BO*TO + TO^2) - (BI^2 + BI*TI + TI^2))
+            float num = (bottomOuterDiameter * bottomOuterDiameter + 2 * bottomOuterDiameter * topOuterDiameter + 3 * topOuterDiameter * topOuterDiameter)
+                      - (bottomInnerDiameter * bottomInnerDiameter + 2 * bottomInnerDiameter * topInnerDiameter + 3 * topInnerDiameter * topInnerDiameter);
+            float denom = (bottomOuterDiameter * bottomOuterDiameter + bottomOuterDiameter * topOuterDiameter + topOuterDiameter * topOuterDiameter)
+                      - (bottomInnerDiameter * bottomInnerDiameter + bottomInnerDiameter * topInnerDiameter + topInnerDiameter * topInnerDiameter);
+            Vector3 res = new Vector3(0, length * ((num / (4 * denom)) - 0.5f), 0);
+            return res;
+        }
+
         public override void UpdateTFInterops()
         {
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "diam1", topOuterDiameter, "ProceduralParts" });
