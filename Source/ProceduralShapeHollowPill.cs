@@ -31,7 +31,7 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float fillet = 0f;
 
-        private float maxError = 0.0125f;
+        private const float maxError = 0.0125f;
 
         public int numSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt(outerDiameter)/(2f * maxError)), 24);
 
@@ -53,19 +53,19 @@ namespace ProceduralParts
             if (HighLogic.LoadedSceneIsEditor)
             {
                 UpdateTechConstraints();
-                Fields[nameof(innerDiameter)].uiControlEditor.onFieldChanged = ClampFillet;
+                Fields[nameof(innerDiameter)].uiControlEditor.onFieldChanged += ClampFillet;
                 Fields[nameof(innerDiameter)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
-                Fields[nameof(outerDiameter)].uiControlEditor.onFieldChanged = ClampFillet;
+                Fields[nameof(outerDiameter)].uiControlEditor.onFieldChanged += ClampFillet;
                 Fields[nameof(outerDiameter)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
-                Fields[nameof(length)].uiControlEditor.onFieldChanged = ClampFillet;
+                Fields[nameof(length)].uiControlEditor.onFieldChanged += ClampFillet;
                 Fields[nameof(length)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
-                Fields[nameof(fillet)].uiControlEditor.onFieldChanged = ClampFillet;
+                Fields[nameof(fillet)].uiControlEditor.onFieldChanged += ClampFillet;
                 Fields[nameof(fillet)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
 
-                Fields[nameof(outerDiameter)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(innerDiameter)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
-                Fields[nameof(fillet)].uiControlEditor.onSymmetryFieldChanged = ClampFillet;
+                Fields[nameof(outerDiameter)].uiControlEditor.onSymmetryFieldChanged += ClampFillet;
+                Fields[nameof(innerDiameter)].uiControlEditor.onSymmetryFieldChanged += ClampFillet;
+                Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged += ClampFillet;
+                Fields[nameof(fillet)].uiControlEditor.onSymmetryFieldChanged += ClampFillet;
             }
         }
 
@@ -475,14 +475,8 @@ namespace ProceduralParts
 
         private static void WriteToAppropriateMesh(UncheckedMesh mesh, Mesh iconMesh, Mesh normalMesh)
         {
-            if (HighLogic.LoadedScene == GameScenes.LOADING)
-            {
-                mesh.WriteTo(iconMesh);
-            }
-            else
-            {
-                mesh.WriteTo(normalMesh);
-            }
+            var target = HighLogic.LoadedScene == GameScenes.LOADING ? iconMesh : normalMesh;
+            mesh.WriteTo(target);
         }
     }
 }

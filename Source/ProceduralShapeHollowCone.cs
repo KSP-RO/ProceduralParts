@@ -38,7 +38,7 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
-        private float maxError = 0.0125f;
+        private const float maxError = 0.0125f;
 
         public int numSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt((Math.Max(bottomOuterDiameter, topOuterDiameter)))/(2f * maxError)), 24);
 
@@ -63,11 +63,11 @@ namespace ProceduralParts
             if (HighLogic.LoadedSceneIsEditor)
             {
                 UpdateTechConstraints();
-                Fields[nameof(bottomInnerDiameter)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
-                Fields[nameof(bottomOuterDiameter)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
-                Fields[nameof(topInnerDiameter)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
-                Fields[nameof(topOuterDiameter)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
-                Fields[nameof(length)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
+                Fields[nameof(bottomInnerDiameter)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
+                Fields[nameof(bottomOuterDiameter)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
+                Fields[nameof(topInnerDiameter)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
+                Fields[nameof(topOuterDiameter)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
+                Fields[nameof(length)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
             }
         }
 
@@ -333,22 +333,14 @@ namespace ProceduralParts
 
             for (int corner = 0; corner < 4; corner++)
             {
-                float xLength = 0;
-                switch (corner)
+                float xLength = corner switch
                 {
-                    case 0:
-                        xLength = topOuterRadius;
-                        break;
-                    case 1:
-                        xLength = bottomOuterRadius;
-                        break;
-                    case 2:
-                        xLength = bottomInnerRadius;
-                        break;
-                    case 3:
-                        xLength = topInnerRadius;
-                        break;
-                }
+                    0 => topOuterRadius,
+                    1 => bottomOuterRadius,
+                    2 => bottomInnerRadius,
+                    _ => topInnerRadius
+                };
+
                 xLength *= Mathf.Cos(CornerCenterCornerAngle / 2);
                 float offsetY = ((corner == 0 | corner == 3) ? 1 : -1) * (height / 2);
                 Vector3 outVector = Vector3.forward * xLength;
@@ -474,14 +466,8 @@ namespace ProceduralParts
 
         private static void WriteToAppropriateMesh(UncheckedMesh mesh, Mesh iconMesh, Mesh normalMesh)
         {
-            if (HighLogic.LoadedScene == GameScenes.LOADING)
-            {
-                mesh.WriteTo(iconMesh);
-            }
-            else
-            {
-                mesh.WriteTo(normalMesh);
-            }
+            var target = (HighLogic.LoadedScene == GameScenes.LOADING) ? iconMesh : normalMesh;
+            mesh.WriteTo(target);
         }
     }
 }

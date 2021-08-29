@@ -26,7 +26,7 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
-        private float maxError = 0.0125f;
+        private const float maxError = 0.0125f;
 
         public int numSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt(outerDiameter)/(2f * maxError)), 24);
 
@@ -51,9 +51,9 @@ namespace ProceduralParts
             if (HighLogic.LoadedSceneIsEditor)
             {
                 UpdateTechConstraints();
-                Fields[nameof(innerDiameter)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
-                Fields[nameof(outerDiameter)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
-                Fields[nameof(length)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
+                Fields[nameof(innerDiameter)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
+                Fields[nameof(outerDiameter)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
+                Fields[nameof(length)].uiControlEditor.onFieldChanged += OnShapeDimensionChanged;
             }
         }
 
@@ -365,14 +365,8 @@ namespace ProceduralParts
 
         private static void WriteToAppropriateMesh(UncheckedMesh mesh, Mesh iconMesh, Mesh normalMesh)
         {
-            if (HighLogic.LoadedScene == GameScenes.LOADING)
-            {
-                mesh.WriteTo(iconMesh);
-            }
-            else
-            {
-                mesh.WriteTo(normalMesh);
-            }
+            var target = (HighLogic.LoadedScene == GameScenes.LOADING) ? iconMesh : normalMesh;
+            mesh.WriteTo(target);
         }
     }
 }
