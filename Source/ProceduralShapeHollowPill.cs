@@ -342,25 +342,13 @@ namespace ProceduralParts
             int i = 0;
             for (int side = 0; side < nbSides; side++)
             {
-                if (up)
-                {
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 0;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 1;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + (up ? 1 : 2);
+                mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + (up ? 2 : 1);
 
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 1;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 3;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
-                } else
-                {
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 0;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 1;
-
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 3;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 1;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
-                }
+                mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + (up ? 1 : 3);
+                mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + (up ? 3 : 1);
+                mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
             }
         }
 
@@ -378,24 +366,9 @@ namespace ProceduralParts
 
                 mesh.vertices[offset + 2*side] = r1 + r2 + Vector3.up*height/2*(top ? 1:-1);
                 mesh.vertices[offset + 2*side+1] = r1 - r2 + Vector3.up*height/2*(top ? 1:-1);
-            }
-            #endregion
-
-            #region Normals
-            for (int side = 0; side <= nbSides; side++)
-            {
                 // ugly, but quick to write
                 mesh.normals[offset + 2*side] = Vector3.up*(top ? 1:-1);
                 mesh.normals[offset + 2*side+1] = Vector3.up*(top ? 1:-1);
-            }
-            #endregion
-
-            #region UVs
-            for (int side = 0; side <= nbSides; side++)
-            {
-                int currSide = side == nbSides ? 0 : side;
-
-                float t1 = ((float)currSide / nbSides + 0.25f) * 2f * Mathf.PI;
                 mesh.uv[offset + 2*side] = new Vector2(Mathf.Cos(t1)*(top ? 1:-1), Mathf.Sin(t1))/2 + new Vector2(0.5f, 0.5f);
                 mesh.uv[offset + 2*side+1] = new Vector2(Mathf.Cos(t1)*(top ? 1:-1), Mathf.Sin(t1))*(revolutionRadius-majorFeatureRadius)/(revolutionRadius+majorFeatureRadius)/2 + new Vector2(0.5f, 0.5f);
                 mesh.tangents[offset + 2*side] = new Vector4(1, 0, 0, 1f);
@@ -450,25 +423,13 @@ namespace ProceduralParts
                     int current = segment + side * pointsInProfile;
                     int next = segment + (side < (nbSides) ? (side + 1) * pointsInProfile : 0);
 
-                    if (outside)
-                    {
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + current;
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + next;
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + next + 1;
+                    mesh.triangles[triangleOffset + i++] = vertexOffset + current;
+                    mesh.triangles[triangleOffset + i++] = vertexOffset + next + (outside ? 0 : 1);
+                    mesh.triangles[triangleOffset + i++] = vertexOffset + next + (outside ? 1 : 0);
 
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + current;
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + next + 1;
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + current + 1;
-                    } else
-                    {
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + current;
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + next + 1;
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + next;
-
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + current + 1;
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + next + 1;
-                        mesh.triangles[triangleOffset + i++] = vertexOffset + current;
-                    }
+                    mesh.triangles[triangleOffset + i++] = vertexOffset + current + (outside ? 0 : 1);
+                    mesh.triangles[triangleOffset + i++] = vertexOffset + next + 1;
+                    mesh.triangles[triangleOffset + i++] = vertexOffset + current + (outside ? 1 : 0);
                 }
             }
         }
