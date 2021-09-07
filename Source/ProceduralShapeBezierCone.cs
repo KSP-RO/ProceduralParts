@@ -8,6 +8,7 @@ namespace ProceduralParts
     public class ProceduralShapeBezierCone : ProceduralShapeCone
     {
         private const string ModTag = "[ProceduralShapeBezierCone]";
+        public override Vector3 CoMOffset => CoMOffset_internal();
         private const string CustomShapeName = "Custom";
 
         #region Config parameters
@@ -163,11 +164,11 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
-            part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             SetControlPoints(length, topDiameter, bottomDiameter);
             // Ensure correct control points if something called AdjustDimensionBounds or CalculateVolume when handling volume change event
             WriteBezier();
+            part.CoMOffset = CoMOffset;
         }
 
         public override void AdjustDimensionBounds()
@@ -259,6 +260,26 @@ namespace ProceduralParts
         }
 
         public override bool SeekVolume(float targetVolume, int dir=0) => SeekVolume(targetVolume, Fields[nameof(length)], dir);
+
+        private Vector3 CoMOffset_internal()
+        {
+            //CoM integral over x(t)^2*y'(t):
+            // int_0->1:y(t)*x(t)^2*y'(t) dt / int_0->1:x(t)^2*y'(t) dt
+            //where x(t), x'(t), y(t) are from the Bezier function
+            float x0 = p0.x, x1 = p1.x, x2 = p2.x, x3 = p3.x, y0 = p0.y, y1 = p1.y, y2 = p2.y, y3 = p3.y;
+            float com = ((2310f*y0*y0 - 1260f*y0*y1 - 252f*y0*y2 - 28f*y0*y3 - 378f*y1*y1 - 252f*y1*y2 - 42f*y1*y3 - 63f*y2*y2 - 30f*y2*y3 - 5f*y3*y3)*x0*x0 + (1260f*x1*y0*y0 - 252f*x1*y1*y1 + 252f*x2*y0*y0 - 162f*x1*y2*y2 + 28f*x3*y0*y0 - 30f*x1*y3*y3 -
+                        90f*x2*y2*y2 + 18f*x3*y1*y1 - 42f*x2*y3*y3 - 18f*x3*y2*y2 - 28f*x3*y3*y3 - 168f*x1*y0*y2 + 168f*x2*y0*y1 - 42f*x1*y0*y3 - 378f*x1*y1*y2 + 42f*x3*y0*y1 - 108f*x1*y1*y3 - 12f*x2*y0*y3 - 108f*x2*y1*y2 + 12f*x3*y0*y2 - 120f*x1*y2*y3 -
+                        60f*x2*y1*y3 - 108f*x2*y2*y3 - 12f*x3*y1*y3 - 42f*x3*y2*y3)*x0 + 378f*x1*x1*y0*y0 + 252f*x1*x1*y0*y1 - 18f*x1*x1*y0*y3 - 162f*x1*x1*y1*y2 - 90f*x1*x1*y1*y3 - 135f*x1*x1*y2*y2 - 162f*x1*x1*y2*y3 - 63f*x1*x1*y3*y3 + 252f*x1*x2*y0*y0 +
+                        378f*x1*x2*y0*y1 + 108f*x1*x2*y0*y2 + 162f*x1*x2*y1*y1 - 108f*x1*x2*y1*y3 - 162f*x1*x2*y2*y2 - 378f*x1*x2*y2*y3 - 252f*x1*x2*y3*y3 + 42f*x1*x3*y0*y0 + 108f*x1*x3*y0*y1 + 60f*x1*x3*y0*y2 + 12f*x1*x3*y0*y3 + 90f*x1*x3*y1*y1 +
+                        108f*x1*x3*y1*y2 - 168f*x1*x3*y2*y3 - 252f*x1*x3*y3*y3 + 63f*x2*x2*y0*y0 + 162f*x2*x2*y0*y1 + 90f*x2*x2*y0*y2 + 18f*x2*x2*y0*y3 + 135f*x2*x2*y1*y1 + 162f*x2*x2*y1*y2 - 252f*x2*x2*y2*y3 - 378f*x2*x2*y3*y3 + 30f*x2*x3*y0*y0 +
+                        120f*x2*x3*y0*y1 + 108f*x2*x3*y0*y2 + 42f*x2*x3*y0*y3 + 162f*x2*x3*y1*y1 + 378f*x2*x3*y1*y2 + 168f*x2*x3*y1*y3 + 252f*x2*x3*y2*y2 - 1260f*x2*x3*y3*y3 + 5f*x3*x3*y0*y0 + 30f*x3*x3*y0*y1 + 42f*x3*x3*y0*y2 + 28f*x3*x3*y0*y3 +
+                        63f*x3*x3*y1*y1 + 252f*x3*x3*y1*y2 + 252f*x3*x3*y1*y3 + 378f*x3*x3*y2*y2 + 1260f*x3*x3*y2*y3 - 2310f*x3*x3*y3*y3)/((3080f*y0 - 2310f*y1 - 660f*y2 - 110f*y3)*x0*x0 + (2310f*x1*y0 - 990f*x1*y1 + 660f*x2*y0 - 990f*x1*y2 + 110f*x3*y0 -
+                        330f*x1*y3 - 396f*x2*y2 + 66f*x3*y1 - 264f*x2*y3 - 66f*x3*y2 - 110f*x3*y3)*x0 + 990f*x1*x1*y0 + 396f*x2*x2*y0 - 594f*x1*x1*y2 + 594f*x2*x2*y1 + 110f*x3*x3*y0 - 396f*x1*x1*y3 + 660f*x3*x3*y1 - 990f*x2*x2*y3 + 2310f*x3*x3*y2 -
+                        3080f*x3*x3*y3 + 990f*x1*x2*y0 + 594f*x1*x2*y1 + 264f*x1*x3*y0 - 594f*x1*x2*y2 + 396f*x1*x3*y1 + 330f*x2*x3*y0 - 990f*x1*x2*y3 + 990f*x2*x3*y1 - 660f*x1*x3*y3 + 990f*x2*x3*y2 - 2310f*x2*x3*y3);
+
+            Vector3 res = new Vector3(0, com, 0);
+            return res;
+        }
 
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
