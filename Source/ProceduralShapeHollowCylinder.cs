@@ -62,14 +62,14 @@ namespace ProceduralParts
             float maxOuterDiameter = PPart.diameterMax;
             float maxInnerDiameter = PPart.diameterMax;
             float minOuterDiameter = PPart.diameterMin;
-            float minInnerDiameter = PPart.diameterMin;
+            float minInnerDiameter = 0;
 
             float minLength = PPart.lengthMin;
 
             maxOuterDiameter = Mathf.Clamp(maxOuterDiameter, PPart.diameterMin, PPart.diameterMax);
-            maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, PPart.diameterMax);
+            maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, 0f, PPart.diameterMax);
 
-            maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, outerDiameter - PPart.diameterMin);
+            maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, 0f, outerDiameter - PPart.diameterMin);
             minOuterDiameter = Mathf.Clamp(minOuterDiameter, innerDiameter + PPart.diameterMin, maxOuterDiameter);
 
             minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);
