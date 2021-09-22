@@ -19,17 +19,10 @@ namespace ProceduralParts
 
         #region Initialization
 
-        [KSPField(isPersistant = true)]
-        private Vector3 tempColliderCenter;
-
-        [KSPField(isPersistant = true)]
-        private Vector3 tempColliderSize;
-
         [KSPField(guiActiveEditor = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, guiName = "Texture Selector GUI"),
          UI_Toggle(disabledText = "Show", enabledText = "Hide", scene = UI_Scene.Editor, affectSymCounterparts = UI_Scene.None)]
         public bool showTUPickerGUI = false;
 
-        private BoxCollider tempCollider;
         private bool isInitialized = false;
         public static bool installedFAR = false;
         public static bool installedTU = false;
@@ -74,14 +67,6 @@ namespace ProceduralParts
             // An existing vessel part or .craft file that has never set this value before, but not the availablePart
             if (HighLogic.LoadedScene != GameScenes.LOADING && !node.HasValue(nameof(forceLegacyTextures)))
                 forceLegacyTextures = true;
-            if (HighLogic.LoadedSceneIsFlight)
-            {
-                // Create a temporary collider for KSP so that it can set the craft on the ground properly
-                tempCollider = gameObject.AddComponent<BoxCollider>();
-                tempCollider.center = tempColliderCenter;
-                tempCollider.size = tempColliderSize;
-                tempCollider.enabled = true;
-            }
         }
 
         public override string GetInfo()
@@ -158,13 +143,6 @@ namespace ProceduralParts
 
                 GameEvents.onVariantApplied.Add(OnVariantApplied);
                 GameEvents.onGameSceneSwitchRequested.Add(OnEditorExit);
-            }
-
-            if (tempCollider != null)
-            {
-                // delete the temporary collider, if there is one, probably too soon to do this
-                Destroy(tempCollider);
-                tempCollider = null;
             }
         }
 
@@ -259,7 +237,7 @@ namespace ProceduralParts
         public string endsName = "ends";
 
         [KSPField]
-        public string collisionName = "collisionMesh";
+        public string colliderHolder = "colliderHolder";
 
         public Mesh SidesMesh { get; private set; }
         public Mesh EndsMesh { get; private set; }
@@ -268,8 +246,13 @@ namespace ProceduralParts
 
         private void InitializeObjects()
         {
-            Transform colliderTr = part.FindModelTransform(collisionName);
-            partCollider = colliderTr.GetComponent<MeshCollider>();
+            // Find or create ColliderHolder and attach to the StretchyTank
+            ColliderHolder = gameObject.GetChild(colliderHolder);
+            if (ColliderHolder is null)
+            {
+                ColliderHolder = new GameObject(colliderHolder);
+                ColliderHolder.transform.SetParent(gameObject.transform.FindDecendant(partModelName).transform, false);
+            }
             legacyTextureHandler = new LegacyTextureHandler(part, this);
             InitializeMeshes();
         }
@@ -292,61 +275,37 @@ namespace ProceduralParts
 
         #region Collider mesh management methods
 
-        private MeshCollider partCollider;
+        public GameObject ColliderHolder { get; private set; }
 
-        // The partCollider mesh. This must be called whenever the contents of the mesh changes, even if the object remains the same.
-        public Mesh ColliderMesh
+        /// <summary>
+        /// Clears the colliderHolder GameObject, deleting all colliders previously attached.
+        /// </summary>
+        public void ClearColliderHolder()
         {
-            get => partCollider.sharedMesh;
-            set
+            foreach (Transform child in ColliderHolder.transform)
             {
-                if (ownColliderMesh)
-                {
-                    Destroy(partCollider.sharedMesh);
-                    ownColliderMesh = false;
-                }
-                partCollider.sharedMesh = value;
-                partCollider.enabled = false;
-                partCollider.enabled = true;
+                child.gameObject.DestroyGameObject();
             }
         }
 
-        [SerializeField]
-        private bool ownColliderMesh = true;
-
         /// <summary>
-        /// Call by base classes to update the partCollider mesh.
+        /// Used for updating a single collider mesh. If the colliderHolder only has one child, that mesh is updated, otherwise the children are cleared and a new collider is generated.
         /// </summary>
-        /// <param name="meshes">List of meshes to set the partCollider to</param>
-        public void SetColliderMeshes(params Mesh[] meshes)
+        public void UpdateOrReplaceSingleCollider(Mesh colliderMesh)
         {
-            if (ownColliderMesh)
-                Destroy(partCollider.sharedMesh);
-
-            if (meshes.Length == 1)
+            if (ColliderHolder.transform.childCount == 1)
             {
-                partCollider.sharedMesh = meshes[0];
-                ownColliderMesh = false;
-            }
-            else
+                var currMeshColl = ColliderHolder.GetComponentInChildren<MeshCollider>();
+                currMeshColl.sharedMesh = colliderMesh;
+            } else
             {
-                CombineInstance[] combine = new CombineInstance[meshes.Length];
-                for (int i = 0; i < meshes.Length; ++i)
-                {
-                    combine[i] = new CombineInstance
-                    {
-                        mesh = meshes[i]
-                    };
-                }
-                Mesh colliderMesh = new Mesh();
-                colliderMesh.CombineMeshes(combine, true, false);
-                partCollider.sharedMesh = colliderMesh;
-                ownColliderMesh = true;
+                ClearColliderHolder();
+                var colliderObject = new GameObject("collisionMesh");
+                var coll = colliderObject.AddComponent<MeshCollider>();
+                colliderObject.transform.SetParent(ColliderHolder.transform, false);
+                coll.convex = true;
+                coll.sharedMesh = colliderMesh;
             }
-
-            // If we don't do this, the partCollider doesn't work properly.
-            partCollider.enabled = false;
-            partCollider.enabled = true;
         }
 
         #endregion
@@ -589,24 +548,6 @@ namespace ProceduralParts
             return moduleCost;
         }
         #endregion
-
-        [KSPEvent(guiActive = false, active = true)]
-        public void OnPartModelChanged()
-        {
-            if(partCollider!=null)
-            {
-                tempColliderCenter = Vector3.zero;
-
-                Vector3 min = transform.InverseTransformPoint(partCollider.bounds.min);
-                Vector3 max = transform.InverseTransformPoint(partCollider.bounds.max);
-
-                tempColliderSize.x = Mathf.Max(max.x - min.x, 0.001f);
-                tempColliderSize.y = Mathf.Max(max.y - min.y, 0.001f);
-                tempColliderSize.z = Mathf.Max(max.z - min.z, 0.001f);
-
-                //Debug.Log(tempColliderSize);
-            }
-        }
 
         [KSPField]
         bool updateDragCubesInEditor = false;

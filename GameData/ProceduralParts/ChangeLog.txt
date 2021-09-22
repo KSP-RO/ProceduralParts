@@ -1,5 +1,14 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 2.3.0 ===
+Added three hollow part presets, Hollow Cylinder, Cone and Fillet Cylinder!
+To allow for hollow parts, the way colliders on the parts are handled has been completely rewritten.
+Specifically, instead of modifying the original collider, the colliders are now re-generated, which allows for having multiple colldiers.
+
+Known limitation: Setting the default shapeName in a part cfg to a hollow shape breaks surface attaching for a new part. Placing it and picking it up again fixes the issue.
+
+Bugfix: Fixed insufficient precision in Bezier control point sliders.
+
 === 2.2.1 ===
 Hotfix: Upgrade pipeline was triggering for .craft files even on UpgradeModules that didn't declare supporting it.
 

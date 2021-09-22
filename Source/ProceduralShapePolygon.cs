@@ -256,7 +256,13 @@ namespace ProceduralParts
 
             var colliderMesh = new Mesh();
             mesh.WriteTo(colliderMesh);
-            PPart.ColliderMesh = colliderMesh;
+
+            PPart.ClearColliderHolder();
+            var colliderObject = new GameObject("Mesh_Collider");
+            var coll = colliderObject.AddComponent<MeshCollider>();
+            colliderObject.transform.SetParent(PPart.ColliderHolder.transform, false);
+            coll.convex = true;
+            coll.sharedMesh = colliderMesh;
         }
 
         private void GenerateCapMesh()
