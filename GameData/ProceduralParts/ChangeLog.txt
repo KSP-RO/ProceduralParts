@@ -7,6 +7,8 @@ Specifically, instead of modifying the original collider, the colliders are now 
 
 Known limitation: Setting the default shapeName in a part cfg to a hollow shape breaks surface attaching for a new part. Placing it and picking it up again fixes the issue.
 
+CoM offset handling for bezier (smooth cone) shapes.
+
 Bugfix: Fixed insufficient precision in Bezier control point sliders.
 
 === 2.2.1 ===
