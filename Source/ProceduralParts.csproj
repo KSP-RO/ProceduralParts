@@ -130,9 +130,10 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy /Y "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.8.1 Dev\GameData\ProceduralParts\Plugins\"
-xcopy /Y "$(TargetDir)$(TargetName).pdb" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program - 1.8.1 Dev\GameData\ProceduralParts\Plugins\"
-</PostBuildEvent>
+    <PostBuildEvent>
+      xcopy /Y "$(TargetPath)" "..\..\..\GameData\ProceduralParts\Plugins"
+      xcopy /Y "$(TargetDir)$(TargetName).pdb" "..\..\..\GameData\ProceduralParts\Plugins"
+    </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>
