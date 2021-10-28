@@ -11,6 +11,8 @@ namespace ProceduralParts
         public string name;
 
         public bool autoScale;
+        public bool autoScaleU;
+        public bool autoScaleV;
         public bool endsAutoScale;
         public bool autoWidthDivide;
         public float autoHeightSteps;
@@ -58,6 +60,11 @@ namespace ProceduralParts
 
             if (sidesNode.HasValue("autoScale"))
                 bool.TryParse(sidesNode.GetValue("autoScale"), out tex.autoScale);
+            if (sidesNode.HasValue("autoScaleU"))
+                bool.TryParse(sidesNode.GetValue("autoScaleU"), out tex.autoScaleU);
+            if (sidesNode.HasValue("autoScaleV"))
+                bool.TryParse(sidesNode.GetValue("autoScaleV"), out tex.autoScaleV);
+
             if (endsNode.HasValue("autoScale"))
                 bool.TryParse(endsNode.GetValue("autoScale"), out tex.endsAutoScale);
             if (sidesNode.HasValue("autoWidthDivide"))
@@ -150,9 +157,12 @@ namespace ProceduralParts
         internal Vector2 GetScaleUv(Vector2 sideTextureScale)
         {
             var scaleUV = scale;
-            if (autoScale)
+            if (autoScale || autoScaleU)
             {
                 scaleUV.x = Math.Max(1, (float)Math.Round(scaleUV.x * sideTextureScale.x / 8f));
+            }
+            if (autoScale || (autoScaleU && autoScaleV))
+            {
                 if (autoWidthDivide)
                 {
                     if (autoHeightSteps > 0)
@@ -167,6 +177,12 @@ namespace ProceduralParts
                     else
                         scaleUV.y *= sideTextureScale.y;
                 }
+            } else if (autoScaleV)
+            {
+                if (autoHeightSteps > 0)
+                    scaleUV.y = (float)Math.Max(Math.Round(sideTextureScale.y / autoHeightSteps), 1f) * autoHeightSteps;
+                else
+                    scaleUV.y *= sideTextureScale.y;
             }
 
             return scaleUV;
