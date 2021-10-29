@@ -179,10 +179,11 @@ namespace ProceduralParts
                 }
             } else if (autoScaleV)
             {
+                float scaleFactor = autoWidthDivide ? (sideTextureScale.x / 8f) : 1;
                 if (autoHeightSteps > 0)
-                    scaleUV.y = (float)Math.Max(Math.Round(sideTextureScale.y / autoHeightSteps), 1f) * autoHeightSteps;
+                    scaleUV.y = (float)Math.Max(Math.Round(sideTextureScale.y / autoHeightSteps), 1f) * autoHeightSteps / scaleFactor;
                 else
-                    scaleUV.y *= sideTextureScale.y;
+                    scaleUV.y *= sideTextureScale.y / scaleFactor;
             }
 
             return scaleUV;
