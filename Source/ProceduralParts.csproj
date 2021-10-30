@@ -131,8 +131,8 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>
-      xcopy /Y "$(TargetPath)" "(ProjectDir)..\..\..\..\..\GameData\ProceduralParts\Plugins"
-      xcopy /Y "$(TargetDir)$(TargetName).pdb" "(ProjectDir)..\..\..\..\..\GameData\ProceduralParts\Plugins"
+      xcopy /Y "$(TargetPath)" "$(ProjectDir)..\GameData\ProceduralParts\Plugins\"
+      xcopy /Y "$(TargetDir)$(TargetName).pdb" "$(ProjectDir)..\GameData\ProceduralParts\Plugins\"
     </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
