@@ -181,7 +181,7 @@ namespace ProceduralParts
             {
                 float scaleFactor = autoWidthDivide ? (sideTextureScale.x / 8f) : 1;
                 if (autoHeightSteps > 0)
-                    scaleUV.y = (float)Math.Max(Math.Round(sideTextureScale.y / autoHeightSteps), 1f) * autoHeightSteps / scaleFactor;
+                    scaleUV.y = (float)Math.Max(Math.Round(scaleUV.y * sideTextureScale.y / (autoHeightSteps * scaleFactor)), 1f) * autoHeightSteps;
                 else
                     scaleUV.y *= sideTextureScale.y / scaleFactor;
             }
