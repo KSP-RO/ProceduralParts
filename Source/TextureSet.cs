@@ -64,6 +64,8 @@ namespace ProceduralParts
                 bool.TryParse(sidesNode.GetValue("autoScaleU"), out tex.autoScaleU);
             if (sidesNode.HasValue("autoScaleV"))
                 bool.TryParse(sidesNode.GetValue("autoScaleV"), out tex.autoScaleV);
+            tex.autoScaleU |= tex.autoScale;
+            tex.autoScaleV |= tex.autoScale;
 
             if (endsNode.HasValue("autoScale"))
                 bool.TryParse(endsNode.GetValue("autoScale"), out tex.endsAutoScale);
@@ -157,11 +159,11 @@ namespace ProceduralParts
         internal Vector2 GetScaleUv(Vector2 sideTextureScale)
         {
             var scaleUV = scale;
-            if (autoScale || autoScaleU)
+            if (autoScaleU)
             {
                 scaleUV.x = Math.Max(1, (float)Math.Round(scaleUV.x * sideTextureScale.x / 8f));
             }
-            if (autoScale || (autoScaleU && autoScaleV))
+            if (autoScaleU && autoScaleV)
             {
                 if (autoWidthDivide)
                 {
