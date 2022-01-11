@@ -103,6 +103,7 @@
     <Compile Include="LegacyTextureHandler.cs" />
     <Compile Include="ProceduralHeatshield.cs" />
     <Compile Include="ProceduralShapeBezierCone.cs" />
+    <Compile Include="ProceduralShapeBezierOffset.cs" />
     <Compile Include="ProceduralShapePill.cs" />
     <Compile Include="ProceduralShapePolygon.cs" />
     <Compile Include="ProceduralShapeHollowCylinder.cs" />
