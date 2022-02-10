@@ -395,21 +395,23 @@ namespace ProceduralParts
                 }
             }
 
-            // Now push our surface-attached children based on their relative (offset) length.
-            foreach (Part p in part.children)
-            {
-                if (p.FindAttachNodeByPart(part) is AttachNode node && node.nodeType == AttachNode.NodeType.Surface)
-                {
-                    GetAttachmentNodeLocation(node, out Vector3 worldSpace, out Vector3 localToHere, out ShapeCoordinates coord);
-                    float ratio = offset / oldOffset;
-                    coord.y *= ratio;
-                    MovePartByAttachNode(node, coord);
-                }
-            }
+            // TODO: translate surface attached parts when changing offset
+            // foreach (Part p in part.children)
+            // {
+            //     if (p.FindAttachNodeByPart(part) is AttachNode node && node.nodeType == AttachNode.NodeType.Surface)
+            //     {
+            //         GetAttachmentNodeLocation(node, out Vector3 worldSpace, out Vector3 localToHere, out ShapeCoordinates coord);
+            //         float ratio = offset / oldOffset;
+            //         coord.y *= ratio;
+            //         MovePartByAttachNode(node, coord);
+            //     }
+            // }
         }
 
         private Vector3 CoMOffset_internal()
         {
+            // Does not handle horizontal offset, only vertical
+
             //CoM integral over x(t)^2*y'(t):
             // int_0->1:y(t)*x(t)^2*y'(t) dt / int_0->1:x(t)^2*y'(t) dt
             //where x(t), x'(t), y(t) are from the Bezier function
@@ -440,7 +442,26 @@ namespace ProceduralParts
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
 
-        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, (bottomDiameter + topDiameter) / 2);
+        internal override void InitializeAttachmentNodes()
+        {
+            foreach (AttachNode node in part.attachNodes)
+            {
+                float direction = (node.position.y > 0) ? 1 : 0;
+                Vector3 translation = direction * (offset-node.position.x) * Vector3.right;
+                float vdirection = (node.position.y > 0) ? 1 : -1;
+                translation += vdirection * (length / 2) * Vector3.up;
+                translation -= node.position.y * Vector3.up;
+                if (node.nodeType == AttachNode.NodeType.Stack)
+                {
+                    TranslateNode(node, translation);
+                    if (node.attachedPart is Part pushTarget)
+                    {
+                        TranslatePart(pushTarget, translation);
+                    }
+                }
+            }
+            
+        }
 
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
@@ -523,7 +544,6 @@ namespace ProceduralParts
         }
 
 
-        private Vector3 CalcCoMOffset() => default;    // Nope.  Just nope.
 
         #endregion
 
@@ -702,15 +722,18 @@ namespace ProceduralParts
             int triOffset = 0;
             UncheckedMesh m = new UncheckedMesh(vertCount, triCount);
             ProfilePoint prev = null;
+            bool odd = false;
             foreach (var pt in points)
             {
-                WriteVertices(pt, m, nSides, vertOffset);
+                WriteVertices(pt, m, nSides, vertOffset, odd);
                 if (prev != null)
                 {
-                    WriteTriangles(m, nSides, triVertOffset, triOffset);
+                    WriteTriangles(m, nSides, triVertOffset, triOffset, odd);
+
                     triVertOffset += vertPerLayer;
                     triOffset += triPerLayer;
                 }
+                odd = !odd;
                 prev = pt;
                 vertOffset += vertPerLayer;
             }
@@ -721,10 +744,10 @@ namespace ProceduralParts
             WriteToAppropriateMesh(m, PPart.SidesIconMesh, SidesMesh);
 
             m = new UncheckedMesh(2 * vertPerLayer, 4 * vertPerLayer);
-            WriteCapVertices(points.First.Value, m, nSides, 0);
-            WriteCapVertices(points.Last.Value, m, nSides, vertPerLayer);
-            WriteCapTriangles(m, nSides, 0, true);
-            WriteCapTriangles(m, nSides, vertPerLayer, false);
+            WriteCapVertices(points.First.Value, m, nSides, 0, true);
+            WriteCapVertices(points.Last.Value, m, nSides, vertPerLayer, odd);
+            WriteCapTriangles(m, nSides, 0, 0, false);
+            WriteCapTriangles(m, nSides, vertPerLayer, vertPerLayer, true);
             WriteToAppropriateMesh(m, PPart.EndsIconMesh, EndsMesh);
         }
 
@@ -740,37 +763,40 @@ namespace ProceduralParts
             int triOffset = 0;
             UncheckedMesh m = new UncheckedMesh(vertCount + 2 * vertPerLayer, triCount + 4 * vertPerLayer);
             ProfilePoint prev = null;
+            bool odd = false;
             foreach (var pt in points)
             {
-                WriteVertices(pt, m, nSides, vertOffset);
+                WriteVertices(pt, m, nSides, vertOffset, odd);
                 if (prev != null)
                 {
-                    WriteTriangles(m, nSides, triVertOffset, triOffset);
+                    WriteTriangles(m, nSides, triVertOffset, triOffset, odd);
                     triVertOffset += vertPerLayer;
                     triOffset += triPerLayer;
                 }
+                odd = !odd;
                 prev = pt;
                 vertOffset += vertPerLayer;
             }
 
-            WriteCapVertices(points.First.Value, m, nSides, vertCount);
-            WriteCapVertices(points.Last.Value, m, nSides, vertCount + vertPerLayer);
-            WriteCapTriangles(m, nSides, triCount, true);
-            WriteCapTriangles(m, nSides, triCount + vertPerLayer, false);
+            WriteCapVertices(points.First.Value, m, nSides, vertCount, true);
+            WriteCapVertices(points.Last.Value, m, nSides, vertCount + vertPerLayer, odd);
+            WriteCapTriangles(m, nSides, 0, triCount, false);
+            WriteCapTriangles(m, nSides, vertCount-vertPerLayer, triCount + vertPerLayer, true);
             var colliderMesh = new Mesh();
             m.WriteTo(colliderMesh);
 
             PPart.UpdateOrReplaceSingleCollider(colliderMesh);
         }
 
-        private void WriteCapVertices(ProfilePoint pt, UncheckedMesh m, int nSides, int vertOffset)
+        private void WriteCapVertices(ProfilePoint pt, UncheckedMesh m, int nSides, int vertOffset, bool odd)
         {
+            int o = odd ? 0 : 1;
             pt = CreatePoint(pt.t, 0);
             float _2pi = Mathf.PI * 2f;
             for (int side = 0; side <= nSides; side++)
             {
                 int currSide = side == nSides ? 0 : side;
-                float t1 = ((float)currSide / nSides + 0.25f) * _2pi;
+                float t1 = ((float)(currSide + o/2f) / nSides + 0.25f) * _2pi;
                 var offset = OB(pt.t);
                 // We do not care about offset.y, since this should be the same as for pt
                 var offsetVec = new Vector3(offset.x, 0);
@@ -781,10 +807,9 @@ namespace ProceduralParts
             }
         }
 
-        private void WriteCapTriangles(UncheckedMesh mesh, int nSides, int triangleOffset, bool up)
+        private void WriteCapTriangles(UncheckedMesh mesh, int nSides, int vertexOffset, int triangleOffset, bool up)
         {
             var triangleIndexOffset = triangleOffset * 3;
-            var vertexOffset = up ? nSides+1 : 0;
             for (var i = 0; i < nSides-2; i++)
             {
                 mesh.triangles[i * 3 + triangleIndexOffset] = vertexOffset;
@@ -793,28 +818,30 @@ namespace ProceduralParts
             }
         }
 
-        private void WriteVertices(ProfilePoint pt, UncheckedMesh m, int nSides, int vertOffset)
+        private void WriteVertices(ProfilePoint pt, UncheckedMesh m, int nSides, int vertOffset, bool odd)
         {
+            int o = odd ? 1 : 0;
             pt = CreatePoint(pt.t, 0);
             float _2pi = Mathf.PI * 2f;
             for (int side = 0; side <= nSides; side++)
             {
                 int currSide = side == nSides ? 0 : side;
-                float t1 = ((float)currSide / nSides + 0.25f) * _2pi;
+                float t1 = ((float)(currSide + o/2f) / nSides + 0.25f) * _2pi;
                 var offset = OB(pt.t);
                 var offsetDeriv = OBdt(pt.t);
+                Vector3 norm = new Vector3(offsetDeriv.x / 2f, offsetDeriv.y / 2f, 0).normalized;
                 // We do not care about offset.y, since this should be the same as for pt
                 var offsetVec = new Vector3(offset.x, 0);
                 // change later, currently wrong (rotate the normal wrt the offset normal)
                 var trueNormal = pt.norm;
                 m.vertices[side+vertOffset] = new Vector3(pt.x/2f*Mathf.Cos(t1), pt.y, pt.x/2f*Mathf.Sin(t1)) + offsetVec;
-                m.normals[side+vertOffset] = new Vector3(pt.norm.x*Mathf.Cos(t1), pt.norm.y, pt.norm.x*Mathf.Sin(t1));
+                m.normals[side+vertOffset] = Quaternion.AngleAxis(Vector3.Angle(Vector3.up, norm)/2f, Vector3.back) * new Vector3(pt.norm.x*Mathf.Cos(t1), pt.norm.y, pt.norm.x*Mathf.Sin(t1));
                 m.tangents[side+vertOffset] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1);
-                m.uv[side+vertOffset] = new Vector2((float)side / nSides, pt.v);
+                m.uv[side+vertOffset] = new Vector2((float)(side + o/2f) / nSides, pt.v);
             }
         }
 
-        private void WriteTriangles(UncheckedMesh m, int nSides, int vertOffset, int triOffset)
+        private void WriteTriangles(UncheckedMesh m, int nSides, int vertOffset, int triOffset, bool odd)
         {
             int i = 0;
             for (int side = 0; side < nSides; side++)
@@ -822,13 +849,25 @@ namespace ProceduralParts
                 int current = side;
                 // int next = (side < (nSides) ? (side + 1) * 2 : 0);
                 int next = side + nSides + 1;
-                m.triangles[triOffset + i++] = vertOffset + current;
-                m.triangles[triOffset + i++] = vertOffset + next;
-                m.triangles[triOffset + i++] = vertOffset + next + 1;
+                if (odd)
+                {
+                    m.triangles[triOffset + i++] = vertOffset + next + 1;
+                    m.triangles[triOffset + i++] = vertOffset + current + 1;
+                    m.triangles[triOffset + i++] = vertOffset + next;
 
-                m.triangles[triOffset + i++] = vertOffset + current;
-                m.triangles[triOffset + i++] = vertOffset + next + 1;
-                m.triangles[triOffset + i++] = vertOffset + current + 1;
+                    m.triangles[triOffset + i++] = vertOffset + current;
+                    m.triangles[triOffset + i++] = vertOffset + next;
+                    m.triangles[triOffset + i++] = vertOffset + current + 1;
+                } else
+                {
+                    m.triangles[triOffset + i++] = vertOffset + current;
+                    m.triangles[triOffset + i++] = vertOffset + next;
+                    m.triangles[triOffset + i++] = vertOffset + next + 1;
+
+                    m.triangles[triOffset + i++] = vertOffset + current;
+                    m.triangles[triOffset + i++] = vertOffset + next + 1;
+                    m.triangles[triOffset + i++] = vertOffset + current + 1;
+                }
             }
         }
 
