@@ -305,7 +305,7 @@ namespace ProceduralParts
                 float totalMass = mass + Convert.ToSingle(resourceMass);
                 massDisplay = (SelectedTankType.isStructural) ?
                                 MathUtils.FormatMass(totalMass) :
-                                $"Dry: {MathUtils.FormatMass(part.mass)} / Wet: {MathUtils.FormatMass(totalMass)}";
+                                $"Dry: {MathUtils.FormatMass(mass)} / Wet: {MathUtils.FormatMass(totalMass)}";
             }
         }
 
