@@ -32,6 +32,10 @@ namespace ProceduralParts
             UI_FloatRange(minValue = 3, maxValue = 30, stepIncrement = 1, scene = UI_Scene.Editor)]
         public float nbRods = 12;
 
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Tilt Angle", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+            UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "°", useSI = true)]
+        public float tiltAngle = 10f;
+
         private float maxError = 0.01f;
 
         public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / bottomDiameter), 12);
@@ -59,21 +63,12 @@ namespace ProceduralParts
                 Fields[nameof(length)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
                 Fields[nameof(rodDiameter)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
                 Fields[nameof(nbRods)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
+                Fields[nameof(tiltAngle)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
 
                 // Fields[nameof(bottomDiameter)].uiControlEditor.onSymmetryFieldChanged =
                 // Fields[nameof(topDiameter)].uiControlEditor.onSymmetryFieldChanged =
                 // Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
                 // Fields[nameof(rodDiameter)].uiControlEditor.onSymmetryFieldChanged = ClampFillet;
-            }
-        }
-
-        private void ClampFillet(BaseField f, object obj)
-        {
-            if (rodDiameter > Mathf.Min((bottomDiameter - topDiameter) / 2f, length) + 0.001f)
-            {
-                float oldFillet = rodDiameter;
-                rodDiameter = Mathf.Min((bottomDiameter - topDiameter) / 2f, length);
-                MonoUtilities.RefreshPartContextWindow(part);
             }
         }
 
@@ -118,11 +113,7 @@ namespace ProceduralParts
 
         public override float CalculateVolume()
         {
-            // Using Pappus's centroid theorem: Volume = area of profile * path traveled by geometric centre of profile
-            // area of profile: circle, pi * fillet * fillet / 4
-            //                  rectangle, height * (outerDiam - innerdiam) - fillet * fillet
-            // path of geometric centre: 2 * pi * majorRadius
-            return ((Mathf.PI / 4f - 1f) * rodDiameter * rodDiameter + length * (bottomDiameter - topDiameter)) * 2 * Mathf.PI * MajorRadius;
+            return Mathf.PI * rodDiameter * rodDiameter * length * nbRods;
         }
 
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
@@ -168,6 +159,10 @@ namespace ProceduralParts
             UI_FloatEdit filletEdit = Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit;
             filletEdit.incrementLarge = PPart.lengthLargeStep;
             filletEdit.incrementSmall = PPart.lengthSmallStep;
+
+            UI_FloatEdit angleEdit = Fields[nameof(tiltAngle)].uiControlEditor as UI_FloatEdit;
+            angleEdit.incrementLarge = PPart.lengthLargeStep;
+            angleEdit.incrementSmall = PPart.lengthSmallStep;
 
             AdjustDimensionBounds();
             topDiameter = Mathf.Clamp(topDiameter, innerDiameterEdit.minValue, innerDiameterEdit.maxValue);
@@ -311,18 +306,18 @@ namespace ProceduralParts
 
         private void GenerateMeshes(float bottomRadius, float topRadius, float height, float rodRadius, int nbRods)
         {
-            // float maxMeshBendError = 0.01f;
-            // int nbRodSides = (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxMeshBendError / Mathf.Max(rodDiameter, maxMeshBendError)), 2) * 2;
-            int nbRodSides = 10;
-            UncheckedMesh sideMesh = new UncheckedMesh(4*(nbRodSides+1)*nbRods, 2 * nbRodSides*3*nbRods*2);
-            GenerateAllSideVertices(sideMesh, bottomRadius, topRadius, rodRadius, height, -20f, nbRods, nbRodSides, 0);
-            GenerateAllSideVertices(sideMesh, bottomRadius, topRadius, rodRadius, height, 20f, nbRods, nbRodSides, 2*(nbRodSides+1)*nbRods);
-            // GenerateSideVertices(sideMesh, true, bottomRadius, topRadius, height, rodRadius, nbRodSides, nbSides, 0);
-            // GenerateSideVertices(sideMesh, false, bottomRadius, topRadius, height, rodRadius, nbRodSides, nbSides, nbRodSides*(nbSides+1));
-            GenerateAllSideTriangles(sideMesh, nbRods,nbRodSides, 0);
-            GenerateAllSideTriangles(sideMesh, nbRods,nbRodSides, nbRodSides*3*nbRods*2);
-            // GenerateSideTriangles(sideMesh, true, nbSides, nbRodSides, 0, 0);
-            // GenerateSideTriangles(sideMesh, false, nbSides, nbRodSides, nbRodSides*(nbSides+1), (nbRodSides-1)*2*3*(nbSides+1));
+            float angle = tiltAngle;
+            float maxMeshBendError = 0.01f;
+            int nbRodSides = (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxMeshBendError / Mathf.Max(rodDiameter, maxMeshBendError)), 2) * 2;
+            int vertPerRod = (nbRodSides + 0) * 2; // +1 if duplicate vertices at first angle is needed
+            int nVert = vertPerRod * nbRods; // x2 for rods going each way
+            int triPerRod = (nbRodSides) * 3 * 2;
+            int nTri = triPerRod * nbRods; // x2 for rods going each way
+            UncheckedMesh sideMesh = new UncheckedMesh(nVert, nTri);
+            GenerateAllSideVertices(sideMesh, bottomRadius, topRadius, rodRadius, height, angle, nbRods, nbRodSides, 0);
+            // GenerateAllSideVertices(sideMesh, bottomRadius, topRadius, rodRadius, height, angle, nbRods, nbRodSides, nVert / 2);
+            GenerateAllSideTriangles(sideMesh, nbRods, nbRodSides, 0, 0);
+            // GenerateAllSideTriangles(sideMesh, nbRods, nbRodSides, nVert / 2, nTri / 2);
 
             var tankULength = numSides * NormSideLength * (bottomRadius+topRadius) * 4;
             var tankVLength = length;
@@ -330,21 +325,43 @@ namespace ProceduralParts
             RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(sideMesh, PPart.SidesIconMesh, SidesMesh);
 
-            // UncheckedMesh capMesh = new UncheckedMesh(2*2*(nbSides+1), 2*2*(nbSides+1));
-            // GenerateCapVertices(capMesh, true, bottomRadius, topRadius-rodRadius, height, nbSides, 0);
-            // GenerateCapVertices(capMesh, false, bottomRadius, topRadius-rodRadius, height, nbSides, 2*(nbSides+1));
-            // GenerateCapTriangles(capMesh, true, nbSides, 0, 0);
-            // GenerateCapTriangles(capMesh, false, nbSides, 2*(nbSides+1), 2*3*(nbSides+1));
-            // WriteToAppropriateMesh(capMesh, PPart.EndsIconMesh, EndsMesh);
+            int nVertCap = 2 * nbRodSides * nbRods * 2;
+            int nTriCap = 2 * 3 * nbRodSides * nbRods * 2;
+            UncheckedMesh capMesh = new UncheckedMesh(nVertCap, nTriCap);
+            GenerateAllCapVertices(capMesh, bottomRadius, topRadius, rodRadius, height, angle, nbRods, nbRodSides, 0);
+            // GenerateAllCapVertices(capMesh, bottomRadius, topRadius, rodRadius, height, 20f, nbRods, nbRodSides, nVertCap / 2);
+            GenerateAllCapTriangles(capMesh, nbRods, nbRodSides, 0, 0);
+            // GenerateAllCapTriangles(capMesh, nbRods, nbRodSides, nVertCap / 2, nTriCap / 2);
+            WriteToAppropriateMesh(capMesh, PPart.EndsIconMesh, EndsMesh);
         }
 
-        private void GenerateAllSideTriangles(UncheckedMesh sideMesh, float nbRods, int nbRodSides, int offset)
+        private void GenerateAllCapTriangles(UncheckedMesh capMesh, int nbRods, int nbRodSides, int vertOffset, int triOffset)
         {
             for (int rodNumber = 0; rodNumber < nbRods; rodNumber++)
             {
-                int vertexOffset = 2 * rodNumber * (nbRodSides+1);
+                int vertexOffset = 2 * rodNumber * (nbRodSides);
+                int triangleOffset = 3 * 2 * rodNumber * (nbRodSides - 2);
+                GenerateCapTriangles(capMesh, nbRodSides, vertexOffset + vertOffset, triangleOffset + triOffset);
+            }
+        }
+
+        private void GenerateAllCapVertices(UncheckedMesh capMesh, float bottomRadius, float topRadius, float rodRadius, float height, float tiltAngle, int nbRods, int nbRodSides, int offset)
+        {
+            for (int rodNumber = 0; rodNumber < nbRods; rodNumber++)
+            {
+                int indexOffset = 2 * rodNumber * (nbRodSides + 0);
+                float t1 = (float)rodNumber / nbRods * 2 * Mathf.PI;
+                GenerateCapVertices(capMesh, t1, bottomRadius, topRadius, height, rodRadius, tiltAngle, nbRodSides, indexOffset + offset);
+            }
+        }
+
+        private void GenerateAllSideTriangles(UncheckedMesh sideMesh, float nbRods, int nbRodSides, int vertOffset, int triOffset)
+        {
+            for (int rodNumber = 0; rodNumber < nbRods; rodNumber++)
+            {
+                int vertexOffset = 2 * rodNumber * (nbRodSides);
                 int triangleOffset = 3*2 * rodNumber * nbRodSides;
-                GenerateSideTriangles(sideMesh, nbRodSides, 2, vertexOffset, triangleOffset + offset);
+                GenerateSideTriangles(sideMesh, nbRodSides, 2, vertexOffset + vertOffset, triangleOffset + triOffset);
             }
         }
 
@@ -352,125 +369,98 @@ namespace ProceduralParts
         {
             for (int rodNumber = 0; rodNumber < nbRods; rodNumber++)
             {
-                int indexOffset = 2 * rodNumber * (nbRodSides + 1);
+                int indexOffset = 2 * rodNumber * (nbRodSides + 0);
                 float t1 = (float)rodNumber / nbRods * 2 * Mathf.PI;
-                GenerateSideVertices(sideMesh, t1, bottomRadius, topRadius, height, rodRadius, (rodNumber % 2 == 0 ? 1 : -1) * tiltAngle, nbRodSides, indexOffset + offset);
+                GenerateSideVertices(sideMesh, t1, bottomRadius, topRadius, height, rodRadius, tiltAngle, nbRodSides, indexOffset + offset);
             }
         }
 
-        private void GenerateCapTriangles(UncheckedMesh mesh, bool up, int nbSides, int vertexOffset, int triangleOffset)
+        private void GenerateCapTriangles(UncheckedMesh mesh, int nbSides, int vertexOffset, int triangleOffset)
         {
             int i = 0;
-            for (int side = 0; side < nbSides; side++)
+            for (int side = 0; side < nbSides - 2; side++)
             {
-                if (up)
-                {
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 0;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 1;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
+                // 0 2 4 6
+                // 024 046
+                mesh.triangles[triangleOffset + i++] = vertexOffset;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 4;
 
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 1;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 3;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
-                } else
-                {
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 0;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 1;
-
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 3;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 1;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
-                }
+                mesh.triangles[triangleOffset + i++] = vertexOffset + 1;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 5;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 3;
             }
         }
 
-        private void GenerateCapVertices(UncheckedMesh mesh, bool top, float revolutionRadius, float majorFeatureRadius, float height, int nbSides, int offset)
-        {
-            #region Vertices
-            float _2pi = Mathf.PI * 2f;
-            for (int side = 0; side <= nbSides; side++)
-            {
-                int currSide = side == nbSides ? 0 : side;
-
-                float t1 = (float)currSide / nbSides * _2pi;
-                Vector3 r1 = new Vector3(Mathf.Cos(t1) * revolutionRadius, 0f, Mathf.Sin(t1) * revolutionRadius);
-                Vector3 r2 = Quaternion.AngleAxis(-t1 * Mathf.Rad2Deg, Vector3.up) * new Vector3(majorFeatureRadius, 0);
-
-                mesh.vertices[offset + 2*side] = r1 + r2 + Vector3.up*height/2*(top ? 1:-1);
-                mesh.vertices[offset + 2*side+1] = r1 - r2 + Vector3.up*height/2*(top ? 1:-1);
-            }
-            #endregion
-
-            #region Normals
-            for (int side = 0; side <= nbSides; side++)
-            {
-                // ugly, but quick to write
-                mesh.normals[offset + 2*side] = Vector3.up*(top ? 1:-1);
-                mesh.normals[offset + 2*side+1] = Vector3.up*(top ? 1:-1);
-            }
-            #endregion
-
-            #region UVs
-            for (int side = 0; side <= nbSides; side++)
-            {
-                int currSide = side == nbSides ? 0 : side;
-
-                float t1 = ((float)currSide / nbSides + 0.25f) * 2f * Mathf.PI;
-                mesh.uv[offset + 2*side] = new Vector2(Mathf.Cos(t1)*(top ? 1:-1), Mathf.Sin(t1))/2 + new Vector2(0.5f, 0.5f);
-                mesh.uv[offset + 2*side+1] = new Vector2(Mathf.Cos(t1)*(top ? 1:-1), Mathf.Sin(t1))*(revolutionRadius-majorFeatureRadius)/(revolutionRadius+majorFeatureRadius)/2 + new Vector2(0.5f, 0.5f);
-                mesh.tangents[offset + 2*side] = new Vector4(1, 0, 0, 1f);
-                mesh.tangents[offset + 2*side+1] = new Vector4(1, 0, 0, 1f);
-            }
-            #endregion
-        }
-
-        private void GenerateSideVertices(UncheckedMesh mesh, float angle, float bottomRadius, float topRadius, float height, float rodRadius, float tiltAngle, int nbSides, int offset)
+        private void GenerateCapVertices(UncheckedMesh mesh, float angle, float bottomRadius, float topRadius, float height, float rodRadius, float tiltAngle, int nbSides, int offset)
         {
             Vector3 rodPos = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (bottomRadius + topRadius) / 2;
-            for (int side = 0; side <= nbSides; side++)
+            float topBottomAngle = Mathf.Atan((bottomRadius - topRadius) / height);
+
+            Vector3 rotNormal = Vector3.Cross(rodPos, Vector3.up);
+            Quaternion rotation = Quaternion.AngleAxis(topBottomAngle * Mathf.Rad2Deg, rotNormal) * Quaternion.AngleAxis(tiltAngle, rodPos);
+            for (int side = 0; side < nbSides; side++)
             {
                 int currSide = side == nbSides ? 0 : side;
 
                 float t1 = ((float)currSide / nbSides + 0.25f) * 2f * Mathf.PI + angle;
                 Vector3 r1 = new Vector3(Mathf.Cos(t1) * rodRadius, 0f, Mathf.Sin(t1) * rodRadius);
 
-                float topBottomAngle = Mathf.Atan((bottomRadius - topRadius) / height);
+                for (int profilePoint = 0; profilePoint < 2; profilePoint++)
+                {
+                    Vector3 yVector = Vector3.up * (profilePoint - 0.5f) * height / (Mathf.Cos(tiltAngle * Mathf.Deg2Rad) * Mathf.Cos(topBottomAngle));
+                    mesh.vertices[offset + 2 * side + profilePoint] = rodPos + rotation * (r1 + yVector);
+                    Vector3 normal = new Vector3(0f, (profilePoint - 0.5f) * 2, 0f);
+                    mesh.normals[offset + 2 * side + profilePoint] = normal;
+                    mesh.tangents[offset + 2 * side + profilePoint] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), 1f);
+                    mesh.uv[offset + 2 * side + profilePoint] = new Vector2(Mathf.Cos(t1) * (profilePoint - 0.5f) * 2, Mathf.Sin(t1)) / 2 + new Vector2(0.5f, 0.5f);
+                }
+            }
+        }
 
-                Vector3 rotNormal = Vector3.Cross(rodPos, Vector3.up);
+        // Generate a single rod
+        private void GenerateSideVertices(UncheckedMesh mesh, float angle, float bottomRadius, float topRadius, float height, float rodRadius, float tiltAngle, int nbSides, int offset)
+        {
+            Vector3 rodPos = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (bottomRadius + topRadius) / 2;
+            float topBottomAngle = Mathf.Atan((bottomRadius - topRadius) / height);
+
+            Vector3 rotNormal = Vector3.Cross(rodPos, Vector3.up);
+            Quaternion rotation = Quaternion.AngleAxis(topBottomAngle * Mathf.Rad2Deg, rotNormal) * Quaternion.AngleAxis(tiltAngle, rodPos);
+            for (int side = 0; side < nbSides; side++)
+            {
+                int currSide = side == nbSides ? 0 : side;
+
+                float t1 = ((float)currSide / nbSides + 0.25f) * 2f * Mathf.PI + angle;
+                Vector3 r1 = new Vector3(Mathf.Cos(t1) * rodRadius, 0f, Mathf.Sin(t1) * rodRadius);
 
                 for (int profilePoint = 0; profilePoint < 2; profilePoint++)
                 {
                     Vector3 yVector = Vector3.up * (profilePoint - 0.5f) * height / (Mathf.Cos(tiltAngle * Mathf.Deg2Rad) * Mathf.Cos(topBottomAngle));
-                    Vector3 tempRodPointPos = Quaternion.AngleAxis(tiltAngle, rodPos) * (r1 + yVector);
-                    mesh.vertices[offset+2*side+profilePoint] = rodPos + Quaternion.AngleAxis(topBottomAngle * Mathf.Rad2Deg, rotNormal) * tempRodPointPos;
+                    mesh.vertices[offset+2*side+profilePoint] = rodPos + rotation * (r1 + yVector);
                     Vector3 normalInPlane = new Vector3(Mathf.Cos(t1), 0f, Mathf.Sin(t1));
                     Vector3 normal = (normalInPlane).normalized;
                     mesh.normals[offset+2*side+profilePoint] = normal;
                     mesh.tangents[offset+2*side+profilePoint] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), 1f);
-                    mesh.uv[offset+2*side+profilePoint] = new Vector2((float)side / nbSides, profilePoint);
+                    mesh.uv[offset+2*side+profilePoint] = new Vector2((float)side / (nbSides-1), profilePoint);
                 }
-        }
+            }
         }
 
         private void GenerateSideTriangles(UncheckedMesh mesh, int nbSides, int pointsInProfile, int vertexOffset, int triangleOffset)
         {
             int i = 0;
-            for (int side = 0; side <= nbSides; side++)
+            for (int side = 0; side < nbSides; side++)
             {
-                for (int segment = 0; segment <= pointsInProfile - 2; segment++)
-                {
-                    int current = segment + side * pointsInProfile;
-                    int next = segment + (side < (nbSides) ? (side + 1) * pointsInProfile : 0);
+                int current = side * pointsInProfile;
+                int next = (side < (nbSides - 1) ? (side + 1) * pointsInProfile : 0);
 
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + current;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + next + 1;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + next;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + current;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + next + 1;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + next;
 
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + current + 1;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + next + 1;
-                    mesh.triangles[triangleOffset + i++] = vertexOffset + current;
-                }
+                mesh.triangles[triangleOffset + i++] = vertexOffset + current + 1;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + next + 1;
+                mesh.triangles[triangleOffset + i++] = vertexOffset + current;
             }
         }
 
