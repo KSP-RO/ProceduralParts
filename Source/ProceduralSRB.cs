@@ -447,20 +447,21 @@ namespace ProceduralParts
         {
             if (selectedBell == null)
                 return;
-            FixThrustLimiter();
+            float minBurnTime = Mathf.Ceil(Engine.atmosphereCurve.Evaluate(0) * FuelMassG / MaxThrust);
             thrust = Mathf.Clamp(thrust, 0, MaxThrust);
-
-            AutoAlignThrustAndBurnTime();
+            burnTimeME = Mathf.Max(burnTimeME, minBurnTime);
 
             if (HighLogic.LoadedSceneIsEditor)
             {
-                float minBurnTime = Mathf.Ceil(Engine.atmosphereCurve.Evaluate(0) * FuelMassG / MaxThrust);
                 Debug.Log($"{ModTag} {this}: UpdateMaxThrust: minBurnTime = {minBurnTime}, maxThrust = {MaxThrust}");
                 (Fields[nameof(thrust)].uiControlEditor as UI_FloatEdit).maxValue = MaxThrust;
-                if (UsingME)
-                    (Fields[nameof(burnTimeME)].uiControlEditor as UI_FloatEdit).minValue = minBurnTime;
+                (Fields[nameof(burnTimeME)].uiControlEditor as UI_FloatEdit).minValue = minBurnTime;
             }
 
+            // Uncertain why this keeps getting turned on under certain KSPField changes.
+            FixThrustLimiter();
+
+            AutoAlignThrustAndBurnTime();
             UpdateThrustDependentCalcs();
             UpdateEngineAndBellScale();
             MoveBellAndBottomNode();
