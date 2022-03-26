@@ -25,7 +25,7 @@ namespace ProceduralParts
         private PartResource fuelResource;
 
         [KSPField]
-        public bool debugMarkers = false;
+        public bool debugMarkers = true;
 
         #region Callbacks
 
@@ -89,6 +89,13 @@ namespace ProceduralParts
             }
         }
 
+        public void OnDestroy()
+        {
+            foreach (var lr in LRs.Values)
+                lr.DestroyGameObject();
+            LRs.Clear();
+        }
+
         public void Update()
         {
             if (HighLogic.LoadedSceneIsFlight)
@@ -96,10 +103,11 @@ namespace ProceduralParts
             if (HighLogic.LoadedSceneIsEditor && debugMarkers)
             {
                 LR("srbNozzle", part.FindModelTransform("srbNozzle").position);
-                LR("bellModel ", selectedBell.model.position);
-                LR("srbAttach  ", selectedBell.srbAttach.position);
+                LR("bellModel", selectedBell.model.position);
+                LR("srbAttach", selectedBell.srbAttach.position);
                 LR("bellTransform", bellTransform.position);
                 LR("Transform", part.transform.position);
+                LR("BottomNode", part.transform.TransformPoint(bottomAttachNode.position));
             }
         }
 
@@ -648,15 +656,10 @@ namespace ProceduralParts
 
         #region DebugMarkers
 
-        // ReSharper disable once InconsistentNaming
-        private void LR(String txt, Vector3 point)
+        private readonly TextAnchor[] textAnchors = { TextAnchor.UpperLeft, TextAnchor.LowerLeft, TextAnchor.UpperRight, TextAnchor.LowerRight, TextAnchor.MiddleCenter };
+        private readonly Color[] LRcolors = { Color.green, Color.blue, Color.magenta, Color.red, Color.yellow, Color.cyan };
+        private void LR(string txt, Vector3 point)
         {
-            Color[] c = {Color.green, Color.blue, Color.magenta, Color.red, Color.yellow};
-            TextAnchor[] a =
-            {
-                TextAnchor.UpperLeft, TextAnchor.LowerLeft, TextAnchor.UpperRight, TextAnchor.LowerRight,
-                TextAnchor.MiddleCenter
-            };
             float s = 0.3f;
             LineRenderer lr;
             TextMesh tm;
@@ -672,35 +675,34 @@ namespace ProceduralParts
             else
             {
                 GameObject go = new GameObject(txt);
-                Debug.Log($"{ModTag} {this} added GO {txt} ({LRs.Count % c.Length})");
-
                 lr = go.AddComponent<LineRenderer>();
                 lr.positionCount = 8;
-                lr.startColor = c[LRs.Count % c.Length];
+                lr.startColor = LRcolors[LRs.Count % LRcolors.Length];
                 lr.endColor = lr.startColor;
                 lr.startWidth = 0.03f;
                 lr.endWidth = 0.03f;
                 lr.useWorldSpace = true;
-                lr.material = new Material (Shader.Find("Particles/Additive"));
+                lr.material = new Material(Shader.Find("KSP/Particles/Additive"));
                 LRs[txt] = go;
 
                 tm = go.AddComponent<TextMesh>();
                 tm.color = lr.startColor;
                 tm.characterSize = 0.1f;
-                tm.anchor = a[LRs.Count % a.Length];
+                tm.anchor = textAnchors[LRs.Count % textAnchors.Length];
             }
             VECs[txt] = point;
-
-            //lr.SetPosition(0, point);
-            lr.SetPosition(0, point + Vector3.up * s);
-            lr.SetPosition(1, point - Vector3.up * s);
-            lr.SetPosition(2, point);
-            lr.SetPosition(3, point + Vector3.left * s);
-            lr.SetPosition(4, point - Vector3.left * s);
-            lr.SetPosition(5, point);
-            lr.SetPosition(6, point + Vector3.forward * s);
-            lr.SetPosition(7, point - Vector3.forward * s);
-
+            Vector3[] positions = new Vector3[]
+            {
+                point + Vector3.up * s,
+                point - Vector3.up * s,
+                point,
+                point + Vector3.left * s,
+                point - Vector3.left * s,
+                point,
+                point + Vector3.forward * s,
+                point - Vector3.forward * s,
+            };
+            lr.SetPositions(positions);
             tm.text = txt + " " + point;
             tm.transform.position = point + Vector3.up * s / 2 + Vector3.right * s / 2;
         }
