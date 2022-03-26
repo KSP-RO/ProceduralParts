@@ -16,9 +16,6 @@ namespace ProceduralParts
         // ReSharper disable once InconsistentNaming
         public const string PAWGroupDisplayName = "ProceduralSRB";
 
-        private readonly Dictionary<string, GameObject> LRs = new Dictionary<string, GameObject>();
-        private readonly Dictionary<string, Vector3> VECs = new Dictionary<string, Vector3>();
-
         public ProceduralPart PPart => _pPart ??= GetComponent<ProceduralPart>();
         private ProceduralPart _pPart;
 
@@ -89,8 +86,8 @@ namespace ProceduralParts
 
         public void OnDestroy()
         {
-            foreach (var lr in LRs.Values)
-                lr.DestroyGameObject();
+            foreach (var data in LRs.Values)
+                data.transform.gameObject.DestroyGameObject();
             LRs.Clear();
         }
 
@@ -98,14 +95,14 @@ namespace ProceduralParts
         {
             if (HighLogic.LoadedSceneIsFlight)
                 AnimateHeat();
-            if (HighLogic.LoadedSceneIsEditor && debugMarkers)
+            if (debugMarkers)
             {
-                LR("srbNozzle", part.FindModelTransform("srbNozzle").position);
-                LR("bellModel", selectedBell.model.position);
-                LR("srbAttach", selectedBell.srbAttach.position);
-                LR("bellTransform", bellTransform.position);
-                LR("Transform", part.transform.position);
-                LR("BottomNode", part.transform.TransformPoint(bottomAttachNode.position));
+                LR("srbNozzle", part.FindModelTransform("srbNozzle"));
+                LR("bellModel", selectedBell.model);
+                LR("srbAttach", selectedBell.srbAttach);
+                LR("bellTransform", bellTransform);
+                LR("Transform", part.transform);
+//                LR("BottomNode", part.transform.TransformPoint(bottomAttachNode.position));
             }
         }
 
@@ -606,24 +603,29 @@ namespace ProceduralParts
 
         private readonly TextAnchor[] textAnchors = { TextAnchor.UpperLeft, TextAnchor.LowerLeft, TextAnchor.UpperRight, TextAnchor.LowerRight, TextAnchor.MiddleCenter };
         private readonly Color[] LRcolors = { Color.green, Color.blue, Color.magenta, Color.red, Color.yellow, Color.cyan };
-        private void LR(string txt, Vector3 point)
+        private readonly Dictionary<string, RendererData> LRs = new Dictionary<string, RendererData>(8);
+        internal class RendererData
+        {
+            internal string txt;
+            internal Transform transform;
+            internal LineRenderer lr;
+            internal TextMesh tm;
+
+            public RendererData(string txt, Transform transform, LineRenderer lr, TextMesh tm)
+            {
+                this.txt = txt;
+                this.transform = transform;
+                this.lr = lr;
+                this.tm = tm;
+            }
+        }
+        private void LR(string txt, Transform transform)
         {
             float s = 0.3f;
-            LineRenderer lr;
-            TextMesh tm;
-            if (LRs.ContainsKey(txt))
-            {
-                if ((point - VECs[txt]).magnitude < 0.01f)
-                {
-                    return;
-                }
-                lr = LRs[txt].GetComponent<LineRenderer>();
-                tm = LRs[txt].GetComponent<TextMesh>();
-            }
-            else
+            if (!LRs.TryGetValue(txt, out RendererData data))
             {
                 GameObject go = new GameObject(txt);
-                lr = go.AddComponent<LineRenderer>();
+                LineRenderer lr = go.AddComponent<LineRenderer>();
                 lr.positionCount = 8;
                 lr.startColor = LRcolors[LRs.Count % LRcolors.Length];
                 lr.endColor = lr.startColor;
@@ -631,30 +633,32 @@ namespace ProceduralParts
                 lr.endWidth = 0.03f;
                 lr.useWorldSpace = true;
                 lr.material = new Material(Shader.Find("KSP/Particles/Additive"));
-                LRs[txt] = go;
 
-                tm = go.AddComponent<TextMesh>();
+                TextMesh tm = go.AddComponent<TextMesh>();
                 tm.color = lr.startColor;
                 tm.characterSize = 0.1f;
                 tm.anchor = textAnchors[LRs.Count % textAnchors.Length];
+                tm.transform.localPosition = Vector3.up * s / 2 + Vector3.right * s / 2;
+                tm.transform.SetParent(transform, false);
+                LRs[txt] = data = new RendererData(txt, transform, lr, tm);
             }
-            VECs[txt] = point;
+            Transform t = data.transform;
+            Vector3 point = t.position;
+
             Vector3[] positions = new Vector3[]
             {
-                point + Vector3.up * s,
-                point - Vector3.up * s,
+                point + t.up * s,
+                point - t.up * s,
                 point,
-                point + Vector3.left * s,
-                point - Vector3.left * s,
+                point + t.right * s * 0.5f,
+                point - t.right * s * 0.5f,
                 point,
-                point + Vector3.forward * s,
-                point - Vector3.forward * s,
+                point + t.forward * s * 2,
+                point - t.forward * s * 2,
             };
-            lr.SetPositions(positions);
-            tm.text = txt + " " + point;
-            tm.transform.position = point + Vector3.up * s / 2 + Vector3.right * s / 2;
+            data.lr.SetPositions(positions);
+            data.tm.text = txt + " " + point;
         }
-
         #endregion
     }
 }
