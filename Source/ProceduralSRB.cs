@@ -162,9 +162,6 @@ namespace ProceduralParts
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "SRB Type", groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedBellName;
 
-        [KSPField(guiName = "Isp", guiActiveEditor = true, groupName = PAWGroupName)]
-        public string srbISP;
-
         [KSPField(isPersistant = true)]
         public float bellScale = 1;
 
@@ -401,6 +398,9 @@ namespace ProceduralParts
 
         private bool UsingME => ModularEnginesChangeThrust != null;
 
+        [KSPField(guiName = "Isp", guiActiveEditor = true, groupName = PAWGroupName)]
+        public string srbISP;
+
         // ReSharper disable once InconsistentNaming
         private Action<float> ModularEnginesChangeThrust;
         // ReSharper disable once InconsistentNaming
@@ -413,12 +413,12 @@ namespace ProceduralParts
         [KSPField(guiActiveEditor = true, guiName = "Thrust", groupName = PAWGroupName)]
         public string thrustStats;
 
-        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Burn Time", guiFormat = "F1", guiUnits = "s", groupName = PAWGroupName),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 600f, incrementLarge = 60f, incrementSmall = 0, incrementSlide = 2e-4f)]
+        [KSPField(isPersistant = true, guiName = "Burn Time", guiActive = true, guiActiveEditor = true, guiFormat = "F1", guiUnits = "s", groupName = PAWGroupName),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 600f, incrementLarge = 60f, incrementSmall = 5, incrementSlide = 0.1f, unit = "s", sigFigs = 1)]
         public float burnTimeME = 60;
 
-        [KSPField(isPersistant = true, guiName = "Deflection", guiActiveEditor = true, guiFormat = "F3", guiUnits = "°", groupName = PAWGroupName),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = -25f, maxValue = 25f, incrementLarge = 5f, incrementSmall = 1f, incrementSlide = 0.1f, sigFigs = 5, unit = "°")]
+        [KSPField(isPersistant = true, guiName = "Deflection", guiActiveEditor = true, guiFormat = "F1", guiUnits = "°", groupName = PAWGroupName),
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = -25f, maxValue = 25f, incrementLarge = 5f, incrementSmall = 1f, incrementSlide = 0.05f, unit = "°", sigFigs = 2)]
         public float thrustDeflection;
 
         [KSPField]
