@@ -18,6 +18,7 @@ namespace ProceduralParts
 
         public ProceduralPart PPart => _pPart ??= GetComponent<ProceduralPart>();
         private ProceduralPart _pPart;
+        private bool started = false;
 
         private PartResource fuelResource;
 
@@ -78,6 +79,7 @@ namespace ProceduralParts
                 if (!UsingME)
                     Fields[nameof(burnTimeME)].uiControlEditor = Fields[nameof(burnTimeME)].uiControlFlight;
             }
+            started = true;
             StartCoroutine(DisableThrustLimitorCR());
         }
 
@@ -500,7 +502,7 @@ namespace ProceduralParts
 
         public void UpdateFAR()
         {
-            if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
+            if (started && (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight))
                 part.SendMessage("GeometryPartModuleRebuildMeshData");
         }
 
