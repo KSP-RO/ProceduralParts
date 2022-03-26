@@ -118,9 +118,7 @@ namespace ProceduralParts
         public void OnResourceMaxChanged(BaseEventDetails data)
         {
             if (HighLogic.LoadedSceneIsEditor)
-            {
                 UpdateMaxThrust(true);
-            }
         }
 
         [KSPEvent(active = true)]
@@ -165,49 +163,32 @@ namespace ProceduralParts
         public string srbISP;
 
         [KSPField(isPersistant = true)]
-        public float bellScale = -1;
+        public float bellScale = 1;
 
         private SRBBellConfig selectedBell;
-        private Dictionary<string, SRBBellConfig> srbConfigs = new Dictionary<string, SRBBellConfig>();
+        private readonly Dictionary<string, SRBBellConfig> srbConfigs = new Dictionary<string, SRBBellConfig>();
         private ConfigNode[] srbConfigNodes;
 
         [Serializable]
         public class SRBBellConfig : IConfigNode
         {
-            [Persistent]
-            public string name;
-            [Persistent]
-            public string modelName;
-            [NonSerialized]
-            public Transform model;
+            [Persistent] public string name;
+            [Persistent] public string modelName;
+            [Persistent] public string srbAttachName = "srbAttach";
+            [Persistent] public FloatCurve atmosphereCurve;
+            [Persistent] public float gimbalRange = -1;
+            [Persistent] public float bellChokeDiameter = 0.5f;
+            [Persistent] public float chokeEndRatio = 0.5f;
+            [Persistent] public string realFuelsEngineType = string.Empty;
 
-            [Persistent]
-            public string srbAttachName = "srbAttach";
-            [NonSerialized]
-            public Transform srbAttach;
+            [NonSerialized] public Transform model;
+            [NonSerialized] public Transform srbAttach;
 
-            [Persistent]
-            public FloatCurve atmosphereCurve;
-            [Persistent]
-            public float gimbalRange = -1;
-
-            [Persistent]
-            public float bellChokeDiameter = 0.5f;
-
-            [Persistent]
-            public float chokeEndRatio = 0.5f;
-
-            [Persistent]
-            public string realFuelsEngineType;
+            public SRBBellConfig() { }
 
             public void Load(ConfigNode node)
             {
                 ConfigNode.LoadObjectFromConfig(this, node);
-                if (node.GetNode("atmosphereCurve") is ConfigNode atmosCurveNode)
-                {
-                    atmosphereCurve = new FloatCurve();
-                    atmosphereCurve.Load(atmosCurveNode);
-                }
                 name ??= node.GetValue("displayName");
             }
             public void Save(ConfigNode node) => ConfigNode.CreateConfigFromObject(this, node);
@@ -248,9 +229,6 @@ namespace ProceduralParts
         private void InitializeBells()
         {
             Debug.Log($"{ModTag} {this}: InitializeBells");
-            // Initialize the configs.
-            if (srbConfigs.Count < 1)
-                srbConfigs = new Dictionary<string, SRBBellConfig>(part.partInfo.partPrefab.FindModuleImplementing<ProceduralSRB>().srbConfigs);
 
             bellTransform = part.FindModelTransform(srbBellName);
             PrepareBellModels();
@@ -274,8 +252,8 @@ namespace ProceduralParts
             if (HighLogic.LoadedSceneIsFlight)
             {
                 thrustTransform = bellTransform.Find(thrustVectorTransformName);
-                thrustTransform.position = selectedBell.srbAttach.position;
-                thrustTransform.SetParent(selectedBell.srbAttach);
+                thrustTransform.localPosition = Vector3.zero;
+                thrustTransform.SetParent(selectedBell.srbAttach, false);
             }
         }
 
