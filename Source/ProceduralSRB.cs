@@ -85,20 +85,6 @@ namespace ProceduralParts
             StartCoroutine(DisableThrustLimitorCR());
         }
 
-        // OnStartFinished is too soon for this.  It must be turned back on then.
-        private System.Collections.IEnumerator DisableThrustLimitorCR()
-        {
-            yield return new WaitForSeconds(0.1f);
-            FixThrustLimiter();
-        }
-
-        private void FixThrustLimiter()
-        {
-            BaseField thrustLimiter = ((PartModule)Engine).Fields["thrustPercentage"];
-            thrustLimiter.SetValue(1, Engine);
-            thrustLimiter.guiActive = thrustLimiter.guiActiveEditor = false;
-        }
-
         public void OnDestroy()
         {
             foreach (var data in LRs.Values)
@@ -122,7 +108,7 @@ namespace ProceduralParts
         }
 
         [KSPEvent(active = true)]
-        public void OnResourceMaxChanged(BaseEventDetails data)
+        public void OnResourceMaxChanged(BaseEventDetails _)
         {
             if (HighLogic.LoadedSceneIsEditor)
                 UpdateMaxThrust(true);
@@ -405,11 +391,6 @@ namespace ProceduralParts
         [KSPField(guiName = "Isp", guiActiveEditor = true, groupName = PAWGroupName)]
         public string srbISP;
 
-        // ReSharper disable once InconsistentNaming
-        private Action<float> ModularEnginesChangeThrust;
-        // ReSharper disable once InconsistentNaming
-        private Action<string> ModularEnginesChangeEngineType;
-
         [KSPField(isPersistant = true, guiName = "Thrust", guiActive = true, guiActiveEditor = true, guiFormat = "F3", guiUnits = "kN", groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = float.PositiveInfinity, incrementLarge = 100f, incrementSmall = 10, incrementSlide = 1f, sigFigs = 5, unit = "kN", useSI = true)]
         public float thrust = 250;
@@ -440,10 +421,6 @@ namespace ProceduralParts
         private float FuelMassG => fuelResource is PartResource
                                     ? (float)fuelResource.maxAmount * fuelResource.info.density * Engine.g
                                     : UsingME ? 7.454f : 30.75f;
-
-        // Real fuels integration
-        [KSPEvent(active = true)]
-        public void OnPartEngineConfigsChanged() => UpdateMaxThrust();
 
         private void UpdateMaxThrust(bool fireEvent = false)
         {
@@ -503,10 +480,50 @@ namespace ProceduralParts
             selectedBell.model.transform.localScale = bellScale * Vector3.one;
         }
 
+        #endregion
+
+        #region Third Party Integration
+
+        private Action<float> ModularEnginesChangeThrust;
+        private Action<string> ModularEnginesChangeEngineType;
+
+        private DateTime updateMEThrustReqTime;
+        private Coroutine delayedUpdateMEThrustCR = null;
+        private void DelayedUpdateMEThrust()
+        {
+            updateMEThrustReqTime = DateTime.Now.Add(TimeSpan.FromSeconds(1));
+            if (delayedUpdateMEThrustCR == null)
+                delayedUpdateMEThrustCR = StartCoroutine(DelayedUpdateMEThrustCR());
+        }
+        private System.Collections.IEnumerator DelayedUpdateMEThrustCR()
+        {
+            while (DateTime.Now < updateMEThrustReqTime)
+                yield return new WaitForSeconds(0.25f);
+            ModularEnginesChangeThrust?.Invoke(thrust);
+            delayedUpdateMEThrustCR = null;
+        }
+
+        // Real fuels integration
+        [KSPEvent(active = true)] public void OnPartEngineConfigsChanged() => UpdateMaxThrust();
+
         public void UpdateFAR()
         {
             if (started && (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight))
                 part.SendMessage("GeometryPartModuleRebuildMeshData");
+        }
+
+        // OnStartFinished is too soon for this.  It must be turned back on then.
+        private System.Collections.IEnumerator DisableThrustLimitorCR()
+        {
+            yield return new WaitForSeconds(0.1f);
+            FixThrustLimiter();
+        }
+
+        private void FixThrustLimiter()
+        {
+            BaseField thrustLimiter = ((PartModule)Engine).Fields["thrustPercentage"];
+            thrustLimiter.SetValue(1, (PartModule)Engine);
+            thrustLimiter.guiActive = thrustLimiter.guiActiveEditor = false;
         }
 
         #endregion
@@ -539,6 +556,8 @@ namespace ProceduralParts
         {
             AlignThrustToBurnTime();
             UpdateMaxThrust(false);
+            if (ModularEnginesChangeThrust != null)
+                DelayedUpdateMEThrust();
         }
 
         private void AlignBurnTimeToThrust()
