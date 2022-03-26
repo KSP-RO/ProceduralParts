@@ -70,7 +70,7 @@ namespace ProceduralParts
                 Fields[nameof(selectedBellName)].uiControlEditor.onSymmetryFieldChanged += HandleBellTypeChange;
 
                 Fields[nameof(thrustDeflection)].uiControlEditor.onFieldChanged += HandleBellDeflectionChange;
-                // onSymmetryFieldChanged is buggy here, will call handler for symmetry counterparts ourselves
+                Fields[nameof(thrustDeflection)].uiControlEditor.onSymmetryFieldChanged += HandleBellDeflectionChange;
 
                 Fields[nameof(burnTimeME)].uiControlEditor.onFieldChanged += HandleBurnTimeChange;
                 Fields[nameof(burnTimeME)].uiControlEditor.onSymmetryFieldChanged += HandleBurnTimeChange;
@@ -132,7 +132,7 @@ namespace ProceduralParts
             if (data.Get<AttachNode>("node") is AttachNode node && node == bottomAttachNode)
             {
                 MoveBellAndBottomNode();
-                SetBellRotation(thrustDeflection);
+                SetBellRotation();
             }
         }
 
@@ -236,13 +236,12 @@ namespace ProceduralParts
             ConfigureRealFuels();
 
             InitModulesFromBell();
-            SetBellRotation(thrustDeflection);
+            SetBellRotation();
 
             if (HighLogic.LoadedSceneIsFlight)
             {
                 thrustTransform = bellTransform.Find(thrustVectorTransformName);
-                thrustTransform.localPosition = Vector3.zero;
-                thrustTransform.SetParent(selectedBell.srbAttach, false);
+                thrustTransform.position = selectedBell.srbAttach.position;
             }
         }
 
@@ -355,23 +354,17 @@ namespace ProceduralParts
                 srbConfigs.Remove(s);
         }
 
-        private void SetBellRotation(float oldThrustDeflection = 0f)
+        private void SetBellRotation()
         {
             if (bellTransform == null || selectedBell == null)
                 return;
 
-            var rotAxis = Vector3.Cross(part.partTransform.right, part.partTransform.up);
+            var rotAxis = Vector3.forward;
 
-            var adjustedDir = thrustDeflection;
-            var rotationDelta = (thrustDeflection - oldThrustDeflection);
-
-            Debug.Log($"{ModTag} {part}.{part.persistentId}: symmetry: {part.symMethod}; mirrored? {part.isMirrored}; rotating to: {adjustedDir}; delta={rotationDelta}");
-            var rot = Quaternion.AngleAxis(thrustDeflection, rotAxis);
-            bellTransform.rotation = rot;
-            selectedBell.srbAttach.rotation = rot;
+            bellTransform.localRotation = Quaternion.AngleAxis(thrustDeflection, rotAxis);
 
             if (HighLogic.LoadedSceneIsEditor)
-                RotateAttachedPartAndNode(rotAxis, rotationDelta, adjustedDir);
+                RotateAttachedPartAndNode(rotAxis, 0, thrustDeflection);
         }
 
         private void InitModulesFromBell()
@@ -457,7 +450,7 @@ namespace ProceduralParts
             UpdateThrustDependentCalcs();
             UpdateEngineAndBellScale();
             MoveBellAndBottomNode();
-            SetBellRotation(thrustDeflection);
+            SetBellRotation();
             UpdateFAR();
 
             if (HighLogic.LoadedSceneIsEditor && fireEvent)
@@ -483,7 +476,6 @@ namespace ProceduralParts
             // Rescale the bell.
             float bellScale1m = selectedBell.chokeEndRatio / selectedBell.bellChokeDiameter;
             bellScale = bellScale1m * Mathf.Sqrt(thrust / thrust1m);
-            Debug.Log($"{ModTag} {this}: bell scale: {bellScale}; thrust: {thrust}, thrust1m: {thrust1m}");
         }
 
         private void UpdateEngineAndBellScale()
@@ -511,22 +503,11 @@ namespace ProceduralParts
             InitModulesFromBell();
             UpdateMaxThrust();
         }
-        
+
         private void HandleBellDeflectionChange(BaseField f, object obj)
         {
-            HandleBellDeflectionChange((float)obj);
-            // onSymmetryFieldChanged() callback has the incorrect value for parameter obj
-            // So we manually invoke things for our symmetry counterparts.
-            foreach (Part p in part.symmetryCounterparts)
-            {
-                p.FindModuleImplementing<ProceduralSRB>()?.HandleBellDeflectionChange((float)obj);
-            }
-        }
-        private void HandleBellDeflectionChange(float oldDeflection)
-        {
-            // First adjust the bell relatively to the SRB, then rotate stuff
             MoveBellAndBottomNode();
-            SetBellRotation(oldDeflection);
+            SetBellRotation();
         }
 
         // User changed thrust, automatically adjust burntime
