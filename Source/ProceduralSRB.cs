@@ -29,17 +29,20 @@ namespace ProceduralParts
 
         #region Callbacks
 
-        public override void OnLoad(ConfigNode node)
+        public override void OnAwake()
         {
-            if (HighLogic.LoadedScene == GameScenes.LOADING)
-                LoadBells(node);
+            if (HighLogic.LoadedScene != GameScenes.LOADING)
+                srbConfigNodes = part.partInfo.partPrefab.FindModuleImplementing<ProceduralSRB>().srbConfigNodes;
         }
 
-        public override string GetInfo()
+        public override void OnLoad(ConfigNode node)
         {
+            bottomAttachNode ??= part.FindAttachNode(bottomAttachNodeName);
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
+                srbConfigNodes = node.GetNodes("SRB_BELL");
+            LoadBells(srbConfigNodes);
             InitializeBells();
             UpdateMaxThrust(false);
-            return base.GetInfo();
         }
 
         public override void OnSave(ConfigNode node) => node.SetValue("isEnabled", "True");
@@ -59,7 +62,7 @@ namespace ProceduralParts
 
             bottomAttachNode = part.FindAttachNode(bottomAttachNodeName);
             fuelResource = part.Resources["SolidFuel"];
-
+            LoadBells(srbConfigNodes);
             InitializeBells();
             UpdateMaxThrust(false);
 
@@ -166,6 +169,7 @@ namespace ProceduralParts
 
         private SRBBellConfig selectedBell;
         private Dictionary<string, SRBBellConfig> srbConfigs = new Dictionary<string, SRBBellConfig>();
+        private ConfigNode[] srbConfigNodes;
 
         [Serializable]
         public class SRBBellConfig : IConfigNode
@@ -209,13 +213,12 @@ namespace ProceduralParts
             public void Save(ConfigNode node) => ConfigNode.CreateConfigFromObject(this, node);
         }
 
-        private void LoadBells(ConfigNode node)
+        private void LoadBells(ConfigNode[] bellNodes)
         {
             srbConfigs.Clear();
-            foreach (ConfigNode srbNode in node.GetNodes("SRB_BELL"))
+            foreach (ConfigNode srbNode in bellNodes)
             {
-                SRBBellConfig conf = new SRBBellConfig();
-                conf.Load(srbNode);
+                SRBBellConfig conf = ConfigNode.CreateObjectFromConfig<SRBBellConfig>(srbNode);
                 srbConfigs.Add(conf.name, conf);
             }
         }
