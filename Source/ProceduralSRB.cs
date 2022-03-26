@@ -58,10 +58,6 @@ namespace ProceduralParts
             InitializeBells();
             UpdateMaxThrust(false);
 
-            // Disable SRB thrust limiter
-            BaseField thrustLimiter = ((PartModule)Engine).Fields["thrustPercentage"];
-            thrustLimiter.guiActive = thrustLimiter.guiActiveEditor = false;
-
             if (HighLogic.LoadedSceneIsEditor)
             {
                 Fields[nameof(selectedBellName)].guiActiveEditor = srbConfigs.Count > 1;
@@ -82,6 +78,21 @@ namespace ProceduralParts
                 if (!UsingME)
                     Fields[nameof(burnTimeME)].uiControlEditor = Fields[nameof(burnTimeME)].uiControlFlight;
             }
+            StartCoroutine(DisableThrustLimitorCR());
+        }
+
+        // OnStartFinished is too soon for this.  It must be turned back on then.
+        private System.Collections.IEnumerator DisableThrustLimitorCR()
+        {
+            yield return new WaitForSeconds(0.1f);
+            FixThrustLimiter();
+        }
+
+        private void FixThrustLimiter()
+        {
+            BaseField thrustLimiter = ((PartModule)Engine).Fields["thrustPercentage"];
+            thrustLimiter.SetValue(1, Engine);
+            thrustLimiter.guiActive = thrustLimiter.guiActiveEditor = false;
         }
 
         public void OnDestroy()
@@ -434,6 +445,7 @@ namespace ProceduralParts
         {
             if (selectedBell == null)
                 return;
+            FixThrustLimiter();
             thrust = Mathf.Clamp(thrust, 0, MaxThrust);
 
             AutoAlignThrustAndBurnTime();
