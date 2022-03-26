@@ -54,7 +54,9 @@ namespace ProceduralParts
             }
 
             bottomAttachNode = part.FindAttachNode(bottomAttachNodeName);
-            fuelResource = part.Resources["SolidFuel"];
+            var prop = part.FindModuleImplementing<ModuleEngines>().propellants.FirstOrDefault();
+            string resName = prop?.name ?? "SolidFuel";
+            fuelResource = part.Resources[resName];
             LoadBells(srbConfigNodes);
             InitializeBells();
             UpdateMaxThrust(false);
