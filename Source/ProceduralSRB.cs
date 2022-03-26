@@ -54,11 +54,6 @@ namespace ProceduralParts
                 Debug.LogError($"{ModTag} {part}.{this} Procedural Part not found");
                 return;
             }
-            // isMirrored flag required for bell deflection: real deflection angle is multiplied by -1 on mirrored part.
-            // Because of this, check if we've been created from the part that already was "mirrored" and flag accordingly
-            isMirrored =
-                part.symMethod == SymmetryMethod.Mirror && part.symmetryCounterparts.Count > 0 &&
-                !part.symmetryCounterparts[0].GetComponent<ProceduralSRB>().isMirrored;
 
             bottomAttachNode = part.FindAttachNode(bottomAttachNodeName);
             fuelResource = part.Resources["SolidFuel"];
@@ -206,9 +201,6 @@ namespace ProceduralParts
 
         #region Objects
 
-        [KSPField(isPersistant = true)]
-        public bool isMirrored;
-
         [KSPField]
         public string srbBellName;
 
@@ -220,7 +212,7 @@ namespace ProceduralParts
         public string thrustVectorTransformName;
         private Transform thrustTransform;
         private Transform bellTransform;
-        
+
         private EngineWrapper _engineWrapper;
         private EngineWrapper Engine => _engineWrapper ??= new EngineWrapper(part);
 
@@ -261,27 +253,20 @@ namespace ProceduralParts
 
         private void MoveBellAndBottomNode()
         {
-            if (bottomAttachNode == null)
-                return;
-
             Debug.Log($"{ModTag} {this} ({part.persistentId}): MoveBellAndBottomNode: bottom node: {bottomAttachNode.position}");
 
             // Move bell a little bit inside the SRB so gimbaling and tilting won't make weird gap between bell choke and SRB
-            // d = chokeDia * scale * 0.5 * sin(max deflection angle)
-            float d = (float)(selectedBell.bellChokeDiameter / 2 * bellScale * Math.PI * (
-                                  selectedBell.gimbalRange + Math.Abs(thrustDeflection)) / 180f);
-            //Debug.Log($"{ModTag} {this}: bell d: {d}; bellD: {selectedBell.bellChokeDiameter}; scale: {bellScale}; angle: {selectedBell.gimbalRange}");
+            float maxRange = selectedBell.gimbalRange + Math.Abs(thrustDeflection);
+            float d = selectedBell.bellChokeDiameter * 0.5f * bellScale * Mathf.Sin(maxRange * Mathf.Deg2Rad);
 
             // Using part transform as a base and shape length as offset for bell placement
             bellTransform.position = PPart.transform.TransformPoint((-GetLength() / 2 + d) * Vector3.up);
 
             // Place attachment node inside the bell 
-            bottomAttachNode.position = PPart.transform.InverseTransformPoint(selectedBell.srbAttach.position);
-
-            // Translate attached parts
-            // ReSharper disable once Unity.InefficientPropertyAccess
+            var pos = selectedBell.srbAttach.position;
+            bottomAttachNode.position = part.transform.InverseTransformPoint(pos);
             if (!HighLogic.LoadedSceneIsFlight)
-                TranslateAttachedPart(selectedBell.srbAttach.position);
+                TranslateAttachedPart(pos);
         }
 
         private void TranslateAttachedPart(Vector3 newPosition)
@@ -289,14 +274,10 @@ namespace ProceduralParts
             if (bottomAttachNode.attachedPart is Part pushTarget)
             {
                 Vector3 opposingNodePos = pushTarget.transform.TransformPoint(bottomAttachNode.FindOpposingNode().position);
-                
+
                 if (pushTarget == part.parent)
-                {
                     pushTarget = part;
-                }
-                Vector3 shift = pushTarget == part
-                    ? opposingNodePos - newPosition
-                    : newPosition - opposingNodePos;
+                Vector3 shift = (pushTarget == part ? 1 : -1) * (opposingNodePos - newPosition);
                 Debug.Log($"{ModTag} {this}: shifting: {pushTarget} by {shift}");
                 pushTarget.transform.Translate(shift, Space.World);
             }
@@ -322,17 +303,12 @@ namespace ProceduralParts
                 
                 rotTarget.partTransform.Rotate(rotAxis, delta, Space.World);
                 // Check new bell position after it was rotated
-                Vector3 shift = rotTarget == part
-                    ? opposingNodePos - selectedBell.srbAttach.position
-                    // ReSharper disable once Unity.InefficientPropertyAccess
-                    : selectedBell.srbAttach.position - opposingNodePos;
+                Vector3 shift = (rotTarget == part ? 1 : -1) * (opposingNodePos - selectedBell.srbAttach.position);
                 // If we've rotated anything, we've moved that thing away from attachment node. Need to bring it back.
                 Debug.Log($"{ModTag} {this}: shifting: {rotTarget} by {shift}");
 
                 rotTarget.transform.Translate(shift, Space.World);
             }
-            // Fix attach node position
-            bottomAttachNode.position = PPart.transform.InverseTransformPoint(selectedBell.srbAttach.position);
         }
         
         #endregion
@@ -387,17 +363,16 @@ namespace ProceduralParts
             if (bellTransform == null || selectedBell == null)
                 return;
 
-            bellTransform.localEulerAngles = Vector3.zero;
             var rotAxis = Vector3.Cross(part.partTransform.right, part.partTransform.up);
 
-            int mirror = (part.symMethod == SymmetryMethod.Mirror && !isMirrored) ? -1 : 1;
-            var adjustedDir = thrustDeflection * mirror;
-            var rotationDelta = (thrustDeflection - oldThrustDeflection) * mirror;
+            var adjustedDir = thrustDeflection;
+            var rotationDelta = (thrustDeflection - oldThrustDeflection);
 
-            Debug.Log($"{ModTag} {part}.{part.persistentId}: symmetry: {part.symMethod}; mirrored? {isMirrored}; rotating to: {adjustedDir}; delta={rotationDelta}");
+            Debug.Log($"{ModTag} {part}.{part.persistentId}: symmetry: {part.symMethod}; mirrored? {part.isMirrored}; rotating to: {adjustedDir}; delta={rotationDelta}");
+            var rot = Quaternion.AngleAxis(thrustDeflection, rotAxis);
+            bellTransform.rotation = rot;
+            selectedBell.srbAttach.rotation = rot;
 
-            bellTransform.Rotate(rotAxis, adjustedDir, Space.World);
-            selectedBell.srbAttach.Rotate(rotAxis, adjustedDir, Space.World);
             if (HighLogic.LoadedSceneIsEditor)
                 RotateAttachedPartAndNode(rotAxis, rotationDelta, adjustedDir);
         }
@@ -415,7 +390,7 @@ namespace ProceduralParts
                 md.gimbalRangeXN = md.gimbalRangeXP = md.gimbalRangeYN = md.gimbalRangeYP = selectedBell.gimbalRange;
             }
 
-            if (ModularEnginesChangeEngineType != null && selectedBell.realFuelsEngineType != null)
+            if (ModularEnginesChangeEngineType != null && !string.IsNullOrEmpty(selectedBell.realFuelsEngineType))
                 ModularEnginesChangeEngineType(selectedBell.realFuelsEngineType);
         }
 
@@ -449,7 +424,7 @@ namespace ProceduralParts
         public float thrust1m = 1;
 
         private float MaxThrust => (float)Math.Round(Mathf.Max(attachedEndSize * attachedEndSize * thrust1m, 10), 1);
-        private float attachedEndSize = float.PositiveInfinity;
+        public float attachedEndSize = float.PositiveInfinity;
 
         [KSPField]
         public float fuelRate;
@@ -483,6 +458,10 @@ namespace ProceduralParts
             }
 
             UpdateThrustDependentCalcs();
+            UpdateEngineAndBellScale();
+            MoveBellAndBottomNode();
+            SetBellRotation(thrustDeflection);
+            UpdateFAR();
 
             if (HighLogic.LoadedSceneIsEditor && fireEvent)
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
@@ -508,8 +487,6 @@ namespace ProceduralParts
             float bellScale1m = selectedBell.chokeEndRatio / selectedBell.bellChokeDiameter;
             bellScale = bellScale1m * Mathf.Sqrt(thrust / thrust1m);
             Debug.Log($"{ModTag} {this}: bell scale: {bellScale}; thrust: {thrust}, thrust1m: {thrust1m}");
-
-            UpdateEngineAndBellScale();
         }
 
         private void UpdateEngineAndBellScale()
@@ -517,11 +494,7 @@ namespace ProceduralParts
             Engine.heatProduction = heatProduction;
             Engine.maxThrust = thrust;
             part.GetComponent<ModuleEngines>().maxFuelFlow = fuelRate;
-
             selectedBell.model.transform.localScale = bellScale * Vector3.one;
-
-            UpdateFAR();
-            MoveBellAndBottomNode();
         }
 
         public void UpdateFAR()
@@ -534,15 +507,10 @@ namespace ProceduralParts
 
         #region ChangeHandlers
 
-        public override void OnWasCopied(PartModule copyPartModule, bool asSymCounterpart)
-        {
-            MoveBellAndBottomNode();
-            SetBellRotation(thrustDeflection);
-        }
-
         private void HandleBellTypeChange(BaseField f, object obj)
         {
             selectedBell.model.gameObject.SetActive(false);
+            selectedBell = srbConfigs[selectedBellName];
             InitModulesFromBell();
             UpdateMaxThrust();
         }
@@ -608,7 +576,6 @@ namespace ProceduralParts
         [KSPField]
         public float heatPerThrust = 2.0f;
 
-        // ReSharper disable once InconsistentNaming
         internal const double DraperPoint = 798;
 
         private void AnimateHeat()
