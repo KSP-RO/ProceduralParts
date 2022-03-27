@@ -259,14 +259,11 @@ namespace ProceduralParts
 
             // Place attachment node inside the bell 
             var pos = selectedBell.srbAttach.position;
-            bottomAttachNode.position = part.transform.InverseTransformPoint(pos);
+            bottomAttachNode.originalPosition = bottomAttachNode.position = part.transform.InverseTransformPoint(pos);
             Vector3 rotation = Vector3.right * (Mathf.Deg2Rad * thrustDeflection);
             bottomAttachNode.orientation = bottomAttachNode.originalOrientation + rotation;
 
             Debug.Log($"{ModTag} {this} ({part.persistentId}): MoveBellAndBottomNode: bottom node moved to {bottomAttachNode.position}");
-
-            if (!HighLogic.LoadedSceneIsFlight)
-                TranslateAndRotateAttachedPart(pos, rotAxis, thrustDeflection);
         }
 
         private void TranslateAndRotateAttachedPart(Vector3 newPosition, Vector3 rotAxis, float deflection)
@@ -488,7 +485,7 @@ namespace ProceduralParts
         private void FixThrustLimiter()
         {
             BaseField thrustLimiter = ((PartModule)Engine).Fields["thrustPercentage"];
-            thrustLimiter.SetValue(1, (PartModule)Engine);
+            thrustLimiter.SetValue(100, (PartModule)Engine);
             thrustLimiter.guiActive = thrustLimiter.guiActiveEditor = false;
         }
 
@@ -504,7 +501,11 @@ namespace ProceduralParts
             UpdateMaxThrust();
         }
 
-        private void HandleBellDeflectionChange(BaseField f, object obj) => SetBellAndBottomNodePositionAndRotation();
+        private void HandleBellDeflectionChange(BaseField f, object obj)
+        {
+            SetBellAndBottomNodePositionAndRotation();
+            TranslateAndRotateAttachedPart(selectedBell.srbAttach.position, Vector3.forward, thrustDeflection);
+        }
 
         // User changed thrust, automatically adjust burntime
         private void HandleThrustChange(BaseField f, object obj)
