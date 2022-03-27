@@ -131,10 +131,7 @@ namespace ProceduralParts
         public void OnPartNodeMoved(BaseEventDetails data)
         {
             if (data.Get<AttachNode>("node") is AttachNode node && node == bottomAttachNode)
-            {
-                MoveBellAndBottomNode();
-                SetBellRotation();
-            }
+                SetBellAndBottomNodePositionAndRotation();
         }
 
         #endregion
@@ -234,7 +231,7 @@ namespace ProceduralParts
             ConfigureRealFuels();
 
             InitModulesFromBell();
-            SetBellRotation();
+            SetBellAndBottomNodePositionAndRotation();
 
             if (HighLogic.LoadedSceneIsFlight)
             {
@@ -245,66 +242,49 @@ namespace ProceduralParts
 
         #region Attachments and nodes
 
-        private void MoveBellAndBottomNode()
+        // Set bell, bottom node, and attached parts based on thrustDeflection and other parameters
+        private void SetBellAndBottomNodePositionAndRotation()
         {
-            Debug.Log($"{ModTag} {this} ({part.persistentId}): MoveBellAndBottomNode: bottom node: {bottomAttachNode.position}");
+            if (bellTransform == null || selectedBell == null)
+                return;
 
-            // Move bell a little bit inside the SRB so gimbaling and tilting won't make weird gap between bell choke and SRB
+            // Move bell inside the SRB so gimbaling and tilting won't make weird gap between bell choke and SRB
             float maxRange = selectedBell.gimbalRange + Math.Abs(thrustDeflection);
             float d = selectedBell.bellChokeDiameter * 0.5f * bellScale * Mathf.Sin(maxRange * Mathf.Deg2Rad);
 
-            // Using part transform as a base and shape length as offset for bell placement
-            bellTransform.position = PPart.transform.TransformPoint((-GetLength() / 2 + d) * Vector3.up);
+            // Use part transform as a base and shape length as offset for bell placement
+            var rotAxis = Vector3.forward;
+            bellTransform.position = part.transform.TransformPoint((-GetLength() / 2 + d) * Vector3.up);
+            bellTransform.localRotation = Quaternion.AngleAxis(thrustDeflection, rotAxis);
 
             // Place attachment node inside the bell 
             var pos = selectedBell.srbAttach.position;
             bottomAttachNode.position = part.transform.InverseTransformPoint(pos);
+            Vector3 rotation = Vector3.right * (Mathf.Deg2Rad * thrustDeflection);
+            bottomAttachNode.orientation = bottomAttachNode.originalOrientation + rotation;
+
+            Debug.Log($"{ModTag} {this} ({part.persistentId}): MoveBellAndBottomNode: bottom node moved to {bottomAttachNode.position}");
+
             if (!HighLogic.LoadedSceneIsFlight)
-                TranslateAttachedPart(pos);
+                TranslateAndRotateAttachedPart(pos, rotAxis, thrustDeflection);
         }
 
-        private void TranslateAttachedPart(Vector3 newPosition)
+        private void TranslateAndRotateAttachedPart(Vector3 newPosition, Vector3 rotAxis, float deflection)
         {
-            if (bottomAttachNode.attachedPart is Part pushTarget)
+            if (bottomAttachNode.attachedPart is Part moveTarget)
             {
-                Vector3 opposingNodePos = pushTarget.transform.TransformPoint(bottomAttachNode.FindOpposingNode().position);
+                var rot = Quaternion.AngleAxis(deflection, rotAxis);
 
-                if (pushTarget == part.parent)
-                    pushTarget = part;
-                Vector3 shift = (pushTarget == part ? 1 : -1) * (opposingNodePos - newPosition);
-                Debug.Log($"{ModTag} {this}: shifting: {pushTarget} by {shift}");
-                pushTarget.transform.Translate(shift, Space.World);
+                if (moveTarget == part.parent)
+                    moveTarget = part;
+                moveTarget.transform.localRotation = moveTarget == part ? Quaternion.Inverse(rot) : rot;
+                Vector3 opposingNodePos = moveTarget.transform.TransformPoint(bottomAttachNode.FindOpposingNode().position);
+                Vector3 shift = (moveTarget == part ? 1 : -1) * (opposingNodePos - newPosition);
+                Debug.Log($"{ModTag} {this}: shifting: {moveTarget} by {shift}");
+                moveTarget.transform.Translate(shift, Space.World);
             }
         }
 
-        public void RotateAttachedPartAndNode(Vector3 rotAxis, float delta, float adjustedDeflection)
-        {
-            Vector3 rotationDelta = Vector3.right * (float) (Math.PI * adjustedDeflection / 180f);
-            Debug.Log($"{ModTag} {this}: setting node orientation: {bottomAttachNode.originalOrientation} + {rotationDelta}");
-            bottomAttachNode.orientation = bottomAttachNode.originalOrientation + rotationDelta;
-
-            if (bottomAttachNode.attachedPart is Part rotTarget)
-            {
-                // If the attached part is a child of ours, rotate it directly.
-                // If it is our parent, then we need to rotate ourselves
-                Vector3 opposingNodePos = rotTarget.transform.TransformPoint(bottomAttachNode.FindOpposingNode().position);
-
-                if (rotTarget == part.parent)
-                {
-                    rotTarget = part;
-                    delta = -delta;
-                }
-                
-                rotTarget.partTransform.Rotate(rotAxis, delta, Space.World);
-                // Check new bell position after it was rotated
-                Vector3 shift = (rotTarget == part ? 1 : -1) * (opposingNodePos - selectedBell.srbAttach.position);
-                // If we've rotated anything, we've moved that thing away from attachment node. Need to bring it back.
-                Debug.Log($"{ModTag} {this}: shifting: {rotTarget} by {shift}");
-
-                rotTarget.transform.Translate(shift, Space.World);
-            }
-        }
-        
         #endregion
 
         private void ConfigureRealFuels()
@@ -350,19 +330,6 @@ namespace ProceduralParts
             }
             foreach (var s in toRemove)
                 srbConfigs.Remove(s);
-        }
-
-        private void SetBellRotation()
-        {
-            if (bellTransform == null || selectedBell == null)
-                return;
-
-            var rotAxis = Vector3.forward;
-
-            bellTransform.localRotation = Quaternion.AngleAxis(thrustDeflection, rotAxis);
-
-            if (HighLogic.LoadedSceneIsEditor)
-                RotateAttachedPartAndNode(rotAxis, 0, thrustDeflection);
         }
 
         private void InitModulesFromBell()
@@ -443,8 +410,7 @@ namespace ProceduralParts
             AutoAlignThrustAndBurnTime();
             UpdateThrustDependentCalcs();
             UpdateEngineAndBellScale();
-            MoveBellAndBottomNode();
-            SetBellRotation();
+            SetBellAndBottomNodePositionAndRotation();
             UpdateFAR();
 
             if (HighLogic.LoadedSceneIsEditor && fireEvent)
@@ -538,11 +504,7 @@ namespace ProceduralParts
             UpdateMaxThrust();
         }
 
-        private void HandleBellDeflectionChange(BaseField f, object obj)
-        {
-            MoveBellAndBottomNode();
-            SetBellRotation();
-        }
+        private void HandleBellDeflectionChange(BaseField f, object obj) => SetBellAndBottomNodePositionAndRotation();
 
         // User changed thrust, automatically adjust burntime
         private void HandleThrustChange(BaseField f, object obj)
