@@ -54,9 +54,7 @@ namespace ProceduralParts
             }
 
             bottomAttachNode = part.FindAttachNode(bottomAttachNodeName);
-            var prop = part.FindModuleImplementing<ModuleEngines>().propellants.FirstOrDefault();
-            string resName = prop?.name ?? "SolidFuel";
-            fuelResource = part.Resources[resName];
+            fuelResource = GetFuelResource();
             LoadBells(srbConfigNodes);
             InitializeBells();
             UpdateMaxThrust(false);
@@ -467,7 +465,12 @@ namespace ProceduralParts
         }
 
         // Real fuels integration
-        [KSPEvent(active = true)] public void OnPartEngineConfigsChanged() => UpdateMaxThrust();
+        [KSPEvent(active = true)]
+        public void OnEngineConfigurationChanged()
+        {
+            fuelResource = GetFuelResource();
+            UpdateMaxThrust();
+        }
 
         public void UpdateFAR()
         {
@@ -490,6 +493,13 @@ namespace ProceduralParts
         }
 
         #endregion
+
+        private PartResource GetFuelResource()
+        {
+            var prop = part.FindModuleImplementing<ModuleEngines>().propellants.FirstOrDefault();
+            string resName = prop?.name ?? "SolidFuel";
+            return part.Resources[resName];
+        }
 
         #region ChangeHandlers
 
