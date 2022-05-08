@@ -38,6 +38,7 @@ namespace ProceduralParts
             bottomAttachNode ??= part.FindAttachNode(bottomAttachNodeName);
             if (HighLogic.LoadedScene == GameScenes.LOADING)
                 srbConfigNodes = node.GetNodes("SRB_BELL");
+            fuelResource = GetFuelResource();
             LoadBells(srbConfigNodes);
             InitializeBells();
             UpdateMaxThrust(false);
@@ -372,7 +373,7 @@ namespace ProceduralParts
         public float thrust1m = 1;
 
         private float MaxThrust => (float)Math.Round(Mathf.Max(attachedEndSize * attachedEndSize * thrust1m, 10), 1);
-        public float attachedEndSize = float.PositiveInfinity;
+        public float attachedEndSize = 1;
 
         [KSPField]
         public float fuelRate;
@@ -496,7 +497,7 @@ namespace ProceduralParts
 
         private PartResource GetFuelResource()
         {
-            var prop = part.FindModuleImplementing<ModuleEngines>().propellants.FirstOrDefault();
+            var prop = part.FindModuleImplementing<ModuleEngines>()?.propellants.FirstOrDefault();
             string resName = prop?.name ?? "SolidFuel";
             return part.Resources[resName];
         }
