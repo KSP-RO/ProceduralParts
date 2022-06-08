@@ -564,6 +564,9 @@ namespace ProceduralParts
 
             var points = points1.Count > points2.Count ? points1 : points2;
 
+            // Figure out what parts of the cone are concave to split them into convex parts for colliders
+            var splitsList = ConcavePoints(points);
+
             // Need to figure out the v coords.
             float sumLengths = 0;
             float[] cumLengths = new float[points.Count - 1];
@@ -588,7 +591,44 @@ namespace ProceduralParts
             }
 
             WriteMeshes(points);
-            WriteCollider(points);
+            WriteCollider(points, splitsList);
+        }
+
+        private LinkedList<int> ConcavePoints(LinkedList<ProfilePoint> points)
+        {
+            LinkedList<int> breakPoints = new LinkedList<int>();
+            breakPoints.AddLast(0);
+            ProfilePoint lastLast1 = null;
+            ProfilePoint last1 = null;
+            ProfilePoint lastLast2 = null;
+            ProfilePoint last2 = null;
+            int counter = -1;
+            foreach (var pt in points)
+            {
+                var pt1 = CreatePoint(pt.t, 1);
+                var pt2 = CreatePoint(pt.t, -1);
+                if (lastLast1 != null)
+                {
+                    // check if "last1" or "last2" is concave
+                    Vector2 norm1 = new Vector2(-lastLast1.y + pt1.y, lastLast1.x - pt1.x);
+                    Vector2 diff1 = new Vector2(lastLast1.x - last1.x, lastLast1.y - last1.y);
+                    var sign1 = Vector2.Dot(norm1, diff1);
+                    Vector2 norm2 = new Vector2(-lastLast2.y + pt2.y, lastLast2.x - pt2.x);
+                    Vector2 diff2 = new Vector2(lastLast2.x - last2.x, lastLast2.y - last2.y);
+                    var sign2 = Vector2.Dot(norm2, diff2);
+                    if (sign1 > 0 || sign2 > 0)
+                    {
+                        breakPoints.AddLast(counter);
+                    }
+                }
+                counter++;
+                lastLast1 = last1;
+                last1 = pt1;
+                lastLast2 = last2;
+                last2 = pt2;
+            }
+            breakPoints.AddLast(points.Count-1);
+            return breakPoints;
         }
 
         private LinkedList<ProfilePoint> GenPoints(float offsetMult)
@@ -751,20 +791,47 @@ namespace ProceduralParts
             WriteToAppropriateMesh(m, PPart.EndsIconMesh, EndsMesh);
         }
 
-        private void WriteCollider(LinkedList<ProfilePoint> points)
+        private void WriteCollider(LinkedList<ProfilePoint> points, LinkedList<int> splitsList)
         {
-            // int nSides = 24;
+            PPart.ClearColliderHolder();
+            int nSides = 24;
             int vertPerLayer = nSides + 1;
-            int vertCount = vertPerLayer*points.Count;
-            int triPerLayer = 2*3*nSides;
-            int triCount = triPerLayer*(points.Count-1);
+            int triPerLayer = 2 * 3 * nSides;
+            bool odd = false;
+
+            for (int i = 0; i < splitsList.Count - 1; i++)
+            {
+                int first = splitsList.ElementAt(i);
+                int last = splitsList.ElementAt(i + 1);
+                int layers = last - first + 1;
+                var go = new GameObject($"Mesh_Collider_{i}");
+                var coll = go.AddComponent<MeshCollider>();
+                go.transform.SetParent(PPart.ColliderHolder.transform, false);
+                coll.convex = true;
+
+                UncheckedMesh uMesh = new UncheckedMesh(vertPerLayer * layers, triPerLayer * layers + 2 * (nSides - 2));
+
+                LinkedList<ProfilePoint> currentPoints = new LinkedList<ProfilePoint>();
+                for (int j = first; j <= last; j++)
+                {
+                    currentPoints.AddLast(points.ElementAt(j));
+                }
+                GenerateColliderMesh(currentPoints, nSides, vertPerLayer, triPerLayer, uMesh, ref odd);
+                odd = !odd;
+
+                var colliderMesh = new Mesh();
+                uMesh.WriteTo(colliderMesh);
+                coll.sharedMesh = colliderMesh;
+            }
+        }
+
+        void GenerateColliderMesh(LinkedList<ProfilePoint> points, int nSides, int vertPerLayer, int triPerLayer, UncheckedMesh m, ref bool odd)
+        {
             int vertOffset = 0;
             int triVertOffset = 0;
             int triOffset = 0;
-            UncheckedMesh m = new UncheckedMesh(vertCount + 2 * vertPerLayer, triCount + 4 * vertPerLayer);
             ProfilePoint prev = null;
-            bool odd = false;
-            foreach (var pt in points)
+            foreach (ProfilePoint pt in points)
             {
                 WriteVertices(pt, m, nSides, vertOffset, odd);
                 if (prev != null)
@@ -773,19 +840,18 @@ namespace ProceduralParts
                     triVertOffset += vertPerLayer;
                     triOffset += triPerLayer;
                 }
+                else
+                {
+                    // Generate bottom tris
+                    WriteCapTriangles(m, nSides, 0, 0, false);
+                    triOffset += 3 * (nSides - 2);
+                }
                 odd = !odd;
                 prev = pt;
                 vertOffset += vertPerLayer;
             }
-
-            WriteCapVertices(points.First.Value, m, nSides, vertCount, true);
-            WriteCapVertices(points.Last.Value, m, nSides, vertCount + vertPerLayer, odd);
-            WriteCapTriangles(m, nSides, 0, triCount, false);
-            WriteCapTriangles(m, nSides, vertCount-vertPerLayer, triCount + vertPerLayer, true);
-            var colliderMesh = new Mesh();
-            m.WriteTo(colliderMesh);
-
-            PPart.UpdateOrReplaceSingleCollider(colliderMesh);
+            // Generate top tris
+            WriteCapTriangles(m, nSides, triVertOffset, triOffset, true);
         }
 
         private void WriteCapVertices(ProfilePoint pt, UncheckedMesh m, int nSides, int vertOffset, bool odd)
