@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using KSPAPIExtensions;
 
@@ -38,27 +34,17 @@ namespace ProceduralParts
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Offset Angle", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 3, unit = "°", useSI = true)]
-        public float offsetAngle = 10f;
+        public float offsetAngle = 0f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Symmetrical rods", groupName = ProceduralPart.PAWGroupName),
             UI_Toggle(disabledText = "Disabled", enabledText = "Enabled", scene = UI_Scene.Editor, affectSymCounterparts = UI_Scene.None)]
-        public bool both = true;
-
-        private float maxError = 0.01f;
-
-        public int numSides => (int)Math.Max(Mathf.PI / Mathf.Acos(1 - maxError / bottomDiameter), 12);
-
-        public float MajorRadius => (bottomDiameter + topDiameter) / 4;
-        public float MinorRadius => (bottomDiameter - topDiameter) / 4;
+        public bool symmetryRods = true;
 
         [KSPField]
         public string TopNodeName = "top";
 
         [KSPField]
         public string BottomNodeName = "bottom";
-
-        private float CornerCenterCornerAngle => 2 * Mathf.PI / numSides;
-        private float NormSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
 
         public override void OnStart(StartState state)
         {
@@ -73,51 +59,57 @@ namespace ProceduralParts
                 Fields[nameof(nbRods)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
                 Fields[nameof(tiltAngle)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
                 Fields[nameof(offsetAngle)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
-                Fields[nameof(both)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
+                Fields[nameof(symmetryRods)].uiControlEditor.onFieldChanged = OnShapeDimensionChanged;
 
-                // Fields[nameof(bottomDiameter)].uiControlEditor.onSymmetryFieldChanged =
-                // Fields[nameof(topDiameter)].uiControlEditor.onSymmetryFieldChanged =
-                // Fields[nameof(length)].uiControlEditor.onSymmetryFieldChanged =
-                // Fields[nameof(rodDiameter)].uiControlEditor.onSymmetryFieldChanged = ClampFillet;
+                Fields[nameof(nbRods)].uiControlEditor.onFieldChanged += ClampOffset;
+                Fields[nameof(nbRods)].uiControlEditor.onSymmetryFieldChanged += ClampOffset;
             }
+        }
+
+        private void ClampOffset(BaseField f, object obj)
+        {
+            float oldOffset = offsetAngle;
+            offsetAngle = Mathf.Clamp(offsetAngle, -180f/nbRods, 180f/nbRods);
+            if (offsetAngle != oldOffset)
+                MonoUtilities.RefreshPartContextWindow(part);
         }
 
         public override void AdjustDimensionBounds()
         {
-            float maxOuterDiameter = PPart.diameterMax;
-            float maxInnerDiameter = PPart.diameterMax;
-            float minOuterDiameter = PPart.diameterMin;
-            float minInnerDiameter = PPart.diameterMin;
-            float maxFillet = PPart.diameterMax / 2;
+            float maxBottomDiameter = PPart.diameterMax;
+            float maxTopDiameter = PPart.diameterMax;
+            float minBottomDiameter = PPart.diameterMin;
+            float minTopDiameter = PPart.diameterMin;
 
             // Vary the outer diameter to stay within min and max volume, given inner diameter
-            if (PPart.volumeMax < float.PositiveInfinity)
-            {
-                var majorRadMax = PPart.volumeMax / (Mathf.PI * MinorRadius * MinorRadius * 2 * Mathf.PI);
-                var minorRadMax = Mathf.Sqrt(PPart.volumeMax / (Mathf.PI * MajorRadius * 2 * Mathf.PI));
+            // if (PPart.volumeMax < float.PositiveInfinity)
+            // {
+            //     // var majorRadMax = PPart.volumeMax / (Mathf.PI * MinorRadius * MinorRadius * 2 * Mathf.PI);
+            //     // var minorRadMax = Mathf.Sqrt(PPart.volumeMax / (Mathf.PI * MajorRadius * 2 * Mathf.PI));
 
-                //MajorRadius => (outerDiameter + innerDiameter) / 2
-                //MinorRadius => (outerDiameter - innerDiameter) / 2;
-                maxOuterDiameter = majorRadMax * 2 - topDiameter;
-                maxInnerDiameter = -(minorRadMax * 2 - bottomDiameter);
-            }
+            //     //MajorRadius => (outerDiameter + innerDiameter) / 2
+            //     //MinorRadius => (outerDiameter - innerDiameter) / 2;
+            //     // maxOuterDiameter = majorRadMax * 2 - topDiameter;
+            //     // maxInnerDiameter = -(minorRadMax * 2 - bottomDiameter);
+            // }
 
-            maxOuterDiameter = Mathf.Clamp(maxOuterDiameter, PPart.diameterMin, PPart.diameterMax);
-            maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, PPart.diameterMax);
+            maxBottomDiameter = Mathf.Clamp(maxBottomDiameter, PPart.diameterMin, PPart.diameterMax);
+            maxTopDiameter = Mathf.Clamp(maxTopDiameter, PPart.diameterMin, PPart.diameterMax);
             // maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, bottomDiameter - PPart.diameterSmallStep);
 
             // minOuterDiameter = Mathf.Clamp(minOuterDiameter, topDiameter + PPart.diameterSmallStep, maxOuterDiameter);
+            float absOffset = 180f/nbRods;
 
-            maxFillet = Mathf.Clamp(maxFillet, 0, length);
-            maxFillet = Mathf.Clamp(maxFillet, 0, (bottomDiameter - topDiameter) / 2f);
-
-            (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxOuterDiameter;
-            (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).minValue = minOuterDiameter;
-            (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxInnerDiameter;
-            (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).minValue = minInnerDiameter;
+            (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxBottomDiameter;
+            (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).minValue = minBottomDiameter;
+            (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxTopDiameter;
+            (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).minValue = minTopDiameter;
             (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = PPart.lengthMin;
             (Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit).minValue = PPart.diameterMin;
-            // (Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxFillet;
+            (Fields[nameof(tiltAngle)].uiControlEditor as UI_FloatEdit).minValue = -180f;
+            (Fields[nameof(tiltAngle)].uiControlEditor as UI_FloatEdit).maxValue = 180f;
+            (Fields[nameof(offsetAngle)].uiControlEditor as UI_FloatEdit).minValue = -absOffset;
+            (Fields[nameof(offsetAngle)].uiControlEditor as UI_FloatEdit).maxValue = absOffset;
 
         }
 
@@ -127,13 +119,7 @@ namespace ProceduralParts
             Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle * Mathf.Deg2Rad) * topDiameter/2, length / 2, Mathf.Sin(tiltAngle * Mathf.Deg2Rad) * topDiameter/2);
             Vector3 rodDirection = topPos - bottomPos;
             float realLength = rodDirection.magnitude;
-            return Mathf.PI * rodDiameter * rodDiameter * realLength * nbRods;
-        }
-
-        public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
-        {
-            coords.r /= (bottomDiameter + topDiameter)/4;
-            coords.y /= length;
+            return Mathf.PI * rodDiameter * rodDiameter / 4 * realLength * nbRods;
         }
 
         public override bool SeekVolume(float targetVolume, int dir) => SeekVolume(targetVolume, Fields[nameof(length)], dir);
@@ -146,23 +132,29 @@ namespace ProceduralParts
             }
         }
 
+        public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
+        {
+            coords.r /= (bottomDiameter + topDiameter)/4;
+            coords.y /= length;
+        }
+
         public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
-            coords.r *= (bottomDiameter / 2);
+            coords.r *= (bottomDiameter + topDiameter)/4;
             coords.y *= length;
         }
 
         public override void UpdateTechConstraints()
         {
             Fields[nameof(topDiameter)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
-            UI_FloatEdit innerDiameterEdit = Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit;
-            innerDiameterEdit.incrementLarge = PPart.diameterLargeStep;
-            innerDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+            UI_FloatEdit topDiameterEdit = Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit;
+            topDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+            topDiameterEdit.incrementSmall = PPart.diameterSmallStep;
 
             Fields[nameof(bottomDiameter)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
-            UI_FloatEdit outerDiameterEdit = Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit;
-            outerDiameterEdit.incrementLarge = PPart.diameterLargeStep;
-            outerDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+            UI_FloatEdit bottomDiameterEdit = Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit;
+            bottomDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+            bottomDiameterEdit.incrementSmall = PPart.diameterSmallStep;
 
             Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
             UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
@@ -170,9 +162,9 @@ namespace ProceduralParts
             lengthEdit.incrementSmall = PPart.lengthSmallStep;
 
             Fields[nameof(rodDiameter)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
-            UI_FloatEdit filletEdit = Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit;
-            filletEdit.incrementLarge = PPart.lengthLargeStep;
-            filletEdit.incrementSmall = PPart.lengthSmallStep;
+            UI_FloatEdit rodEdit = Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit;
+            rodEdit.incrementLarge = PPart.lengthLargeStep;
+            rodEdit.incrementSmall = PPart.lengthSmallStep;
 
             UI_FloatEdit angleEdit = Fields[nameof(tiltAngle)].uiControlEditor as UI_FloatEdit;
             angleEdit.incrementLarge = 10;
@@ -183,10 +175,10 @@ namespace ProceduralParts
             offsetEdit.incrementSmall = 1;
 
             AdjustDimensionBounds();
-            topDiameter = Mathf.Clamp(topDiameter, innerDiameterEdit.minValue, innerDiameterEdit.maxValue);
-            bottomDiameter = Mathf.Clamp(bottomDiameter, outerDiameterEdit.minValue, outerDiameterEdit.maxValue);
+            topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
+            bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
             length = Mathf.Clamp(length, lengthEdit.minValue, lengthEdit.maxValue);
-            rodDiameter = Mathf.Clamp(rodDiameter, filletEdit.minValue, filletEdit.maxValue);
+            rodDiameter = Mathf.Clamp(rodDiameter, rodEdit.minValue, rodEdit.maxValue);
         }
         public override void UpdateTFInterops()
         {
@@ -195,13 +187,13 @@ namespace ProceduralParts
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
 
-        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, bottomDiameter);
+        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, (bottomDiameter + topDiameter)/2f);
 
         internal override void UpdateShape(bool force = true)
         {
             part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
-            GenerateMeshes(bottomDiameter / 2, topDiameter / 2, length, rodDiameter / 2, (int)nbRods, tiltAngle * Mathf.Deg2Rad, offsetAngle * Mathf.Deg2Rad, both);
+            GenerateMeshes(bottomDiameter / 2, topDiameter / 2, length, rodDiameter / 2, (int)nbRods, tiltAngle * Mathf.Deg2Rad, offsetAngle * Mathf.Deg2Rad, symmetryRods);
 
             // WriteMeshes in AbstractSoRShape typically does UpdateNodeSize, UpdateProps, RaiseModelAndColliderChanged
             UpdateNodeSize(TopNodeName);
@@ -214,22 +206,24 @@ namespace ProceduralParts
         {
             if (part.attachNodes.Find(n => n.id == nodeName) is AttachNode node)
             {
-                node.size = Math.Min((int)(topDiameter / PPart.diameterLargeStep), 3);
+                float nodeDiameter = nodeName == TopNodeName ? topDiameter : bottomDiameter;
+                node.size = Math.Min((int)(nodeDiameter / PPart.diameterLargeStep), 3);
                 node.breakingTorque = node.breakingForce = Mathf.Max(50 * node.size * node.size, 50);
-                RaiseChangeAttachNodeSize(node, topDiameter, Mathf.PI * topDiameter * topDiameter * 0.25f + Mathf.PI * length * (topDiameter+bottomDiameter));
+                RaiseChangeAttachNodeSize(node, nodeDiameter, Mathf.PI * nodeDiameter * nodeDiameter * 0.25f);
             }
         }
 
+        #region meshes
         public void GenerateMeshes(float bottomRadius, float topRadius, float height, float rodRadius, int nbRods, float tiltAngle, float offsetAngle, bool both)
         {
             float maxMeshBendError = 0.01f;
-            int nbRodSides = (int)Mathf.Max(Mathf.PI / Mathf.Acos(1 - maxMeshBendError / Mathf.Max(2*rodRadius, maxMeshBendError)), 2) * 2;
+            int nbRodSides = (int)Mathf.Max(Mathf.PI / Mathf.Acos(1 - maxMeshBendError / Mathf.Max(2 * rodRadius, maxMeshBendError)), 2) * 2;
             float CornerCenterCornerAngle = 2 * Mathf.PI / nbRodSides;
             float NormSideLength = Mathf.Tan(CornerCenterCornerAngle / 2);
             int vertPerRod = (nbRodSides + 1) * 2;
-            int nVert = vertPerRod * nbRods * (both ? 2 : 1); // x2 for rods going each way
-            int triPerRod = (nbRodSides) * 3 * 2; // nr of sides * 3 per tri * 2 tris per side
-            int nTri = triPerRod * nbRods * (both ? 2 : 1); // x2 for rods going each way
+            int nVert = vertPerRod * nbRods * (both ? 2 : 1);
+            int triPerRod = (nbRodSides) * 3 * 2;
+            int nTri = triPerRod * nbRods * (both ? 2 : 1);
 
             UncheckedMesh uSideMesh = new UncheckedMesh(nVert, nTri);
             GenerateAllSideVertices(uSideMesh, bottomRadius, topRadius, rodRadius, height, tiltAngle, offsetAngle, nbRods, nbRodSides, 0);
@@ -239,12 +233,12 @@ namespace ProceduralParts
                 GenerateAllSideVertices(uSideMesh, bottomRadius, topRadius, rodRadius, height, -tiltAngle, -offsetAngle, nbRods, nbRodSides, nVert / 2);
                 GenerateAllSideTriangles(uSideMesh, nbRods, nbRodSides, nVert / 2, nTri / 2);
             }
-            var tankULength = nbRodSides * NormSideLength * rodRadius * 2;
+            float tankULength = nbRodSides * NormSideLength * rodRadius * 2;
             Vector3 bottomPos = new Vector3(bottomRadius, -height / 2, 0);
             Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle) * topRadius, height / 2, Mathf.Sin(tiltAngle) * topRadius);
             Vector3 rodDirection = topPos - bottomPos;
             float realLength = rodDirection.magnitude;
-            var tankVLength = realLength;
+            float tankVLength = realLength;
 
             RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(uSideMesh, PPart.SidesIconMesh, SidesMesh);
@@ -261,6 +255,11 @@ namespace ProceduralParts
             }
             WriteToAppropriateMesh(capMesh, PPart.EndsIconMesh, EndsMesh);
 
+            GenerateColliders(bottomRadius, topRadius, height, rodRadius, nbRods, tiltAngle, offsetAngle, both, nbRodSides);
+        }
+
+        private void GenerateColliders(float bottomRadius, float topRadius, float height, float rodRadius, int nbRods, float tiltAngle, float offsetAngle, bool both, int nbRodSides)
+        {
             PPart.ClearColliderHolder();
             for (int i = 0; i < nbRods; i++)
             {
@@ -276,7 +275,7 @@ namespace ProceduralParts
             {
                 for (int i = 0; i < nbRods; i++)
                 {
-                    var go = new GameObject($"Mesh_Collider_{i+nbRods}");
+                    var go = new GameObject($"Mesh_Collider_{i + nbRods}");
                     var coll = go.AddComponent<MeshCollider>();
                     go.transform.SetParent(PPart.ColliderHolder.transform, false);
                     coll.convex = true;
@@ -386,8 +385,8 @@ namespace ProceduralParts
                     Vector3 yVector = Vector3.up * (profilePoint) * rodDirection.magnitude;
                     mesh.vertices[offset + 2 * side + profilePoint] = rodPos + rotation.normalized * (r1 + yVector);
                     Vector3 normal = new Vector3(0f, (profilePoint - 0.5f) * 2, 0f);
-                    mesh.normals[offset + 2 * side + profilePoint] = normal;
-                    mesh.tangents[offset + 2 * side + profilePoint] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), 1f);
+                    mesh.normals[offset + 2 * side + profilePoint] = rotation * normal;
+                    mesh.tangents[offset + 2 * side + profilePoint] = rotation * new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), 1f);
                     mesh.uv[offset + 2 * side + profilePoint] = new Vector2(Mathf.Cos(t1) * (profilePoint - 0.5f) * 2, Mathf.Sin(t1)) / 2 + new Vector2(0.5f, 0.5f);
                 }
             }
@@ -415,8 +414,8 @@ namespace ProceduralParts
                     mesh.vertices[offset + 2 * side + profilePoint] = rodPos + rotation.normalized * (r1 + yVector);
                     Vector3 normalInPlane = new Vector3(Mathf.Cos(t1), 0f, Mathf.Sin(t1));
                     Vector3 normal = (normalInPlane).normalized;
-                    mesh.normals[offset + 2 * side + profilePoint] = normal;
-                    mesh.tangents[offset + 2 * side + profilePoint] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1f);
+                    mesh.normals[offset + 2 * side + profilePoint] = rotation * normal;
+                    mesh.tangents[offset + 2 * side + profilePoint] = rotation * new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1f);
                     float ucoord = (float)side / (nbSides);
                     mesh.uv[offset + 2 * side + profilePoint] = new Vector2(ucoord, profilePoint);
                 }
@@ -453,5 +452,6 @@ namespace ProceduralParts
                 mesh.WriteTo(normalMesh);
             }
         }
+        #endregion
     }
 }
