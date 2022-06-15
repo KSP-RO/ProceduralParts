@@ -6,6 +6,7 @@ namespace ProceduralParts
 {
     class ProceduralShapeHollowTruss : ProceduralAbstractShape
     {
+        #region KSPFields
         private const string ModTag = "[ProceduralShapeHollowTruss]";
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Top D", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
@@ -45,6 +46,7 @@ namespace ProceduralParts
 
         [KSPField]
         public string BottomNodeName = "bottom";
+        #endregion
 
         public override void OnStart(StartState state)
         {
@@ -66,6 +68,7 @@ namespace ProceduralParts
             }
         }
 
+        // Known issue; causes the nbRods slider to get dropped in the UI when hitting the offset limit
         private void ClampOffset(BaseField f, object obj)
         {
             float oldOffset = offsetAngle;
@@ -74,30 +77,32 @@ namespace ProceduralParts
                 MonoUtilities.RefreshPartContextWindow(part);
         }
 
+        private static float GetRealRodLength(float bottomRadius, float topRadius, float height, float tiltAngle)
+        {
+            Vector3 bottomPos = new Vector3(bottomRadius, -height / 2, 0);
+            Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle) * topRadius, height / 2, Mathf.Sin(tiltAngle) * topRadius);
+            Vector3 rodDirection = topPos - bottomPos;
+            return rodDirection.magnitude;
+        }
+
         public override void AdjustDimensionBounds()
         {
             float maxBottomDiameter = PPart.diameterMax;
             float maxTopDiameter = PPart.diameterMax;
             float minBottomDiameter = PPart.diameterMin;
             float minTopDiameter = PPart.diameterMin;
+            float maxRodRadius = PPart.diameterMax;
+            float minRodRadius = PPart.diameterMin;
 
-            // Vary the outer diameter to stay within min and max volume, given inner diameter
-            // if (PPart.volumeMax < float.PositiveInfinity)
-            // {
-            //     // var majorRadMax = PPart.volumeMax / (Mathf.PI * MinorRadius * MinorRadius * 2 * Mathf.PI);
-            //     // var minorRadMax = Mathf.Sqrt(PPart.volumeMax / (Mathf.PI * MajorRadius * 2 * Mathf.PI));
-
-            //     //MajorRadius => (outerDiameter + innerDiameter) / 2
-            //     //MinorRadius => (outerDiameter - innerDiameter) / 2;
-            //     // maxOuterDiameter = majorRadMax * 2 - topDiameter;
-            //     // maxInnerDiameter = -(minorRadMax * 2 - bottomDiameter);
-            // }
+            // Vary the rod diameter to stay within min and max volume, given length
+            float realLength = GetRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
+            if (PPart.volumeMax < float.PositiveInfinity)
+                maxRodRadius = Mathf.Sqrt(PPart.volumeMax/(nbRods * realLength * Mathf.PI));
+            if (PPart.volumeMin > 0)
+                minRodRadius = Mathf.Sqrt(PPart.volumeMin/(nbRods * realLength * Mathf.PI));
 
             maxBottomDiameter = Mathf.Clamp(maxBottomDiameter, PPart.diameterMin, PPart.diameterMax);
             maxTopDiameter = Mathf.Clamp(maxTopDiameter, PPart.diameterMin, PPart.diameterMax);
-            // maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, PPart.diameterMin, bottomDiameter - PPart.diameterSmallStep);
-
-            // minOuterDiameter = Mathf.Clamp(minOuterDiameter, topDiameter + PPart.diameterSmallStep, maxOuterDiameter);
             float absOffset = 180f/nbRods;
 
             (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxBottomDiameter;
@@ -105,7 +110,8 @@ namespace ProceduralParts
             (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxTopDiameter;
             (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).minValue = minTopDiameter;
             (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = PPart.lengthMin;
-            (Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit).minValue = PPart.diameterMin;
+            (Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit).minValue = minRodRadius;
+            (Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxRodRadius;
             (Fields[nameof(tiltAngle)].uiControlEditor as UI_FloatEdit).minValue = -180f;
             (Fields[nameof(tiltAngle)].uiControlEditor as UI_FloatEdit).maxValue = 180f;
             (Fields[nameof(offsetAngle)].uiControlEditor as UI_FloatEdit).minValue = -absOffset;
@@ -115,10 +121,7 @@ namespace ProceduralParts
 
         public override float CalculateVolume()
         {
-            Vector3 bottomPos = new Vector3(bottomDiameter/2, -length / 2, 0);
-            Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle * Mathf.Deg2Rad) * topDiameter/2, length / 2, Mathf.Sin(tiltAngle * Mathf.Deg2Rad) * topDiameter/2);
-            Vector3 rodDirection = topPos - bottomPos;
-            float realLength = rodDirection.magnitude;
+            float realLength = GetRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
             return Mathf.PI * rodDiameter * rodDiameter / 4 * realLength * nbRods;
         }
 
@@ -196,17 +199,16 @@ namespace ProceduralParts
             GenerateMeshes(bottomDiameter / 2, topDiameter / 2, length, rodDiameter / 2, (int)nbRods, tiltAngle * Mathf.Deg2Rad, offsetAngle * Mathf.Deg2Rad, symmetryRods);
 
             // WriteMeshes in AbstractSoRShape typically does UpdateNodeSize, UpdateProps, RaiseModelAndColliderChanged
-            UpdateNodeSize(TopNodeName);
-            UpdateNodeSize(BottomNodeName);
+            UpdateNodeSize(TopNodeName, topDiameter);
+            UpdateNodeSize(BottomNodeName, bottomDiameter);
             PPart.UpdateProps();
             RaiseModelAndColliderChanged();
         }
 
-        private void UpdateNodeSize(string nodeName)
+        private void UpdateNodeSize(string nodeName, float nodeDiameter)
         {
             if (part.attachNodes.Find(n => n.id == nodeName) is AttachNode node)
             {
-                float nodeDiameter = nodeName == TopNodeName ? topDiameter : bottomDiameter;
                 node.size = Math.Min((int)(nodeDiameter / PPart.diameterLargeStep), 3);
                 node.breakingTorque = node.breakingForce = Mathf.Max(50 * node.size * node.size, 50);
                 RaiseChangeAttachNodeSize(node, nodeDiameter, Mathf.PI * nodeDiameter * nodeDiameter * 0.25f);
@@ -216,7 +218,7 @@ namespace ProceduralParts
         #region meshes
         public void GenerateMeshes(float bottomRadius, float topRadius, float height, float rodRadius, int nbRods, float tiltAngle, float offsetAngle, bool both)
         {
-            float maxMeshBendError = 0.01f;
+            float maxMeshBendError = 0.02f;
             int nbRodSides = (int)Mathf.Max(Mathf.PI / Mathf.Acos(1 - maxMeshBendError / Mathf.Max(2 * rodRadius, maxMeshBendError)), 2) * 2;
             float CornerCenterCornerAngle = 2 * Mathf.PI / nbRodSides;
             float NormSideLength = Mathf.Tan(CornerCenterCornerAngle / 2);
@@ -234,11 +236,7 @@ namespace ProceduralParts
                 GenerateAllSideTriangles(uSideMesh, nbRods, nbRodSides, nVert / 2, nTri / 2);
             }
             float tankULength = nbRodSides * NormSideLength * rodRadius * 2;
-            Vector3 bottomPos = new Vector3(bottomRadius, -height / 2, 0);
-            Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle) * topRadius, height / 2, Mathf.Sin(tiltAngle) * topRadius);
-            Vector3 rodDirection = topPos - bottomPos;
-            float realLength = rodDirection.magnitude;
-            float tankVLength = realLength;
+            float tankVLength = GetRealRodLength(bottomRadius, topRadius, height, tiltAngle);
 
             RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(uSideMesh, PPart.SidesIconMesh, SidesMesh);
@@ -261,26 +259,20 @@ namespace ProceduralParts
         private void GenerateColliders(float bottomRadius, float topRadius, float height, float rodRadius, int nbRods, float tiltAngle, float offsetAngle, bool both, int nbRodSides)
         {
             PPart.ClearColliderHolder();
-            for (int i = 0; i < nbRods; i++)
-            {
-                var go = new GameObject($"Mesh_Collider_{i}");
-                var coll = go.AddComponent<MeshCollider>();
-                go.transform.SetParent(PPart.ColliderHolder.transform, false);
-                coll.convex = true;
-                coll.sharedMesh = GenerateColliderMesh(0, bottomRadius, topRadius, height, rodRadius, tiltAngle, nbRodSides);
-                var orientation = Quaternion.AngleAxis(-offsetAngle * Mathf.Rad2Deg + (360f * i / nbRods), Vector3.up);
-                go.transform.localRotation *= orientation;
-            }
+            GenerateCollidersOneWay(tiltAngle, offsetAngle, nbRods);
             if (both)
+                GenerateCollidersOneWay(-tiltAngle, -offsetAngle, nbRods);
+
+            void GenerateCollidersOneWay(float tiltAngle, float offsetAngle, int startColliderIndex)
             {
                 for (int i = 0; i < nbRods; i++)
                 {
-                    var go = new GameObject($"Mesh_Collider_{i + nbRods}");
+                    var go = new GameObject($"Mesh_Collider_{i + startColliderIndex}");
                     var coll = go.AddComponent<MeshCollider>();
                     go.transform.SetParent(PPart.ColliderHolder.transform, false);
                     coll.convex = true;
-                    coll.sharedMesh = GenerateColliderMesh(0, bottomRadius, topRadius, height, rodRadius, -tiltAngle, nbRodSides);
-                    var orientation = Quaternion.AngleAxis(offsetAngle * Mathf.Rad2Deg + (360f * i / nbRods), Vector3.up);
+                    coll.sharedMesh = GenerateColliderMesh(0, bottomRadius, topRadius, height, rodRadius, tiltAngle, nbRodSides);
+                    var orientation = Quaternion.AngleAxis((360f * i / nbRods) - offsetAngle * Mathf.Rad2Deg, Vector3.up);
                     go.transform.localRotation *= orientation;
                 }
             }
@@ -289,11 +281,10 @@ namespace ProceduralParts
         private static Mesh GenerateColliderMesh(float angle, float bottomRadius, float topRadius, float height, float rodRadius, float tiltAngle, int nbSides)
         {
             int nTriSide = nbSides * 6;
-            // top and bottom, 3 per tri, nbSides
-            int nTriCaps = 2 * 3 * nbSides * 2; // Never both, as that doesn't work with collider, handle in outer function
+            int nTriCaps = 2 * 3 * nbSides * 2;
             UncheckedMesh colliderMesh = new UncheckedMesh(2 * (nbSides + 1), nTriSide + nTriCaps);
             GenerateSideVertices(colliderMesh, angle, bottomRadius, topRadius, height, rodRadius, tiltAngle, nbSides, 0);
-            GenerateSideTriangles(colliderMesh, nbSides, 2, 0, 0);
+            GenerateSideTriangles(colliderMesh, nbSides, 0, 0);
             GenerateCapTriangles(colliderMesh, nbSides, 0, nTriSide);
 
             Mesh mesh = new Mesh();
@@ -328,7 +319,7 @@ namespace ProceduralParts
             {
                 int vertexOffset = 2 * rodNumber * (nbRodSides + 1);
                 int triangleOffset = 3 * 2 * rodNumber * nbRodSides;
-                GenerateSideTriangles(sideMesh, nbRodSides, 2, vertexOffset + vertOffset, triangleOffset + triOffset);
+                GenerateSideTriangles(sideMesh, nbRodSides, vertexOffset + vertOffset, triangleOffset + triOffset);
             }
         }
 
@@ -347,8 +338,6 @@ namespace ProceduralParts
             int i = 0;
             for (int side = 0; side < nbSides - 2; side++)
             {
-                // 0 2 4 6
-                // 024 046
                 mesh.triangles[triangleOffset + i++] = vertexOffset;
                 mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 2;
                 mesh.triangles[triangleOffset + i++] = vertexOffset + side * 2 + 4;
@@ -361,18 +350,11 @@ namespace ProceduralParts
 
         private static void GenerateCapVertices(UncheckedMesh mesh, float angle, float bottomRadius, float topRadius, float height, float rodRadius, float tiltAngle, int nbSides, int offset)
         {
-            //Vector3 rodPos = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (bottomRadius + topRadius) / 2;
-            //float topBottomAngle = Mathf.Atan((bottomRadius - topRadius) / height);
-
-            //Vector3 rotNormal = Vector3.Cross(rodPos, Vector3.up);
-            //Quaternion rotation = Quaternion.AngleAxis(topBottomAngle * Mathf.Rad2Deg, rotNormal) * Quaternion.AngleAxis(tiltAngle, rodPos);
-
             Vector3 bottomPos = new Vector3(Mathf.Cos(angle) * bottomRadius, -height / 2, Mathf.Sin(angle) * bottomRadius);
             Vector3 topPos = new Vector3(Mathf.Cos(angle + tiltAngle) * topRadius, height / 2, Mathf.Sin(angle + tiltAngle) * topRadius);
             Vector3 rodDirection = topPos - bottomPos;
             Quaternion rotation = Quaternion.identity;
             rotation.SetFromToRotation(Vector3.up, rodDirection);
-            Vector3 rodPos = bottomPos;
             for (int side = 0; side < nbSides; side++)
             {
                 int currSide = side == nbSides ? 0 : side;
@@ -382,12 +364,12 @@ namespace ProceduralParts
 
                 for (int profilePoint = 0; profilePoint < 2; profilePoint++)
                 {
+                    int idx = offset + 2 * side + profilePoint;
                     Vector3 yVector = Vector3.up * (profilePoint) * rodDirection.magnitude;
-                    mesh.vertices[offset + 2 * side + profilePoint] = rodPos + rotation.normalized * (r1 + yVector);
-                    Vector3 normal = new Vector3(0f, (profilePoint - 0.5f) * 2, 0f);
-                    mesh.normals[offset + 2 * side + profilePoint] = rotation * normal;
-                    mesh.tangents[offset + 2 * side + profilePoint] = rotation * new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), 1f);
-                    mesh.uv[offset + 2 * side + profilePoint] = new Vector2(Mathf.Cos(t1) * (profilePoint - 0.5f) * 2, Mathf.Sin(t1)) / 2 + new Vector2(0.5f, 0.5f);
+                    mesh.vertices[idx] = bottomPos + rotation.normalized * (r1 + yVector);
+                    mesh.normals[idx] = rotation * new Vector3(0f, (profilePoint - 0.5f) * 2, 0f);
+                    mesh.tangents[idx] = rotation * new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), 1f);
+                    mesh.uv[idx] = new Vector2(Mathf.Cos(t1) * (profilePoint - 0.5f) * 2, Mathf.Sin(t1)) / 2 + new Vector2(0.5f, 0.5f);
                 }
             }
         }
@@ -400,7 +382,6 @@ namespace ProceduralParts
             Vector3 rodDirection = topPos - bottomPos;
             Quaternion rotation = Quaternion.identity;
             rotation.SetFromToRotation(Vector3.up, rodDirection);
-            Vector3 rodPos = bottomPos;
             for (int side = 0; side <= nbSides; side++)
             {
                 int currSide = side == nbSides ? 0 : side;
@@ -410,26 +391,23 @@ namespace ProceduralParts
 
                 for (int profilePoint = 0; profilePoint < 2; profilePoint++)
                 {
+                    int idx = offset + 2 * side + profilePoint;
                     Vector3 yVector = Vector3.up * (profilePoint) * rodDirection.magnitude;
-                    mesh.vertices[offset + 2 * side + profilePoint] = rodPos + rotation.normalized * (r1 + yVector);
-                    Vector3 normalInPlane = new Vector3(Mathf.Cos(t1), 0f, Mathf.Sin(t1));
-                    Vector3 normal = (normalInPlane).normalized;
-                    mesh.normals[offset + 2 * side + profilePoint] = rotation * normal;
-                    mesh.tangents[offset + 2 * side + profilePoint] = rotation * new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1f);
-                    float ucoord = (float)side / (nbSides);
-                    mesh.uv[offset + 2 * side + profilePoint] = new Vector2(ucoord, profilePoint);
+                    mesh.vertices[idx] = bottomPos + rotation.normalized * (r1 + yVector);
+                    mesh.normals[idx] = rotation * new Vector3(Mathf.Cos(t1), 0f, Mathf.Sin(t1));
+                    mesh.tangents[idx] = rotation * new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1f);
+                    mesh.uv[idx] = new Vector2((float)side / (nbSides), profilePoint);
                 }
             }
         }
 
-        private static void GenerateSideTriangles(UncheckedMesh mesh, int nbSides, int pointsInProfile, int vertexOffset, int triangleOffset)
+        private static void GenerateSideTriangles(UncheckedMesh mesh, int nbSides, int vertexOffset, int triangleOffset)
         {
             int i = 0;
             for (int side = 0; side < nbSides; side++)
             {
-                int current = side * pointsInProfile;
-                // int next = (side < (nbSides - 1) ? (side + 1) * pointsInProfile : 0);
-                int next = (side + 1) * pointsInProfile;
+                int current = side * 2;
+                int next = (side + 1) * 2;
 
                 mesh.triangles[triangleOffset + i++] = vertexOffset + current;
                 mesh.triangles[triangleOffset + i++] = vertexOffset + next + 1;
