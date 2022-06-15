@@ -129,6 +129,14 @@ namespace ProceduralParts
 
         public override void TranslateAttachmentsAndNodes(BaseField f, object obj)
         {
+            if (f.name == nameof(bottomDiameter) && obj is float oldBottomDiameter)
+            {
+                HandleDiameterChange((bottomDiameter + topDiameter) / 2, (oldBottomDiameter + topDiameter) / 2);
+            }
+            if (f.name == nameof(topDiameter) && obj is float oldTopDiameter)
+            {
+                HandleDiameterChange((topDiameter + bottomDiameter) / 2, (oldTopDiameter + bottomDiameter) / 2);
+            }
             if (f.name == nameof(length) && obj is float oldLength)
             {
                 HandleLengthChange(length, oldLength);
