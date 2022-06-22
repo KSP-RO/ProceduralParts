@@ -46,6 +46,9 @@ namespace ProceduralParts
 
         [KSPField]
         public string BottomNodeName = "bottom";
+
+        [KSPField]
+        public float realLength = 0f;
         #endregion
 
         public override void OnStart(StartState state)
@@ -77,12 +80,12 @@ namespace ProceduralParts
                 MonoUtilities.RefreshPartContextWindow(part);
         }
 
-        private static float GetRealRodLength(float bottomRadius, float topRadius, float height, float tiltAngle)
+        private void UpdateRealRodLength(float bottomRadius, float topRadius, float height, float tiltAngle)
         {
             Vector3 bottomPos = new Vector3(bottomRadius, -height / 2, 0);
             Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle) * topRadius, height / 2, Mathf.Sin(tiltAngle) * topRadius);
             Vector3 rodDirection = topPos - bottomPos;
-            return rodDirection.magnitude;
+            realLength = rodDirection.magnitude;
         }
 
         public override void AdjustDimensionBounds()
@@ -95,7 +98,7 @@ namespace ProceduralParts
             float minRodRadius = PPart.diameterMin;
 
             // Vary the rod diameter to stay within min and max volume, given length
-            float realLength = GetRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
+            UpdateRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
             if (PPart.volumeMax < float.PositiveInfinity)
                 maxRodRadius = Mathf.Sqrt(PPart.volumeMax/(nbRods * realLength * Mathf.PI));
             if (PPart.volumeMin > 0)
@@ -121,7 +124,7 @@ namespace ProceduralParts
 
         public override float CalculateVolume()
         {
-            float realLength = GetRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
+            UpdateRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
             return Mathf.PI * rodDiameter * rodDiameter / 4 * realLength * nbRods;
         }
 
@@ -244,7 +247,8 @@ namespace ProceduralParts
                 GenerateAllSideTriangles(uSideMesh, nbRods, nbRodSides, nVert / 2, nTri / 2);
             }
             float tankULength = nbRodSides * NormSideLength * rodRadius * 2;
-            float tankVLength = GetRealRodLength(bottomRadius, topRadius, height, tiltAngle);
+            UpdateRealRodLength(bottomRadius, topRadius, height, tiltAngle);
+            float tankVLength = realLength;
 
             RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(uSideMesh, PPart.SidesIconMesh, SidesMesh);
