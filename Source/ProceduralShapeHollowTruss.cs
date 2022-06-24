@@ -83,13 +83,15 @@ namespace ProceduralParts
         private void UpdateRealRodLength(float bottomRadius, float topRadius, float height, float tiltAngle)
         {
             Vector3 bottomPos = new Vector3(bottomRadius, -height / 2, 0);
-            Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle) * topRadius, height / 2, Mathf.Sin(tiltAngle) * topRadius);
+            Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle * Mathf.Deg2Rad) * topRadius, height / 2, Mathf.Sin(tiltAngle * Mathf.Deg2Rad) * topRadius);
             Vector3 rodDirection = topPos - bottomPos;
             realLength = rodDirection.magnitude;
         }
 
         public override void AdjustDimensionBounds()
         {
+            float maxLength = PPart.lengthMax;
+            float minLength = 0f;
             float maxBottomDiameter = PPart.diameterMax;
             float maxTopDiameter = PPart.diameterMax;
             float minBottomDiameter = PPart.diameterMin;
@@ -97,8 +99,16 @@ namespace ProceduralParts
             float maxRodRadius = PPart.diameterMax;
             float minRodRadius = PPart.diameterMin;
 
-            // Vary the rod diameter to stay within min and max volume, given length
             UpdateRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
+            // If realLength is too small, update the length to prevent too small size
+            if (realLength < PPart.lengthMin)
+            {
+                minLength = PPart.lengthMin;
+                length = minLength;
+                UpdateRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
+                MonoUtilities.RefreshPartContextWindow(part);
+            }
+            // Vary the rod diameter to stay within min and max volume, given length
             if (PPart.volumeMax < float.PositiveInfinity)
                 maxRodRadius = Mathf.Sqrt(PPart.volumeMax/(nbRods * realLength * Mathf.PI));
             if (PPart.volumeMin > 0)
@@ -112,7 +122,8 @@ namespace ProceduralParts
             (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).minValue = minBottomDiameter;
             (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxTopDiameter;
             (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).minValue = minTopDiameter;
-            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = PPart.lengthMin;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = maxLength;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = minLength;
             (Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit).minValue = minRodRadius;
             (Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxRodRadius;
             (Fields[nameof(tiltAngle)].uiControlEditor as UI_FloatEdit).minValue = -180f;
