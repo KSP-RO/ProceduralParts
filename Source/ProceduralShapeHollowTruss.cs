@@ -49,6 +49,15 @@ namespace ProceduralParts
 
         [KSPField]
         public float realLength = 0f;
+        public float RealLength {
+            get {
+                Vector3 bottomPos = new Vector3(bottomDiameter/2, -length / 2, 0);
+                Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle * Mathf.Deg2Rad) * topDiameter/2, length / 2, Mathf.Sin(tiltAngle * Mathf.Deg2Rad) * topDiameter/2);
+                Vector3 rodDirection = topPos - bottomPos;
+                realLength = rodDirection.magnitude;
+                return realLength;
+            }
+        }
         #endregion
 
         public override void OnStart(StartState state)
@@ -80,14 +89,6 @@ namespace ProceduralParts
                 MonoUtilities.RefreshPartContextWindow(part);
         }
 
-        private void UpdateRealRodLength(float bottomRadius, float topRadius, float height, float tiltAngle)
-        {
-            Vector3 bottomPos = new Vector3(bottomRadius, -height / 2, 0);
-            Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle * Mathf.Deg2Rad) * topRadius, height / 2, Mathf.Sin(tiltAngle * Mathf.Deg2Rad) * topRadius);
-            Vector3 rodDirection = topPos - bottomPos;
-            realLength = rodDirection.magnitude;
-        }
-
         public override void AdjustDimensionBounds()
         {
             float maxLength = PPart.lengthMax;
@@ -99,20 +100,18 @@ namespace ProceduralParts
             float maxRodRadius = PPart.diameterMax;
             float minRodRadius = PPart.diameterMin;
 
-            UpdateRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
             // If realLength is too small, update the length to prevent too small size
-            if (realLength < PPart.lengthMin)
+            if (RealLength < PPart.lengthMin)
             {
                 minLength = PPart.lengthMin;
                 length = minLength;
-                UpdateRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
                 MonoUtilities.RefreshPartContextWindow(part);
             }
             // Vary the rod diameter to stay within min and max volume, given length
             if (PPart.volumeMax < float.PositiveInfinity)
-                maxRodRadius = Mathf.Sqrt(PPart.volumeMax/(nbRods * realLength * Mathf.PI));
+                maxRodRadius = Mathf.Sqrt(PPart.volumeMax/(nbRods * RealLength * Mathf.PI));
             if (PPart.volumeMin > 0)
-                minRodRadius = Mathf.Sqrt(PPart.volumeMin/(nbRods * realLength * Mathf.PI));
+                minRodRadius = Mathf.Sqrt(PPart.volumeMin/(nbRods * RealLength * Mathf.PI));
 
             maxBottomDiameter = Mathf.Clamp(maxBottomDiameter, PPart.diameterMin, PPart.diameterMax);
             maxTopDiameter = Mathf.Clamp(maxTopDiameter, PPart.diameterMin, PPart.diameterMax);
@@ -135,8 +134,7 @@ namespace ProceduralParts
 
         public override float CalculateVolume()
         {
-            UpdateRealRodLength(bottomDiameter/2, topDiameter/2, length, tiltAngle);
-            return Mathf.PI * rodDiameter * rodDiameter / 4 * realLength * nbRods;
+            return Mathf.PI * rodDiameter * rodDiameter / 4 * RealLength * nbRods;
         }
 
         public override bool SeekVolume(float targetVolume, int dir) => SeekVolume(targetVolume, Fields[nameof(length)], dir);
@@ -186,7 +184,7 @@ namespace ProceduralParts
             lengthEdit.incrementLarge = PPart.lengthLargeStep;
             lengthEdit.incrementSmall = PPart.lengthSmallStep;
 
-            Fields[nameof(rodDiameter)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
+            Fields[nameof(rodDiameter)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
             UI_FloatEdit rodEdit = Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit;
             rodEdit.incrementLarge = PPart.lengthLargeStep;
             rodEdit.incrementSmall = PPart.lengthSmallStep;
@@ -258,8 +256,7 @@ namespace ProceduralParts
                 GenerateAllSideTriangles(uSideMesh, nbRods, nbRodSides, nVert / 2, nTri / 2);
             }
             float tankULength = nbRodSides * NormSideLength * rodRadius * 2;
-            UpdateRealRodLength(bottomRadius, topRadius, height, tiltAngle);
-            float tankVLength = realLength;
+            float tankVLength = RealLength;
 
             RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(uSideMesh, PPart.SidesIconMesh, SidesMesh);
