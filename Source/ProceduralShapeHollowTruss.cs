@@ -49,8 +49,10 @@ namespace ProceduralParts
 
         [KSPField]
         public float realLength = 0f;
-        public float RealLength {
-            get {
+        public float RealLength
+        {
+            get
+            {
                 Vector3 bottomPos = new Vector3(bottomDiameter/2, -length / 2, 0);
                 Vector3 topPos = new Vector3(Mathf.Cos(tiltAngle * Mathf.Deg2Rad) * topDiameter/2, length / 2, Mathf.Sin(tiltAngle * Mathf.Deg2Rad) * topDiameter/2);
                 Vector3 rodDirection = topPos - bottomPos;
