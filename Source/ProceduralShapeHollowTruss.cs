@@ -30,11 +30,11 @@ namespace ProceduralParts
         public float nbRods = 12;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Tilt Angle", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-            UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 3, unit = "°", useSI = true)]
+            UI_FloatEdit(scene = UI_Scene.Editor, incrementLarge = 10f, incrementSmall = 1f, incrementSlide = SliderPrecision, sigFigs = 3, unit = "°", useSI = true)]
         public float tiltAngle = 10f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Offset Angle", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-            UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 3, unit = "°", useSI = true)]
+            UI_FloatEdit(scene = UI_Scene.Editor, incrementLarge = 10f, incrementSmall = 1f, incrementSlide = SliderPrecision, sigFigs = 3, unit = "°", useSI = true)]
         public float offsetAngle = 0f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Symmetrical rods", groupName = ProceduralPart.PAWGroupName),
@@ -190,14 +190,6 @@ namespace ProceduralParts
             UI_FloatEdit rodEdit = Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit;
             rodEdit.incrementLarge = PPart.lengthLargeStep;
             rodEdit.incrementSmall = PPart.lengthSmallStep;
-
-            UI_FloatEdit angleEdit = Fields[nameof(tiltAngle)].uiControlEditor as UI_FloatEdit;
-            angleEdit.incrementLarge = 10;
-            angleEdit.incrementSmall = 1;
-
-            UI_FloatEdit offsetEdit = Fields[nameof(offsetAngle)].uiControlEditor as UI_FloatEdit;
-            offsetEdit.incrementLarge = 10;
-            offsetEdit.incrementSmall = 1;
 
             AdjustDimensionBounds();
             topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
@@ -375,8 +367,7 @@ namespace ProceduralParts
             Vector3 bottomPos = new Vector3(Mathf.Cos(angle) * bottomRadius, -height / 2, Mathf.Sin(angle) * bottomRadius);
             Vector3 topPos = new Vector3(Mathf.Cos(angle + tiltAngle) * topRadius, height / 2, Mathf.Sin(angle + tiltAngle) * topRadius);
             Vector3 rodDirection = topPos - bottomPos;
-            Quaternion rotation = Quaternion.identity;
-            rotation.SetFromToRotation(Vector3.up, rodDirection);
+            Quaternion rotation = Quaternion.FromToRotation(Vector3.up, rodDirection);
             for (int side = 0; side < nbSides; side++)
             {
                 int currSide = side == nbSides ? 0 : side;
@@ -402,8 +393,7 @@ namespace ProceduralParts
             Vector3 bottomPos = new Vector3(Mathf.Cos(angle) * bottomRadius, -height / 2, Mathf.Sin(angle) * bottomRadius);
             Vector3 topPos = new Vector3(Mathf.Cos(angle+tiltAngle) * topRadius, height / 2, Mathf.Sin(angle+tiltAngle) * topRadius);
             Vector3 rodDirection = topPos - bottomPos;
-            Quaternion rotation = Quaternion.identity;
-            rotation.SetFromToRotation(Vector3.up, rodDirection);
+            Quaternion rotation = Quaternion.FromToRotation(Vector3.up, rodDirection);
             for (int side = 0; side <= nbSides; side++)
             {
                 int currSide = side == nbSides ? 0 : side;
@@ -443,14 +433,7 @@ namespace ProceduralParts
 
         private static void WriteToAppropriateMesh(UncheckedMesh mesh, Mesh iconMesh, Mesh normalMesh)
         {
-            if (HighLogic.LoadedScene == GameScenes.LOADING)
-            {
-                mesh.WriteTo(iconMesh);
-            }
-            else
-            {
-                mesh.WriteTo(normalMesh);
-            }
+            mesh.WriteTo((HighLogic.LoadedScene == GameScenes.LOADING) ? iconMesh : normalMesh);
         }
         #endregion
     }
