@@ -397,7 +397,7 @@ namespace ProceduralParts
             {
                 Debug.Log($"{ModTag} {this}: UpdateMaxThrust: minBurnTime = {minBurnTime}, maxThrust = {MaxThrust}");
                 (Fields[nameof(thrust)].uiControlEditor as UI_FloatEdit).maxValue = MaxThrust;
-                (Fields[nameof(burnTimeME)].uiControlEditor as UI_FloatEdit).minValue = minBurnTime;
+                if (Fields[nameof(burnTimeME)].uiControlEditor is UI_FloatEdit f) f.minValue = minBurnTime;
             }
 
             // Uncertain why this keeps getting turned on under certain KSPField changes.
