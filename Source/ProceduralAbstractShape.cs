@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace ProceduralParts
 {
@@ -402,13 +403,13 @@ namespace ProceduralParts
 
         internal abstract void InitializeAttachmentNodes();
 
-        internal virtual void InitializeAttachmentNodes(float length, float diameter)
+        internal virtual void InitializeAttachmentNodes(float length, float diameter, Func<AttachNode,bool> offsetNode = null, Vector3? offset = null)
         {
-            InitializeStackAttachmentNodes(length);
+            InitializeStackAttachmentNodes(length, offsetNode, offset);
             InitializeSurfaceAttachmentNode(length, diameter);
         }
 
-        internal virtual void InitializeStackAttachmentNodes(float length)
+        internal virtual void InitializeStackAttachmentNodes(float length, Func<AttachNode,bool> offsetNodeCriteria = null, Vector3? offset = null)
         {
 //            Debug.Log($"{ModTag} InitializeStackAttachmentNodes for {this} length {length}");
             foreach (AttachNode node in part.attachNodes)
@@ -417,6 +418,10 @@ namespace ProceduralParts
                     node.owner = part;
                 float direction = (node.position.y > 0) ? 1 : -1;
                 Vector3 translation = direction * (length / 2) * Vector3.up;
+                if (offset != null && offsetNodeCriteria != null && offsetNodeCriteria(node))
+                {
+                    translation += (Vector3)offset;
+                }
                 if (node.nodeType == AttachNode.NodeType.Stack)
                     MoveNode(node, translation);
             }
