@@ -25,12 +25,12 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float rodDiameter = 0.125f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Rods", guiUnits = "#", guiFormat = "F0", groupName = ProceduralPart.PAWGroupName), 
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Rods", guiUnits = "#", guiFormat = "F0", groupName = ProceduralPart.PAWGroupName),
             UI_FloatRange(minValue = 3, maxValue = 30, stepIncrement = 1, scene = UI_Scene.Editor)]
         public float nbRods = 12;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Tilt Angle", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-            UI_FloatEdit(scene = UI_Scene.Editor, incrementLarge = 10f, incrementSmall = 1f, incrementSlide = SliderPrecision, sigFigs = 3, unit = "°", useSI = true)]
+            UI_FloatEdit(scene = UI_Scene.Editor, minValue = -180f, maxValue = 180f, incrementLarge = 10f, incrementSmall = 1f, incrementSlide = SliderPrecision, sigFigs = 3, unit = "°", useSI = true)]
         public float tiltAngle = 10f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Offset Angle", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
@@ -60,6 +60,8 @@ namespace ProceduralParts
                 return realLength;
             }
         }
+
+        const float maxMeshBendError = 0.02f;
         #endregion
 
         public override void OnStart(StartState state)
@@ -127,8 +129,6 @@ namespace ProceduralParts
             (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = minLength;
             (Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit).minValue = minRodRadius;
             (Fields[nameof(rodDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxRodRadius;
-            (Fields[nameof(tiltAngle)].uiControlEditor as UI_FloatEdit).minValue = -180f;
-            (Fields[nameof(tiltAngle)].uiControlEditor as UI_FloatEdit).maxValue = 180f;
             (Fields[nameof(offsetAngle)].uiControlEditor as UI_FloatEdit).minValue = -absOffset;
             (Fields[nameof(offsetAngle)].uiControlEditor as UI_FloatEdit).maxValue = absOffset;
 
@@ -232,7 +232,6 @@ namespace ProceduralParts
         #region meshes
         public void GenerateMeshes(float bottomRadius, float topRadius, float height, float rodRadius, int nbRods, float tiltAngle, float offsetAngle, bool both)
         {
-            float maxMeshBendError = 0.02f;
             int nbRodSides = (int)Mathf.Max(Mathf.PI / Mathf.Acos(1 - maxMeshBendError / Mathf.Max(2 * rodRadius, maxMeshBendError)), 2) * 2;
             float CornerCenterCornerAngle = 2 * Mathf.PI / nbRodSides;
             float NormSideLength = Mathf.Tan(CornerCenterCornerAngle / 2);
