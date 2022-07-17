@@ -271,10 +271,10 @@ namespace ProceduralParts
             {
                 var rot = Quaternion.AngleAxis(deflection, rotAxis);
 
+                Vector3 opposingNodePos = moveTarget.transform.TransformPoint(bottomAttachNode.FindOpposingNode().position);
                 if (moveTarget == part.parent)
                     moveTarget = part;
                 moveTarget.transform.localRotation = moveTarget == part ? Quaternion.Inverse(rot) : rot;
-                Vector3 opposingNodePos = moveTarget.transform.TransformPoint(bottomAttachNode.FindOpposingNode().position);
                 Vector3 shift = (moveTarget == part ? 1 : -1) * (opposingNodePos - newPosition);
                 Debug.Log($"{ModTag} {this}: shifting: {moveTarget} by {shift}");
                 moveTarget.transform.Translate(shift, Space.World);
