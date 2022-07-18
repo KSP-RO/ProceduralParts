@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -407,6 +407,7 @@ namespace ProceduralParts
             UpdateThrustDependentCalcs();
             UpdateEngineAndBellScale();
             SetBellAndBottomNodePositionAndRotation();
+            TranslateAndRotateAttachedPart(selectedBell.srbAttach.position, Vector3.forward, thrustDeflection);
             UpdateFAR();
 
             if (HighLogic.LoadedSceneIsEditor && fireEvent)
