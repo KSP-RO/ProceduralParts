@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -23,7 +23,7 @@ namespace ProceduralParts
         private PartResource fuelResource;
 
         [KSPField]
-        public bool debugMarkers = true;
+        public bool debugMarkers = false;
 
         #region Callbacks
 
