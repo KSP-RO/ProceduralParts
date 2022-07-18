@@ -1,5 +1,14 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 2.4.0 ===
+Added a new shape: Hollow Truss!
+Added option to scale a texture in only one direction, instead of either scaling in no direction or both directions.
+
+Bugfix: Fixed multiple issues with the procedural SRB.
+(Known remaining issue: An SRB attached to a parent through the nozzle gets incorrect position when changing the nozzle angle)
+Bugfix: Fixed dry mass display in the PAW being incorrect.
+Bugfix: Fixed model hierarchy on procedural heatshield.
+
 === 2.3.0 ===
 Added three hollow part presets, Hollow Cylinder, Cone and Fillet Cylinder!
 To allow for hollow parts, the way colliders on the parts are handled has been completely rewritten.
