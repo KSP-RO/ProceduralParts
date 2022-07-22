@@ -237,7 +237,7 @@ namespace ProceduralParts
                 thrustTransform = bellTransform.Find(thrustVectorTransformName);
                 if (thrustTransform != null)
                 {
-                    thrustTransform.SetParent(selectedBell.srbAttach);
+                    thrustTransform.SetParent(selectedBell.srbAttach, true);
                     thrustTransform.position = selectedBell.srbAttach.position;
                 }
             }
