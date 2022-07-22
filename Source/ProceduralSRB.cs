@@ -235,7 +235,11 @@ namespace ProceduralParts
             if (HighLogic.LoadedSceneIsFlight)
             {
                 thrustTransform = bellTransform.Find(thrustVectorTransformName);
-                thrustTransform.position = selectedBell.srbAttach.position;
+                if (thrustTransform != null)
+                {
+                    thrustTransform.SetParent(selectedBell.srbAttach);
+                    thrustTransform.position = selectedBell.srbAttach.position;
+                }
             }
         }
 
@@ -373,6 +377,8 @@ namespace ProceduralParts
         public float thrust1m = 1;
 
         private float MaxThrust => (float)Math.Round(Mathf.Max(attachedEndSize * attachedEndSize * thrust1m, 10), 1);
+
+        [KSPField(isPersistant = true)]
         public float attachedEndSize = 1;
 
         [KSPField]
