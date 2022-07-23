@@ -1,6 +1,13 @@
 ============= Changelog for ProceduralParts  =========
 
 === 2.4.0 ===
+Added dependency: KSPCommunityFixes.
+Added KSPCommunityFixes patch to enable PersistentIConfigNode
+
+Bugfix: fixed procedural SRB nozzle size getting reset in flight.
+Bugfix: fixed procedural SRB thrust not following the gimbal.
+
+=== 2.4.0 ===
 Added a new shape: Hollow Truss!
 Added option to scale a texture in only one direction, instead of either scaling in no direction or both directions.
 

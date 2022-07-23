@@ -25,7 +25,11 @@ ProceduralParts allows you to procedurally generate a number of different parts 
 * **Heat Shield** Built to the same specs as Deadly Reentry. Will shield any sized object from heat. (requires deadly reentry) 
 
 ## Installation
-Just extract the zip into your KSP folder and you should be away. Some of the integration with other mods requires the latest version of ModuleManager, which is included in the zip. 
+Place the ProceduralParts folder found inside the zip file into GameData.
+
+Dependencies:
+* ModuleManager
+* KSPCommunityFixes
 
 ## Upgrades
 * Make sure you delete any old versions of ProceduralParts. 
