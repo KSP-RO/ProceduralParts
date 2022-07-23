@@ -136,7 +136,7 @@ namespace ProceduralParts
 
         public override float CalculateVolume()
         {
-            return Mathf.PI * rodDiameter * rodDiameter / 4 * RealLength * nbRods;
+            return Mathf.PI * rodDiameter * rodDiameter / 4 * RealLength * nbRods * (symmetryRods ? 2 : 1);
         }
 
         public override bool SeekVolume(float targetVolume, int dir) => SeekVolume(targetVolume, Fields[nameof(length)], dir);
