@@ -1,6 +1,9 @@
 ============= Changelog for ProceduralParts  =========
 
-=== 2.4.0 ===
+=== 2.4.2 ===
+Updated Upgrade Pipeline to take advantage of KSPCF 1.22+
+
+=== 2.4.1 ===
 Added dependency: KSPCommunityFixes.
 Added KSPCommunityFixes patch to enable PersistentIConfigNode
 
