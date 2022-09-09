@@ -10,10 +10,8 @@ namespace ProceduralParts
     {
         public override string Name { get => "ProceduralParts 2.1 Bezier Cone Upgrader"; }
         public override string Description { get => "Updates ProceduralParts Bezier Shapes to Custom Settings"; }
-        public override Version EarliestCompatibleVersion { get => new Version(1, 0, 0); }
-        public override Version TargetVersion { get => new Version(1, 8, 1); }
-        //protected override bool CheckMaxVersion(Version v) => true; // Upgrades are ProcParts-dependent, not KSP version.
-        protected override TestResult VersionTest(Version v) => TestResult.Upgradeable;
+        public override Version EarliestCompatibleVersion { get => new Version(0, 0, 0); }
+        public override Version TargetVersion { get => new Version(2, 1, 0); }
 
         public override TestResult OnTest(ConfigNode node, LoadContext loadContext, ref string nodeName)
         {
@@ -48,21 +46,21 @@ namespace ProceduralParts
             loadContext == LoadContext.Craft ? TestResult.Pass : base.OnTest(node, loadContext, ref nodeName);
     }
 
-    [UpgradeModule(LoadContext.SFS | LoadContext.Craft, sfsNodeUrl = "GAME/SCENARIO/KSC/VABList/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/VABList/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
     public class ShapeBezierConeUpgrade_KCT1 : ShapeBezierConeUpgrade_KCTBase { }
 
-    [UpgradeModule(LoadContext.SFS | LoadContext.Craft, sfsNodeUrl = "GAME/SCENARIO/KSC/SPHList/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/SPHList/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
     public class ShapeBezierConeUpgrade_KCT2 : ShapeBezierConeUpgrade_KCTBase { }
 
-    [UpgradeModule(LoadContext.SFS | LoadContext.Craft, sfsNodeUrl = "GAME/SCENARIO/KSC/VABWarehouse/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/VABWarehouse/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
     public class ShapeBezierConeUpgrade_KCT3 : ShapeBezierConeUpgrade_KCTBase { }
 
-    [UpgradeModule(LoadContext.SFS | LoadContext.Craft, sfsNodeUrl = "GAME/SCENARIO/KSC/SPHWarehouse/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/SPHWarehouse/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
     public class ShapeBezierConeUpgrade_KCT4 : ShapeBezierConeUpgrade_KCTBase { }
 
-    [UpgradeModule(LoadContext.SFS | LoadContext.Craft, sfsNodeUrl = "GAME/SCENARIO/KSC/VABPlans/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/VABPlans/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
     public class ShapeBezierConeUpgrade_KCT5 : ShapeBezierConeUpgrade_KCTBase { }
 
-    [UpgradeModule(LoadContext.SFS | LoadContext.Craft, sfsNodeUrl = "GAME/SCENARIO/KSC/SPHPlans/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
+    [UpgradeModule(LoadContext.SFS, sfsNodeUrl = "GAME/SCENARIO/KSC/SPHPlans/KCTVessel/ShipNode/PART", craftNodeUrl = "PART")]
     public class ShapeBezierConeUpgrade_KCT6 : ShapeBezierConeUpgrade_KCTBase { }
 }
