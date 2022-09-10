@@ -6,7 +6,7 @@ namespace ProceduralParts
 {
     public class ProceduralShapePill : ProceduralAbstractSoRShape
     {
-        private static readonly string ModTag = "[ProceduralShapePill]";
+        private const string ModTag = "[ProceduralShapePill]";
 
         #region Config parameters
 

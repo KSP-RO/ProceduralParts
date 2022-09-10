@@ -73,9 +73,9 @@ namespace ProceduralParts
 
         internal const float MaxDiameterChange = 5.0f;
 
-        public int numSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt((Math.Max(bottomDiameter, topDiameter)))/(2f * MaxCircleError)), 24);
+        public int NumSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt((Math.Max(bottomDiameter, topDiameter)))/(2f * MaxCircleError)), 24);
 
-        private float CornerCenterCornerAngle => 2 * Mathf.PI / numSides;
+        private float CornerCenterCornerAngle => 2 * Mathf.PI / NumSides;
 
         private float NormSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
 
@@ -132,6 +132,7 @@ namespace ProceduralParts
             base.OnStart(state);
             if (HighLogic.LoadedSceneIsEditor)
             {
+                UpdateTechConstraints();
                 UI_ChooseOption opt = Fields[nameof(selectedShape)].uiControlEditor as UI_ChooseOption;
                 opt.options = shapePresets.Values.Select(x => x.name).ToArray();
                 opt.display = shapePresets.Values.Select(x => x.displayName).ToArray();
@@ -191,6 +192,31 @@ namespace ProceduralParts
         public override void UpdateTechConstraints()
         {
             InitializeSelectedShape();
+
+            Fields[nameof(topDiameter)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
+            UI_FloatEdit topDiameterEdit = Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit;
+            topDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+            topDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+
+            Fields[nameof(bottomDiameter)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
+            UI_FloatEdit bottomDiameterEdit = Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit;
+            bottomDiameterEdit.incrementLarge = PPart.diameterLargeStep;
+            bottomDiameterEdit.incrementSmall = PPart.diameterSmallStep;
+
+            Fields[nameof(length)].guiActiveEditor = PPart.lengthMin != PPart.lengthMax;
+            UI_FloatEdit lengthEdit = Fields[nameof(length)].uiControlEditor as UI_FloatEdit;
+            lengthEdit.incrementLarge = PPart.lengthLargeStep;
+            lengthEdit.incrementSmall = PPart.lengthSmallStep;
+
+            // Fields[nameof(offset)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
+            UI_FloatEdit offsetEdit = Fields[nameof(offset)].uiControlEditor as UI_FloatEdit;
+            offsetEdit.incrementLarge = PPart.diameterLargeStep;
+            offsetEdit.incrementSmall = PPart.diameterSmallStep;
+
+            AdjustDimensionBounds();
+            bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
+            topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
+            length = Mathf.Clamp(length, lengthEdit.minValue, lengthEdit.maxValue);
         }
 
         #endregion
@@ -336,9 +362,9 @@ namespace ProceduralParts
 
             // factor 1/2 taken out. The 1/4 is because the pN.x are diameters not radii.
             // ReSharper disable once InconsistentNaming
-            float M_y  = 1f/4f* ((p1.y-p0.y)*(1f/3f * p0.x*p0.x + 1f/4f * p0.x*p1.x + 1f/14f* p0.x*p2.x + 3f/28f* p1.x*p1.x+ 3f/28f * p1.x*p2.x + 1f/84f * p0.x*p3.x + 3f/70f * p2.x*p2.x + 1f/35f* p1.x*p3.x + 1f/28f* p2.x*p3.x + 1f/84f* p3.x*p3.x) +
-                                 (p2.y-p1.y)*(1f/12f* p0.x*p0.x + 1f/7f * p0.x*p1.x + 1f/14f* p0.x*p2.x + 3f/28f* p1.x*p1.x+ 6f/35f * p1.x*p2.x + 2f/105f* p0.x*p3.x + 3f/28f * p2.x*p2.x + 1f/14f* p1.x*p3.x + 1f/7f * p2.x*p3.x + 1f/12f* p3.x*p3.x) +
-                                 (p3.y-p2.y)*(1f/84f* p0.x*p0.x + 1f/28f* p0.x*p1.x + 1f/35f* p0.x*p2.x + 3f/70f* p1.x*p1.x+ 3f/28f * p1.x*p2.x + 1f/84f * p0.x*p3.x + 3f/28f * p2.x*p2.x + 1f/14f* p1.x*p3.x + 1f/4f * p2.x*p3.x + 1f/3f * p3.x*p3.x));
+            float M_y  = 1f/4f* ((p[1].y-p[0].y)*(1f/3f * p[0].x*p[0].x + 1f/4f * p[0].x*p[1].x + 1f/14f* p[0].x*p[2].x + 3f/28f* p[1].x*p[1].x+ 3f/28f * p[1].x*p[2].x + 1f/84f * p[0].x*p[3].x + 3f/70f * p[2].x*p[2].x + 1f/35f* p[1].x*p[3].x + 1f/28f* p[2].x*p[3].x + 1f/84f* p[3].x*p[3].x) +
+                                 (p[2].y-p[1].y)*(1f/12f* p[0].x*p[0].x + 1f/7f * p[0].x*p[1].x + 1f/14f* p[0].x*p[2].x + 3f/28f* p[1].x*p[1].x+ 6f/35f * p[1].x*p[2].x + 2f/105f* p[0].x*p[3].x + 3f/28f * p[2].x*p[2].x + 1f/14f* p[1].x*p[3].x + 1f/7f * p[2].x*p[3].x + 1f/12f* p[3].x*p[3].x) +
+                                 (p[3].y-p[2].y)*(1f/84f* p[0].x*p[0].x + 1f/28f* p[0].x*p[1].x + 1f/35f* p[0].x*p[2].x + 3f/70f* p[1].x*p[1].x+ 3f/28f * p[1].x*p[2].x + 1f/84f * p[0].x*p[3].x + 3f/28f * p[2].x*p[2].x + 1f/14f* p[1].x*p[3].x + 1f/4f * p[2].x*p[3].x + 1f/3f * p[3].x*p[3].x));
 
             return Mathf.PI * M_y;
         }
@@ -427,7 +453,7 @@ namespace ProceduralParts
             //where x(t), x'(t), y(t) are from the Bezier function
 
             //Function below derived using symbolic math in Matlab
-            float x0 = p0.x, x1 = p1.x, x2 = p2.x, x3 = p3.x, y0 = p0.y, y1 = p1.y, y2 = p2.y, y3 = p3.y;
+            float x0 = p[0].x, x1 = p[1].x, x2 = p[2].x, x3 = p[3].x, y0 = p[0].y, y1 = p[1].y, y2 = p[2].y, y3 = p[3].y;
             float num = (2310f*y0*y0 - 1260f*y0*y1 - 252f*y0*y2 - 28f*y0*y3 - 378f*y1*y1 - 252f*y1*y2 - 42f*y1*y3 - 63f*y2*y2 - 30f*y2*y3 - 5f*y3*y3)*x0*x0 +
                         (1260f*x1*y0*y0 - 252f*x1*y1*y1 + 252f*x2*y0*y0 - 162f*x1*y2*y2 + 28f*x3*y0*y0 - 30f*x1*y3*y3 - 90f*x2*y2*y2 + 18f*x3*y1*y1 - 42f*x2*y3*y3 - 18f*x3*y2*y2 - 28f*x3*y3*y3 - 168f*x1*y0*y2 +
                         168f*x2*y0*y1 - 42f*x1*y0*y3 - 378f*x1*y1*y2 + 42f*x3*y0*y1 - 108f*x1*y1*y3 - 12f*x2*y0*y3 - 108f*x2*y1*y2 + 12f*x3*y0*y2 - 120f*x1*y2*y3 - 60f*x2*y1*y3 - 108f*x2*y2*y3 - 12f*x3*y1*y3 - 42f*x3*y2*y3)*x0 +
@@ -462,7 +488,7 @@ namespace ProceduralParts
             //  p3 = new Vector2(topDiameter, length / 2f);
             // But we do need to normalize the length and shift such that 0 <= t <= 1
             float t = (coords.y / length) + (1f / 2);
-            Vector2 Bt = B(t);
+            Vector2 Bt = B(t, p);
             Debug.Log($"{ModTag} Normalized {coords.y} to {t} (0=bottom, 1=top), B(t)={Bt} as (diameter, length). TopDiameter:{topDiameter} BotDiameter:{bottomDiameter} Len: {length}");
             // For a given normalized length (t), B(t).x is the diameter of the surface cross-section at that length, and B(t).y is .. what?
 
@@ -474,7 +500,7 @@ namespace ProceduralParts
         {
             CalculateVolume();  // Update the bezier curve control nodes
             float t = (coords.y + (1f / 2));    // Shift coords.y from [-0.5..0.5] to [0..1]
-            Vector2 Bt = B(t);
+            Vector2 Bt = B(t, p);
             Debug.Log($"{ModTag} From normalized {coords.y}, shape unnormalized bottom {bottomDiameter} top {topDiameter} length {length},  B({t}) yields [{Bt.x:F3}, {Bt.y:F3}] as (diameter, length)");
             // B(t).x is the diameter of the curve at t.  /2 for radius.
 
@@ -485,51 +511,51 @@ namespace ProceduralParts
         #endregion
 
         #region Control point calculation
-        private Vector2 p0, p1, p2, p3;
+        private readonly Vector2[] p = new Vector2[4];
 
         private void SetControlPoints(float length, float topDiameter, float bottomDiameter)
         {
             // So we have a rotated bezier curve from bottom to top.
             // There are four control points, the bottom (p0) and the top ones (p3) are obvious
-            p0 = new Vector2(bottomDiameter, -length / 2f);
-            p3 = new Vector2(topDiameter, length / 2f);
+            p[0] = new Vector2(bottomDiameter, -length / 2f);
+            p[3] = new Vector2(topDiameter, length / 2f);
             float[] shape = { shapePoints.x, shapePoints.y, shapePoints.z, shapePoints.w };
 
             // Pretty obvious below what the shape points mean
             if (bottomDiameter < topDiameter)
             {
-                p1 = new Vector2(Mathf.Lerp(p0.x, p3.x, shape[0]), Mathf.Lerp(p0.y, p3.y, shape[1]));
-                p2 = new Vector2(Mathf.Lerp(p0.x, p3.x, shape[2]), Mathf.Lerp(p0.y, p3.y, shape[3]));
+                p[1] = new Vector2(Mathf.Lerp(p[0].x, p[3].x, shape[0]), Mathf.Lerp(p[0].y, p[3].y, shape[1]));
+                p[2] = new Vector2(Mathf.Lerp(p[0].x, p[3].x, shape[2]), Mathf.Lerp(p[0].y, p[3].y, shape[3]));
             }
             else
             {
-                p2 = new Vector2(Mathf.Lerp(p3.x, p0.x, shape[0]), Mathf.Lerp(p3.y, p0.y, shape[1]));
-                p1 = new Vector2(Mathf.Lerp(p3.x, p0.x, shape[2]), Mathf.Lerp(p3.y, p0.y, shape[3]));
+                p[2] = new Vector2(Mathf.Lerp(p[3].x, p[0].x, shape[0]), Mathf.Lerp(p[3].y, p[0].y, shape[1]));
+                p[1] = new Vector2(Mathf.Lerp(p[3].x, p[0].x, shape[2]), Mathf.Lerp(p[3].y, p[0].y, shape[3]));
             }
             SetOffsetControlPoints(length, offset);
         }
 
-        private Vector2 op0, op1, op2, op3;
+        private readonly Vector2[] op = new Vector2[4];
 
         private void SetOffsetControlPoints(float length, float offset)
         {
             // Debug.Log("[ProcPartsDebug] offset control points were set");
             // There are four control points, the bottom (p0) and the top ones (p3) are obvious
-            op0 = new Vector2(0, -length / 2f);
-            op3 = new Vector2(offset, length / 2f);
+            op[0] = new Vector2(0, -length / 2f);
+            op[3] = new Vector2(offset, length / 2f);
 
             // Currently hard coded to be identical with the shape - change later
             float[] shape = { shapePoints.x, shapePoints.y, shapePoints.z, shapePoints.w };
 
             if (bottomDiameter < topDiameter)
             {
-                op1 = new Vector2(Mathf.Lerp(op0.x, op3.x, shape[0]), Mathf.Lerp(op0.y, op3.y, shape[1]));
-                op2 = new Vector2(Mathf.Lerp(op0.x, op3.x, shape[2]), Mathf.Lerp(op0.y, op3.y, shape[3]));
+                op[1] = new Vector2(Mathf.Lerp(op[0].x, op[3].x, shape[0]), Mathf.Lerp(op[0].y, op[3].y, shape[1]));
+                op[2] = new Vector2(Mathf.Lerp(op[0].x, op[3].x, shape[2]), Mathf.Lerp(op[0].y, op[3].y, shape[3]));
             }
             else
             {
-                op2 = new Vector2(Mathf.Lerp(op3.x, op0.x, shape[0]), Mathf.Lerp(op3.y, op0.y, shape[1]));
-                op1 = new Vector2(Mathf.Lerp(op3.x, op0.x, shape[2]), Mathf.Lerp(op3.y, op0.y, shape[3]));
+                op[2] = new Vector2(Mathf.Lerp(op[3].x, op[0].x, shape[0]), Mathf.Lerp(op[3].y, op[0].y, shape[1]));
+                op[1] = new Vector2(Mathf.Lerp(op[3].x, op[0].x, shape[2]), Mathf.Lerp(op[3].y, op[0].y, shape[3]));
             }
         }
 
@@ -574,13 +600,13 @@ namespace ProceduralParts
                 nx.Value.v = cumLengths[i] / sumLengths;
             }
 
-            BSolverGetT(p0.x, p1.x, p2.x, p3.x, 0.5f);
+            // BSolverGetT(p[0].x, p[1].x, p[2].x, p[3].x, 0.5f);
             WriteMeshes(points);
             WriteCollider(points, splitsList);
         }
 
         /// <summary>
-        /// Subdivide profile points according to the max diameter change. 
+        /// Subdivide profile points according to the max diameter change.
         /// </summary>
         private void SubdivHorizontal(LinkedList<ProfilePoint> pts)
         {
@@ -591,7 +617,7 @@ namespace ProceduralParts
                 float positiveChange = CreatePoint(curr.t, 1).x - CreatePoint(prev.t, 1).x;
                 float negativeChange = CreatePoint(curr.t, -1).x - CreatePoint(prev.t, -1).x;
                 float largestChange = Mathf.Max(Math.Abs(positiveChange), Math.Abs(negativeChange));
-                float dPercentage = largestChange / (Math.Max(B(curr.t).x, B(prev.t).x) / 100.0f);
+                float dPercentage = largestChange / (Math.Max(B(curr.t, p).x, B(prev.t, p).x) / 100.0f);
                 int subdiv = Math.Min((int)(Math.Truncate(dPercentage / MaxDiameterChange)), 30);
                 if (subdiv > 1)
                 {
@@ -658,8 +684,8 @@ namespace ProceduralParts
         {
             LinkedList<ProfilePoint> points = new LinkedList<ProfilePoint>();
 
-            points.AddLast(CreatePoint(0, offsetMult));
-            points.AddLast(CreatePoint(1, offsetMult));
+            points.AddLast(CreatePoint(0f, offsetMult));
+            points.AddLast(CreatePoint(1f, offsetMult));
 
             Queue<LinkedListNode<ProfilePoint>> process = new Queue<LinkedListNode<ProfilePoint>>();
             process.Enqueue(points.First);
@@ -688,9 +714,9 @@ namespace ProceduralParts
 
                 // This is a quadratic, which we can solve directly.
 
-                float a = ((p1.x + op1.x * offsetMult - p0.x - op0.x * offsetMult) * norm.x + (p1.y - p0.y) * norm.y);
-                float b = ((p2.x + op2.x * offsetMult - p1.x - op1.x * offsetMult) * norm.x + (p2.y - p1.y) * norm.y);
-                float c = ((p3.x + op3.x * offsetMult - p2.x - op2.x * offsetMult) * norm.x + (p3.y - p2.y) * norm.y);
+                float a = (p[1].x + op[1].x * offsetMult - p[0].x - op[0].x * offsetMult) * norm.x + (p[1].y - p[0].y) * norm.y;
+                float b = (p[2].x + op[2].x * offsetMult - p[1].x - op[1].x * offsetMult) * norm.x + (p[2].y - p[1].y) * norm.y;
+                float c = (p[3].x + op[3].x * offsetMult - p[2].x - op[2].x * offsetMult) * norm.x + (p[3].y - p[2].y) * norm.y;
 
                 // solve a (1-t)^2+2 b (t (1-t))+c t^2 = 0
 
@@ -743,9 +769,9 @@ namespace ProceduralParts
                 for (int i = 0; i < ts.Count; ++i)
                 {
                     // The difference from the line
-                    var offsetVec = OB(ts[i])*offsetMult;
+                    var offsetVec = B(ts[i], op)*offsetMult;
                     offsetVec.y = 0;
-                    float devTS = Vector2.Dot(B(ts[i])+offsetVec, norm) - devM;
+                    float devTS = Vector2.Dot(B(ts[i], p)+offsetVec, norm) - devM;
 
                     if (Mathf.Abs(devTS) < MaxCircleError)
                         ts.RemoveAt(i--);
@@ -779,7 +805,9 @@ namespace ProceduralParts
 
         private void WriteMeshes(LinkedList<ProfilePoint> points)
         {
-            int nSides = numSides;
+            float tankVLength = 0f;
+
+            int nSides = NumSides;
             int vertPerLayer = nSides + 1;
             int vertCount = vertPerLayer*points.Count;
             int triPerLayer = 2*3*nSides;
@@ -790,12 +818,16 @@ namespace ProceduralParts
             UncheckedMesh m = new UncheckedMesh(vertCount, triCount);
             ProfilePoint prev = null;
             bool odd = false;
-            foreach (var pt in points)
+            foreach (ProfilePoint pt in points)
             {
                 WriteVertices(pt, m, nSides, vertOffset, odd);
                 if (prev != null)
                 {
                     WriteTriangles(m, nSides, triVertOffset, triOffset, odd);
+
+                    float dy = pt.y - prev.y;
+                    float dx = (pt.x - prev.x) * 0.5f;
+                    tankVLength += Mathf.Sqrt(dx * dx + dy * dy);
 
                     triVertOffset += vertPerLayer;
                     triOffset += triPerLayer;
@@ -807,7 +839,7 @@ namespace ProceduralParts
 
             var tankULength = nSides * NormSideLength * (topDiameter + bottomDiameter);
 
-            RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, length));
+            RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(m, PPart.SidesIconMesh, SidesMesh);
 
             m = new UncheckedMesh(2 * vertPerLayer, 4 * vertPerLayer);
@@ -821,7 +853,7 @@ namespace ProceduralParts
         private void WriteCollider(LinkedList<ProfilePoint> points, LinkedList<int> splitsList)
         {
             PPart.ClearColliderHolder();
-            int nSides = numSides;
+            int nSides = NumSides;
             int vertPerLayer = nSides + 1;
             int triPerLayer = 2 * 3 * nSides;
             bool odd = false;
@@ -884,7 +916,8 @@ namespace ProceduralParts
             // Generate top tris
             WriteCapTriangles(m, nSides, triVertOffset, triOffset, true);
             // Debug.Log($"[ProcPartsDebug] Points in Collider: {points.Count}");
-            Debug.Log($"[ProcPartsDebug] Collider Mesh: {m.DumpMesh()}");
+            // FIXME: Re-enable
+            // Debug.Log($"[ProcPartsDebug] Collider Mesh: {m.DumpMesh()}");
         }
 
         private void WriteCapVertices(ProfilePoint pt, UncheckedMesh m, int nSides, int vertOffset, bool odd)
@@ -896,7 +929,7 @@ namespace ProceduralParts
             {
                 int currSide = side == nSides ? 0 : side;
                 float t1 = ((float)(currSide + o/2f) / nSides + 0.25f) * _2pi;
-                var offset = OB(pt.t);
+                var offset = B(pt.t, op);
                 // We do not care about offset.y, since this should be the same as for pt
                 var offsetVec = new Vector3(0, 0, offset.x);
                 m.vertices[side+vertOffset] = new Vector3(pt.x/2f*Mathf.Cos(t1), pt.y, pt.x/2f*Mathf.Sin(t1)) + offsetVec;
@@ -920,14 +953,15 @@ namespace ProceduralParts
         private void WriteVertices(ProfilePoint pt, UncheckedMesh m, int nSides, int vertOffset, bool odd)
         {
             int o = odd ? 1 : 0;
+            float uvv = pt.v;
             pt = CreatePoint(pt.t, 0);
             float _2pi = Mathf.PI * 2f;
             for (int side = 0; side <= nSides; side++)
             {
                 int currSide = side == nSides ? 0 : side;
                 float t1 = ((float)(currSide + o/2f) / nSides + 0.25f) * _2pi;
-                var offset = OB(pt.t);
-                var offsetDeriv = OBdt(pt.t);
+                var offset = B(pt.t, op);
+                var offsetDeriv = Bdt(pt.t, op);
                 Vector3 norm = new Vector3(offsetDeriv.x / 2f, offsetDeriv.y / 2f, 0).normalized;
                 // We do not care about offset.y, since this should be the same as for pt
                 var offsetVec = new Vector3(0, 0, offset.x);
@@ -936,7 +970,7 @@ namespace ProceduralParts
                 m.vertices[side+vertOffset] = new Vector3(pt.x/2f*Mathf.Cos(t1), pt.y, pt.x/2f*Mathf.Sin(t1)) + offsetVec;
                 m.normals[side+vertOffset] = Quaternion.AngleAxis(Vector3.Angle(Vector3.up, norm)/2f, Vector3.back) * new Vector3(pt.norm.x*Mathf.Cos(t1), pt.norm.y, pt.norm.x*Mathf.Sin(t1));
                 m.tangents[side+vertOffset] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1);
-                m.uv[side+vertOffset] = new Vector2((float)(side + o/2f) / nSides, pt.v);
+                m.uv[side+vertOffset] = new Vector2((float)(side + o/2f) / nSides, uvv);
             }
         }
 
@@ -974,13 +1008,13 @@ namespace ProceduralParts
         {
             // ReSharper disable once InconsistentNaming
             // B(t) = (1-t)^3 p0 + t(1-t)^2 p1 + t^2(1-t) p2 + t^3 p3
-            Vector2 Bt = B(t);
-            Vector2 OBt = OB(t);
+            Vector2 Bt = B(t, p);
+            Vector2 OBt = B(t, op);
 
             // ReSharper disable once InconsistentNaming
             // B'(t) = (1-t)^2 (p1-p0) + t(1-t) (p2-p1) + t^2 (p3-p2)
-            Vector2 Btdt = Bdt(t);
-            Vector2 OBtdt = OBdt(t);
+            Vector2 Btdt = Bdt(t, p);
+            Vector2 OBtdt = Bdt(t, op);
 
             // normalized perpendicular to tangent (derivative)
             Vector2 norm = new Vector2(Btdt.y, -Btdt.x / 2f).normalized;
@@ -988,24 +1022,14 @@ namespace ProceduralParts
             return new ProfilePoint(Bt.x + OBt.x*offsetMult, Bt.y, t, t, norm, inCollider);
         }
 
-        private Vector2 B(float t)
+        private static Vector2 B(float t, Vector2[] p)
         {
-            return (1 - t) * (1 - t) * (1 - t) * p0 + 3 * t * (1 - t) * (1 - t) * p1 + 3 * t * t * (1 - t) * p2 + t * t * t * p3;
+            return (1 - t) * (1 - t) * (1 - t) * p[0] + 3 * t * (1 - t) * (1 - t) * p[1] + 3 * t * t * (1 - t) * p[2] + t * t * t * p[3];
         }
 
-        private Vector2 Bdt(float t)
+        private static Vector2 Bdt(float t, Vector2[] p)
         {
-            return 3 * (1 - t) * (1 - t) * (p1 - p0) + 6 * t * (1 - t) * (p2 - p1) + 3 * t * t * (p3 - p2);
-        }
-
-        private Vector2 OB(float t)
-        {
-            return (1 - t) * (1 - t) * (1 - t) * op0 + 3 * t * (1 - t) * (1 - t) * op1 + 3 * t * t * (1 - t) * op2 + t * t * t * op3;
-        }
-
-        private Vector2 OBdt(float t)
-        {
-            return 3 * (1 - t) * (1 - t) * (op1 - op0) + 6 * t * (1 - t) * (op2 - op1) + 3 * t * t * (op3 - op2);
+            return 3 * (1 - t) * (1 - t) * (p[1] - p[0]) + 6 * t * (1 - t) * (p[2] - p[1]) + 3 * t * t * (p[3] - p[2]);
         }
 
         private float BSolverGetT(float p0, float p1, float p2, float p3, float target)

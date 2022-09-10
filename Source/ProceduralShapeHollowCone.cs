@@ -13,7 +13,7 @@ namespace ProceduralParts
         #region Config parameters
 
         [KSPField(guiActiveEditor = true, guiName = "Top diameters", groupName = ProceduralPart.PAWGroupName)]
-        private string topTitleString = "";
+        private const string topTitleString = "";
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Inner", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
@@ -24,7 +24,7 @@ namespace ProceduralParts
         public float topOuterDiameter = 2f;
 
         [KSPField(guiActiveEditor = true, guiName = "Bottom diameters", groupName = ProceduralPart.PAWGroupName)]
-        private string bottomTitleString = "";
+        private const string bottomTitleString = "";
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Inner", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
