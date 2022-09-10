@@ -1,7 +1,11 @@
 ============= Changelog for ProceduralParts  =========
 
+=== 2.4.3 ===
+Require KSPCommunityFixes 1.22.2 since Proc Parts 2.4.2 exposed a stock upgrade bug fixed in KSPCF 1.22.2
+
 === 2.4.2 ===
-Updated Upgrade Pipeline to take advantage of KSPCF 1.22+
+Updated Upgrade Pipeline to take advantage of KSPCommunityFixes 1.22+
+Bugfix: Fix truss volume not caring about symmetry rods
 
 === 2.4.1 ===
 Added dependency: KSPCommunityFixes.
