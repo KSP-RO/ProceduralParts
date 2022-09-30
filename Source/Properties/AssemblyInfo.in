@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -22,11 +22,14 @@ using System.Runtime.InteropServices;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("a1c9118f-14a4-4aaf-bb43-87b1c13a7d4d")]
 
+[assembly: KSPAssembly("ProceduralParts", @VERSION_MAJOR@, @VERSION_MINOR@)]
+
 // Version information for an assembly consists of the following four values:
 //
 //      Major Version
-//      Minor Version 
+//      Minor Version
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("@VERSION@")]
+[assembly: AssemblyVersion("@VERSION_MAJOR_FIRST@")]
+[assembly: AssemblyFileVersion("@VERSION@")]
