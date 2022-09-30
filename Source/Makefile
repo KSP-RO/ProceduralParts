@@ -21,7 +21,6 @@ TARGETS		:= ProceduralParts.dll
 
 API_FILES := \
 	DecouplerTweaker.cs \
-	ObjectSerializer.cs \
 	ProceduralAbstractShape.cs \
 	ProceduralAbstractSoRShape.cs \
 	ProceduralHeatshield.cs \
@@ -33,13 +32,12 @@ API_FILES := \
 	ProceduralSRB.cs \
 	TankContentSwitcher.cs \
 	TransformFollower.cs \
-	zzVersionChecker.cs \
 	ICostModifier.cs \
 	VectorUtils.cs \
 	$e
 
 RESGEN2	:= resgen2
-GMCS	:= gmcs
+GMCS	:= csc
 GIT		:= git
 TAR		:= tar
 ZIP		:= zip
