@@ -113,6 +113,7 @@ namespace ProceduralParts
             (Fields[nameof(innerDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxInnerDiameter;
             (Fields[nameof(innerDiameter)].uiControlEditor as UI_FloatEdit).minValue = minInnerDiameter;
             (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = PPart.lengthMin;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = PPart.lengthMax;
             (Fields[nameof(fillet)].uiControlEditor as UI_FloatEdit).minValue = 0;
             (Fields[nameof(fillet)].uiControlEditor as UI_FloatEdit).maxValue = maxFillet;
 
