@@ -117,6 +117,7 @@ namespace ProceduralParts
 
             // Length
             (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = minLength;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = PPart.lengthMax;
 
         }
 

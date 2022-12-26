@@ -80,6 +80,7 @@ namespace ProceduralParts
             (Fields[nameof(innerDiameter)].uiControlEditor as UI_FloatEdit).minValue = minInnerDiameter;
 
             (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = minLength;
+            (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = PPart.lengthMax;
         }
 
         public override float CalculateVolume()
