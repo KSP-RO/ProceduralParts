@@ -141,8 +141,8 @@ namespace ProceduralParts
             float trans = length - oldLength;
             foreach (AttachNode node in part.attachNodes)
             {
-                // Our nodes are relative to part center 0,0,0.  position.y > 0 are top nodes.
-                float direction = (node.position.y > 0) ? 1 : -1;
+                // Compare node id to 'top'. Names are top and bottom
+                float direction = (node.id == "top") ? 1 : -1;
                 Vector3 translation = direction * (trans / 2) * Vector3.up;
                 if (node.nodeType == AttachNode.NodeType.Stack)
                 {
