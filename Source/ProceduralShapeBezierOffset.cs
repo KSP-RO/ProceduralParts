@@ -28,12 +28,12 @@ namespace ProceduralParts
          UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedShape;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3", guiUnits="m", groupName = ProceduralPart.PAWGroupName),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float topDiameter = 1.25f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float bottomDiameter = 1.25f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
@@ -73,7 +73,7 @@ namespace ProceduralParts
 
         internal const float MaxDiameterChange = 5.0f;
 
-        public int NumSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt((Math.Max(bottomDiameter, topDiameter)))/(2f * MaxCircleError)), 24);
+        public int NumSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt((Math.Max(bottomDiameter, topDiameter))) / (2f * MaxCircleError)), 24);
 
         private float CornerCenterCornerAngle => 2 * Mathf.PI / NumSides;
 
@@ -94,12 +94,12 @@ namespace ProceduralParts
             /// If the end is the big end then it will be still be limited by the minimum diameter.
             /// The default mode. 
             /// </summary>
-            CanZero, 
+            CanZero,
             /// <summary>
             /// Limit the minimum diameter regardless of if this is the big or the small end. Useful for parts that
             /// must have something attached to the end such as SRBs.
             /// </summary>
-            LimitMin, 
+            LimitMin,
             /// <summary>
             /// The diameter is fixed and cannot be changed. Set the diameter in the config file.
             /// </summary>
@@ -326,7 +326,7 @@ namespace ProceduralParts
         // For any sizable volume limit, simple iteration will be very slow.
         // Instead, search by variable increment.  Minimal harm in setting scale default high, because
         // early passes will terminate on first loop.
-        private void IterateVolumeLimits(ref float top, ref float bottom, ref float len, float target, float inc, int scale=6)
+        private void IterateVolumeLimits(ref float top, ref float bottom, ref float len, float target, float inc, int scale = 6)
         {
             if (inc <= 0) return;
 
@@ -354,7 +354,7 @@ namespace ProceduralParts
         public float CalculateVolume(float length, float topDiameter, float bottomDiameter)
         {
             SetControlPoints(length, topDiameter, bottomDiameter);
-            // The maths for the area under the bezier can be calculated using 
+            // The maths for the area under the bezier can be calculated using
             // pappus's centroid theroem: http://mathworld.wolfram.com/PappussCentroidTheorem.html
             // V = 2pi * Area of lamina * x geometric centroid y axis
             // geometric centroid about y axis = Moment about y / Area of curve
@@ -362,14 +362,14 @@ namespace ProceduralParts
 
             // factor 1/2 taken out. The 1/4 is because the pN.x are diameters not radii.
             // ReSharper disable once InconsistentNaming
-            float M_y  = 1f/4f* ((p[1].y-p[0].y)*(1f/3f * p[0].x*p[0].x + 1f/4f * p[0].x*p[1].x + 1f/14f* p[0].x*p[2].x + 3f/28f* p[1].x*p[1].x+ 3f/28f * p[1].x*p[2].x + 1f/84f * p[0].x*p[3].x + 3f/70f * p[2].x*p[2].x + 1f/35f* p[1].x*p[3].x + 1f/28f* p[2].x*p[3].x + 1f/84f* p[3].x*p[3].x) +
-                                 (p[2].y-p[1].y)*(1f/12f* p[0].x*p[0].x + 1f/7f * p[0].x*p[1].x + 1f/14f* p[0].x*p[2].x + 3f/28f* p[1].x*p[1].x+ 6f/35f * p[1].x*p[2].x + 2f/105f* p[0].x*p[3].x + 3f/28f * p[2].x*p[2].x + 1f/14f* p[1].x*p[3].x + 1f/7f * p[2].x*p[3].x + 1f/12f* p[3].x*p[3].x) +
-                                 (p[3].y-p[2].y)*(1f/84f* p[0].x*p[0].x + 1f/28f* p[0].x*p[1].x + 1f/35f* p[0].x*p[2].x + 3f/70f* p[1].x*p[1].x+ 3f/28f * p[1].x*p[2].x + 1f/84f * p[0].x*p[3].x + 3f/28f * p[2].x*p[2].x + 1f/14f* p[1].x*p[3].x + 1f/4f * p[2].x*p[3].x + 1f/3f * p[3].x*p[3].x));
+            float M_y = 1f / 4f * ((p[1].y - p[0].y) * (1f / 3f * p[0].x * p[0].x + 1f / 4f * p[0].x * p[1].x + 1f / 14f * p[0].x * p[2].x + 3f / 28f * p[1].x * p[1].x + 3f / 28f * p[1].x * p[2].x + 1f / 84f * p[0].x * p[3].x + 3f / 70f * p[2].x * p[2].x + 1f / 35f * p[1].x * p[3].x + 1f / 28f * p[2].x * p[3].x + 1f / 84f * p[3].x * p[3].x) +
+                                 (p[2].y - p[1].y) * (1f / 12f * p[0].x * p[0].x + 1f / 7f * p[0].x * p[1].x + 1f / 14f * p[0].x * p[2].x + 3f / 28f * p[1].x * p[1].x + 6f / 35f * p[1].x * p[2].x + 2f / 105f * p[0].x * p[3].x + 3f / 28f * p[2].x * p[2].x + 1f / 14f * p[1].x * p[3].x + 1f / 7f * p[2].x * p[3].x + 1f / 12f * p[3].x * p[3].x) +
+                                 (p[3].y - p[2].y) * (1f / 84f * p[0].x * p[0].x + 1f / 28f * p[0].x * p[1].x + 1f / 35f * p[0].x * p[2].x + 3f / 70f * p[1].x * p[1].x + 3f / 28f * p[1].x * p[2].x + 1f / 84f * p[0].x * p[3].x + 3f / 28f * p[2].x * p[2].x + 1f / 14f * p[1].x * p[3].x + 1f / 4f * p[2].x * p[3].x + 1f / 3f * p[3].x * p[3].x));
 
             return Mathf.PI * M_y;
         }
 
-        public override bool SeekVolume(float targetVolume, int dir=0) => SeekVolume(targetVolume, Fields[nameof(length)], dir);
+        public override bool SeekVolume(float targetVolume, int dir = 0) => SeekVolume(targetVolume, Fields[nameof(length)], dir);
 
         public override void TranslateAttachmentsAndNodes(BaseField f, object obj)
         {
@@ -416,6 +416,7 @@ namespace ProceduralParts
 
         private void HandleOffsetChange(float offset, float oldOffset)
         {
+            // TODO: Implement the translation in a better way. Currently changed the internal method to public
             float trans = offset - oldOffset;
             foreach (AttachNode node in part.attachNodes)
             {
@@ -454,21 +455,21 @@ namespace ProceduralParts
 
             //Function below derived using symbolic math in Matlab
             float x0 = p[0].x, x1 = p[1].x, x2 = p[2].x, x3 = p[3].x, y0 = p[0].y, y1 = p[1].y, y2 = p[2].y, y3 = p[3].y;
-            float num = (2310f*y0*y0 - 1260f*y0*y1 - 252f*y0*y2 - 28f*y0*y3 - 378f*y1*y1 - 252f*y1*y2 - 42f*y1*y3 - 63f*y2*y2 - 30f*y2*y3 - 5f*y3*y3)*x0*x0 +
-                        (1260f*x1*y0*y0 - 252f*x1*y1*y1 + 252f*x2*y0*y0 - 162f*x1*y2*y2 + 28f*x3*y0*y0 - 30f*x1*y3*y3 - 90f*x2*y2*y2 + 18f*x3*y1*y1 - 42f*x2*y3*y3 - 18f*x3*y2*y2 - 28f*x3*y3*y3 - 168f*x1*y0*y2 +
-                        168f*x2*y0*y1 - 42f*x1*y0*y3 - 378f*x1*y1*y2 + 42f*x3*y0*y1 - 108f*x1*y1*y3 - 12f*x2*y0*y3 - 108f*x2*y1*y2 + 12f*x3*y0*y2 - 120f*x1*y2*y3 - 60f*x2*y1*y3 - 108f*x2*y2*y3 - 12f*x3*y1*y3 - 42f*x3*y2*y3)*x0 +
-                        378f*x1*x1*y0*y0 + 252f*x1*x1*y0*y1 - 18f*x1*x1*y0*y3 - 162f*x1*x1*y1*y2 - 90f*x1*x1*y1*y3 - 135f*x1*x1*y2*y2 - 162f*x1*x1*y2*y3 - 63f*x1*x1*y3*y3 + 252f*x1*x2*y0*y0 + 378f*x1*x2*y0*y1 + 108f*x1*x2*y0*y2 +
-                        162f*x1*x2*y1*y1 - 108f*x1*x2*y1*y3 - 162f*x1*x2*y2*y2 - 378f*x1*x2*y2*y3 - 252f*x1*x2*y3*y3 + 42f*x1*x3*y0*y0 + 108f*x1*x3*y0*y1 + 60f*x1*x3*y0*y2 + 12f*x1*x3*y0*y3 + 90f*x1*x3*y1*y1 + 108f*x1*x3*y1*y2 -
-                        168f*x1*x3*y2*y3 - 252f*x1*x3*y3*y3 + 63f*x2*x2*y0*y0 + 162f*x2*x2*y0*y1 + 90f*x2*x2*y0*y2 + 18f*x2*x2*y0*y3 + 135f*x2*x2*y1*y1 + 162f*x2*x2*y1*y2 - 252f*x2*x2*y2*y3 - 378f*x2*x2*y3*y3 + 30f*x2*x3*y0*y0 +
-                        120f*x2*x3*y0*y1 + 108f*x2*x3*y0*y2 + 42f*x2*x3*y0*y3 + 162f*x2*x3*y1*y1 + 378f*x2*x3*y1*y2 + 168f*x2*x3*y1*y3 + 252f*x2*x3*y2*y2 - 1260f*x2*x3*y3*y3 + 5f*x3*x3*y0*y0 + 30f*x3*x3*y0*y1 + 42f*x3*x3*y0*y2 +
-                        28f*x3*x3*y0*y3 + 63f*x3*x3*y1*y1 + 252f*x3*x3*y1*y2 + 252f*x3*x3*y1*y3 + 378f*x3*x3*y2*y2 + 1260f*x3*x3*y2*y3 - 2310f*x3*x3*y3*y3;
+            float num = (2310f * y0 * y0 - 1260f * y0 * y1 - 252f * y0 * y2 - 28f * y0 * y3 - 378f * y1 * y1 - 252f * y1 * y2 - 42f * y1 * y3 - 63f * y2 * y2 - 30f * y2 * y3 - 5f * y3 * y3) * x0 * x0 +
+                        (1260f * x1 * y0 * y0 - 252f * x1 * y1 * y1 + 252f * x2 * y0 * y0 - 162f * x1 * y2 * y2 + 28f * x3 * y0 * y0 - 30f * x1 * y3 * y3 - 90f * x2 * y2 * y2 + 18f * x3 * y1 * y1 - 42f * x2 * y3 * y3 - 18f * x3 * y2 * y2 - 28f * x3 * y3 * y3 - 168f * x1 * y0 * y2 +
+                        168f * x2 * y0 * y1 - 42f * x1 * y0 * y3 - 378f * x1 * y1 * y2 + 42f * x3 * y0 * y1 - 108f * x1 * y1 * y3 - 12f * x2 * y0 * y3 - 108f * x2 * y1 * y2 + 12f * x3 * y0 * y2 - 120f * x1 * y2 * y3 - 60f * x2 * y1 * y3 - 108f * x2 * y2 * y3 - 12f * x3 * y1 * y3 - 42f * x3 * y2 * y3) * x0 +
+                        378f * x1 * x1 * y0 * y0 + 252f * x1 * x1 * y0 * y1 - 18f * x1 * x1 * y0 * y3 - 162f * x1 * x1 * y1 * y2 - 90f * x1 * x1 * y1 * y3 - 135f * x1 * x1 * y2 * y2 - 162f * x1 * x1 * y2 * y3 - 63f * x1 * x1 * y3 * y3 + 252f * x1 * x2 * y0 * y0 + 378f * x1 * x2 * y0 * y1 + 108f * x1 * x2 * y0 * y2 +
+                        162f * x1 * x2 * y1 * y1 - 108f * x1 * x2 * y1 * y3 - 162f * x1 * x2 * y2 * y2 - 378f * x1 * x2 * y2 * y3 - 252f * x1 * x2 * y3 * y3 + 42f * x1 * x3 * y0 * y0 + 108f * x1 * x3 * y0 * y1 + 60f * x1 * x3 * y0 * y2 + 12f * x1 * x3 * y0 * y3 + 90f * x1 * x3 * y1 * y1 + 108f * x1 * x3 * y1 * y2 -
+                        168f * x1 * x3 * y2 * y3 - 252f * x1 * x3 * y3 * y3 + 63f * x2 * x2 * y0 * y0 + 162f * x2 * x2 * y0 * y1 + 90f * x2 * x2 * y0 * y2 + 18f * x2 * x2 * y0 * y3 + 135f * x2 * x2 * y1 * y1 + 162f * x2 * x2 * y1 * y2 - 252f * x2 * x2 * y2 * y3 - 378f * x2 * x2 * y3 * y3 + 30f * x2 * x3 * y0 * y0 +
+                        120f * x2 * x3 * y0 * y1 + 108f * x2 * x3 * y0 * y2 + 42f * x2 * x3 * y0 * y3 + 162f * x2 * x3 * y1 * y1 + 378f * x2 * x3 * y1 * y2 + 168f * x2 * x3 * y1 * y3 + 252f * x2 * x3 * y2 * y2 - 1260f * x2 * x3 * y3 * y3 + 5f * x3 * x3 * y0 * y0 + 30f * x3 * x3 * y0 * y1 + 42f * x3 * x3 * y0 * y2 +
+                        28f * x3 * x3 * y0 * y3 + 63f * x3 * x3 * y1 * y1 + 252f * x3 * x3 * y1 * y2 + 252f * x3 * x3 * y1 * y3 + 378f * x3 * x3 * y2 * y2 + 1260f * x3 * x3 * y2 * y3 - 2310f * x3 * x3 * y3 * y3;
 
-            float den = (3080f*y0 - 2310f*y1 - 660f*y2 - 110f*y3)*x0*x0 +
-                        (2310f*x1*y0 - 990f*x1*y1 + 660f*x2*y0 - 990f*x1*y2 + 110f*x3*y0 - 330f*x1*y3 - 396f*x2*y2 + 66f*x3*y1 - 264f*x2*y3 - 66f*x3*y2 - 110f*x3*y3)*x0 +
-                        990f*x1*x1*y0 + 396f*x2*x2*y0 - 594f*x1*x1*y2 + 594f*x2*x2*y1 + 110f*x3*x3*y0 - 396f*x1*x1*y3 + 660f*x3*x3*y1 - 990f*x2*x2*y3 + 2310f*x3*x3*y2 -
-                        3080f*x3*x3*y3 + 990f*x1*x2*y0 + 594f*x1*x2*y1 + 264f*x1*x3*y0 - 594f*x1*x2*y2 + 396f*x1*x3*y1 + 330f*x2*x3*y0 - 990f*x1*x2*y3 + 990f*x2*x3*y1 - 660f*x1*x3*y3 + 990f*x2*x3*y2 - 2310f*x2*x3*y3;
+            float den = (3080f * y0 - 2310f * y1 - 660f * y2 - 110f * y3) * x0 * x0 +
+                        (2310f * x1 * y0 - 990f * x1 * y1 + 660f * x2 * y0 - 990f * x1 * y2 + 110f * x3 * y0 - 330f * x1 * y3 - 396f * x2 * y2 + 66f * x3 * y1 - 264f * x2 * y3 - 66f * x3 * y2 - 110f * x3 * y3) * x0 +
+                        990f * x1 * x1 * y0 + 396f * x2 * x2 * y0 - 594f * x1 * x1 * y2 + 594f * x2 * x2 * y1 + 110f * x3 * x3 * y0 - 396f * x1 * x1 * y3 + 660f * x3 * x3 * y1 - 990f * x2 * x2 * y3 + 2310f * x3 * x3 * y2 -
+                        3080f * x3 * x3 * y3 + 990f * x1 * x2 * y0 + 594f * x1 * x2 * y1 + 264f * x1 * x3 * y0 - 594f * x1 * x2 * y2 + 396f * x1 * x3 * y1 + 330f * x2 * x3 * y0 - 990f * x1 * x2 * y3 + 990f * x2 * x3 * y1 - 660f * x1 * x3 * y3 + 990f * x2 * x3 * y2 - 2310f * x2 * x3 * y3;
 
-            return new Vector3(0, num/den, 0);
+            return new Vector3(0, num / den, 0);
         }
 
         public override void UpdateTFInterops()
@@ -478,15 +479,15 @@ namespace ProceduralParts
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
 
-        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, (bottomDiameter + topDiameter) / 2, (node) => node.position.y>0, offset * Vector3.forward);
+        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, (bottomDiameter + topDiameter) / 2, (node) => node.position.y > 0, offset * Vector3.forward);
 
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             CalculateVolume();  // Update the bezier curve control nodes
-            // The Bezier curve control points are NOT normalized.
-            //  p0 = new Vector2(bottomDiameter, -length / 2f);
-            //  p3 = new Vector2(topDiameter, length / 2f);
-            // But we do need to normalize the length and shift such that 0 <= t <= 1
+                                // The Bezier curve control points are NOT normalized.
+                                //  p0 = new Vector2(bottomDiameter, -length / 2f);
+                                //  p3 = new Vector2(topDiameter, length / 2f);
+                                // But we do need to normalize the length and shift such that 0 <= t <= 1
             float t = (coords.y / length) + (1f / 2);
             Vector2 Bt = B(t, p);
             Debug.Log($"{ModTag} Normalized {coords.y} to {t} (0=bottom, 1=top), B(t)={Bt} as (diameter, length). TopDiameter:{topDiameter} BotDiameter:{bottomDiameter} Len: {length}");
@@ -499,7 +500,7 @@ namespace ProceduralParts
         public override void UnNormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             CalculateVolume();  // Update the bezier curve control nodes
-            float t = (coords.y + (1f / 2));    // Shift coords.y from [-0.5..0.5] to [0..1]
+            float t = coords.y + (1f / 2);    // Shift coords.y from [-0.5..0.5] to [0..1]
             Vector2 Bt = B(t, p);
             Debug.Log($"{ModTag} From normalized {coords.y}, shape unnormalized bottom {bottomDiameter} top {topDiameter} length {length},  B({t}) yields [{Bt.x:F3}, {Bt.y:F3}] as (diameter, length)");
             // B(t).x is the diameter of the curve at t.  /2 for radius.
@@ -542,7 +543,7 @@ namespace ProceduralParts
             // Debug.Log("[ProcPartsDebug] offset control points were set");
             // There are four control points, the bottom (p0) and the top ones (p3) are obvious
             op[0] = new Vector2(0, -length / 2f);
-            op[3] = new Vector2(offset, length / 2f);
+            op[3] = new Vector2(offset * 2f, length / 2f);
 
             // Currently hard coded to be identical with the shape - change later
             float[] shape = { shapePoints.x, shapePoints.y, shapePoints.z, shapePoints.w };
@@ -567,13 +568,24 @@ namespace ProceduralParts
 
         private void WriteBezier()
         {
-            var points1 = GenPoints(1f);
-            var points2 = GenPoints(-1f);
+            var pointsPositive = GeneratePoints(1f);
+            var pointsNegative = GeneratePoints(-1f);
 
-            var points = points1.Count > points2.Count ? points1 : points2;
+            LinkedList<ProfilePoint> points;
+            float offsetMult;
+            if (pointsPositive.Count > pointsNegative.Count)
+            {
+                points = pointsPositive;
+                offsetMult = 1f;
+            }
+            else
+            {
+                points = pointsNegative;
+                offsetMult = -1f;
+            }
 
             // Subdivide due to diameter changes that are straight lines
-            SubdivHorizontal(points);
+            SubdivideHorizontal(points, offsetMult);
             // Figure out what parts of the cone are concave to split them into convex parts for colliders
             var splitsList = ConcavePoints(points);
 
@@ -581,26 +593,23 @@ namespace ProceduralParts
             float sumLengths = 0;
             float[] cumLengths = new float[points.Count - 1];
 
-            LinkedListNode<ProfilePoint> pv = points.First;
-            LinkedListNode<ProfilePoint> nx = pv.Next;
-            for (int i = 0; i < cumLengths.Length; ++i, pv = nx, nx = nx.Next)
+            LinkedListNode<ProfilePoint> current = points.First;
+            LinkedListNode<ProfilePoint> next = current.Next;
+            for (int i = 0; i < cumLengths.Length; ++i, current = next, next = next.Next)
             {
-                // ReSharper disable once PossibleNullReferenceException
-                float dX = nx.Value.x - pv.Value.x;
-                float dY = nx.Value.y - pv.Value.y;
+                float dX = next.Value.diameter - current.Value.diameter;
+                float dY = next.Value.y - current.Value.y;
 
                 cumLengths[i] = sumLengths += Mathf.Sqrt(dX * dX + dY * dY);
             }
 
             points.First.Value.v = 0;
-            nx = points.First.Next;
-            for (int i = 0; i < cumLengths.Length; ++i, nx = nx.Next)
+            next = points.First.Next;
+            for (int i = 0; i < cumLengths.Length; ++i, next = next.Next)
             {
-                // ReSharper disable once PossibleNullReferenceException
-                nx.Value.v = cumLengths[i] / sumLengths;
+                next.Value.v = cumLengths[i] / sumLengths;
             }
 
-            // BSolverGetT(p[0].x, p[1].x, p[2].x, p[3].x, 0.5f);
             WriteMeshes(points);
             WriteCollider(points, splitsList);
         }
@@ -608,17 +617,17 @@ namespace ProceduralParts
         /// <summary>
         /// Subdivide profile points according to the max diameter change.
         /// </summary>
-        private void SubdivHorizontal(LinkedList<ProfilePoint> pts)
+        private void SubdivideHorizontal(LinkedList<ProfilePoint> points, float offsetMult)
         {
-            ProfilePoint prev = pts.First.Value;
-            for (LinkedListNode<ProfilePoint> node = pts.First.Next; node != null; node = node.Next)
+            ProfilePoint prev = points.First.Value;
+            for (LinkedListNode<ProfilePoint> node = points.First.Next; node != null; node = node.Next)
             {
                 ProfilePoint curr = node.Value;
-                float positiveChange = CreatePoint(curr.t, 1).x - CreatePoint(prev.t, 1).x;
-                float negativeChange = CreatePoint(curr.t, -1).x - CreatePoint(prev.t, -1).x;
+                float positiveChange = CreatePoint(curr.t, 1).diameter - CreatePoint(prev.t, 1).diameter;
+                float negativeChange = CreatePoint(curr.t, -1).diameter - CreatePoint(prev.t, -1).diameter;
                 float largestChange = Mathf.Max(Math.Abs(positiveChange), Math.Abs(negativeChange));
                 float dPercentage = largestChange / (Math.Max(B(curr.t, p).x, B(prev.t, p).x) / 100.0f);
-                int subdiv = Math.Min((int)(Math.Truncate(dPercentage / MaxDiameterChange)), 30);
+                int subdiv = Math.Min((int)Math.Truncate(dPercentage / MaxDiameterChange), 30);
                 if (subdiv > 1)
                 {
                     for (int i = 1; i < subdiv; ++i)
@@ -626,7 +635,7 @@ namespace ProceduralParts
                         float frac = i / (float)subdiv;
                         float t = Mathf.Lerp(prev.t, curr.t, frac);
 
-                        pts.AddBefore(node, CreatePoint(t, 1, false));
+                        points.AddBefore(node, CreatePoint(t, offsetMult, false));
                     }
                 }
 
@@ -634,53 +643,68 @@ namespace ProceduralParts
             }
         }
 
-        private LinkedList<int> ConcavePoints(LinkedList<ProfilePoint> points)
+        #region Collider Splitting algorithm
+        /// <summary>
+        /// Returns True if the middle point is found to the left of the line going from the 'left' to the 'right' point.
+        /// Returns False if any point is null
+        /// </summary>
+        private static bool MiddleIsConcave(ProfilePoint left, ProfilePoint middle, ProfilePoint right)
+        {
+            // NOTE: The 'left' point is below the 'right' point, and they are to the right of the y-axis. The math is correct
+
+            // If any point is null, default to false.
+            if (left == null || middle == null || right == null)
+                return false;
+
+            Vector2 line = right.Pos - left.Pos; // Line from 'left' to 'right'
+            Vector2 normal = new Vector2(-line.y, line.x); // Rotate 90° left
+            Vector2 difference = middle.Pos - left.Pos; // from 'left' to 'middle'
+            bool sign = Vector2.Dot(difference, normal) > 0; // Does 'difference' point in the same direction as 'normal'?
+            return sign;
+        }
+
+        private bool PointIsConcave(LinkedListNode<ProfilePoint> pointNode, float offsetMult)
+        {
+            var left = CreatePoint(pointNode.Previous.Value.t, offsetMult);
+            var middle = CreatePoint(pointNode.Value.t, offsetMult);
+            var right = CreatePoint(pointNode.Next.Value.t, offsetMult);
+            return MiddleIsConcave(left, middle, right);
+        }
+
+        private LinkedList<int> ConcavePointsWithOffset(LinkedList<ProfilePoint> points, float offsetMult)
         {
             LinkedList<int> breakPoints = new LinkedList<int>();
             breakPoints.AddLast(0);
-            Debug.Log($"BreakPoint: {0}");
-            ProfilePoint lastLast1 = null;
-            ProfilePoint prev1 = null;
-            ProfilePoint lastLast2 = null;
-            ProfilePoint prev2 = null;
-            int prevIndex = 0;
-            // counter starts at -1 because it's incremented at the start of the loop
-            int counter = -1;
-            foreach (var pt in points)
-            {
-                counter++;
-                if (!pt.inCollider)
-                    continue;
 
-                var pt1 = CreatePoint(pt.t, 1);
-                var pt2 = CreatePoint(pt.t, -1);
-                if (lastLast1 != null)
+            int index = 1;
+            for (var currentPoint = points.First.Next; currentPoint.Next != null; currentPoint = currentPoint.Next)
+            {
+                if (currentPoint.Value.inCollider && PointIsConcave(currentPoint, offsetMult))
                 {
-                    // check if "prev1" or "prev2" is concave
-                    Vector2 norm1 = new Vector2(-lastLast1.y + pt1.y, lastLast1.x - pt1.x);
-                    Vector2 diff1 = new Vector2(lastLast1.x - prev1.x, lastLast1.y - prev1.y);
-                    var sign1 = Vector2.Dot(norm1, diff1);
-                    Vector2 norm2 = new Vector2(-lastLast2.y + pt2.y, lastLast2.x - pt2.x);
-                    Vector2 diff2 = new Vector2(lastLast2.x - prev2.x, lastLast2.y - prev2.y);
-                    var sign2 = Vector2.Dot(norm2, diff2);
-                    if (sign1 > 0 || sign2 > 0)
-                    {
-                        breakPoints.AddLast(prevIndex);
-                        Debug.Log($"BreakPoint: {prevIndex}");
-                    }
+                    breakPoints.AddLast(index);
                 }
-                prevIndex = counter;
-                lastLast1 = prev1;
-                prev1 = pt1;
-                lastLast2 = prev2;
-                prev2 = pt2;
+
+                index++;
             }
-            breakPoints.AddLast(points.Count-1);
-            Debug.Log($"BreakPoint: {points.Count-1}");
+            breakPoints.AddLast(points.Count - 1);
+
+            // Every index should be unique, so if unique count is not same as list count, something is wrong
+            if (breakPoints.Distinct().Count() != breakPoints.Count)
+                throw new InvalidProgramException("Collider splitting resulted in the same index twice.");
             return breakPoints;
         }
 
-        private LinkedList<ProfilePoint> GenPoints(float offsetMult)
+        private LinkedList<int> ConcavePoints(LinkedList<ProfilePoint> points)
+        {
+            LinkedList<int> positivePoints = ConcavePointsWithOffset(points, 1);
+            LinkedList<int> negativePoints = ConcavePointsWithOffset(points, -1);
+            // If an element exists in either of the lists, we want it in the result
+            LinkedList<int> breakPoints = new LinkedList<int>(positivePoints.Union(negativePoints));
+            return breakPoints;
+        }
+        #endregion
+
+        private LinkedList<ProfilePoint> GeneratePoints(float offsetMult)
         {
             LinkedList<ProfilePoint> points = new LinkedList<ProfilePoint>();
 
@@ -694,16 +718,15 @@ namespace ProceduralParts
             {
                 LinkedListNode<ProfilePoint> node = process.Dequeue();
                 ProfilePoint pM = node.Value;
-                // ReSharper disable once PossibleNullReferenceException
                 ProfilePoint pN = node.Next.Value;
 
-                float tM = pM.v;
-                float tN = pN.v;
+                float tM = pM.t;
+                float tN = pN.t;
 
                 // So we want to find the point where the curve is maximally distant from the line between pM and pN
 
                 // First we need the normal to the line:
-                Vector2 norm = new Vector2(-pN.y + pM.y, pN.x - pM.x);
+                Vector2 norm = new Vector2(-pN.y + pM.y, pN.diameter - pM.diameter);
 
                 // The deviation is:
                 // Dev = B(t) . norm - B(m) . norm    (where m = t at point M)
@@ -764,14 +787,14 @@ namespace ProceduralParts
                     throw new InvalidProgramException("There should be a point maximally distant from the line or the maths is really wrong.");
 
                 norm = norm.normalized;
-                float devM = pM.x * norm.x + pM.y * norm.y;
+                float devM = pM.diameter * norm.x + pM.y * norm.y;
 
                 for (int i = 0; i < ts.Count; ++i)
                 {
                     // The difference from the line
-                    var offsetVec = B(ts[i], op)*offsetMult;
+                    var offsetVec = B(ts[i], op) * offsetMult;
                     offsetVec.y = 0;
-                    float devTS = Vector2.Dot(B(ts[i], p)+offsetVec, norm) - devM;
+                    float devTS = Vector2.Dot(B(ts[i], p) + offsetVec, norm) - devM;
 
                     if (Mathf.Abs(devTS) < MaxCircleError)
                         ts.RemoveAt(i--);
@@ -808,46 +831,46 @@ namespace ProceduralParts
             float tankVLength = 0f;
 
             int nSides = NumSides;
-            int vertPerLayer = nSides + 1;
-            int vertCount = vertPerLayer*points.Count;
-            int triPerLayer = 2*3*nSides;
-            int triCount = triPerLayer*(points.Count-1);
-            int vertOffset = 0;
-            int triVertOffset = 0;
-            int triOffset = 0;
-            UncheckedMesh m = new UncheckedMesh(vertCount, triCount);
-            ProfilePoint prev = null;
+            int verticesPerLayer = nSides + 1;
+            int verticeCount = verticesPerLayer * points.Count;
+            int triangleCornersPerLayer = 2 * 3 * nSides;
+            int triangleCornerCount = triangleCornersPerLayer * (points.Count - 1);
+            int verticeOffset = 0;
+            int triangleVerticeOffset = 0;
+            int triangleCornerOffset = 0;
+            UncheckedMesh sideMesh = new UncheckedMesh(verticeCount, triangleCornerCount);
+            ProfilePoint previous = null;
             bool odd = false;
-            foreach (ProfilePoint pt in points)
+            foreach (ProfilePoint point in points)
             {
-                WriteVertices(pt, m, nSides, vertOffset, odd);
-                if (prev != null)
+                WriteVertices(point, sideMesh, nSides, ref verticeOffset, odd);
+                if (previous == null)
                 {
-                    WriteTriangles(m, nSides, triVertOffset, triOffset, odd);
-
-                    float dy = pt.y - prev.y;
-                    float dx = (pt.x - prev.x) * 0.5f;
-                    tankVLength += Mathf.Sqrt(dx * dx + dy * dy);
-
-                    triVertOffset += vertPerLayer;
-                    triOffset += triPerLayer;
+                    previous = point;
+                    odd = !odd;
+                    continue;
                 }
+                WriteTriangles(sideMesh, nSides, ref triangleVerticeOffset, ref triangleCornerOffset, odd);
+
+                float dy = point.y - previous.y;
+                float dx = (point.diameter - previous.diameter) * 0.5f;
+                tankVLength += Mathf.Sqrt(dx * dx + dy * dy);
+
                 odd = !odd;
-                prev = pt;
-                vertOffset += vertPerLayer;
+                previous = point;
             }
 
             var tankULength = nSides * NormSideLength * (topDiameter + bottomDiameter);
 
             RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
-            WriteToAppropriateMesh(m, PPart.SidesIconMesh, SidesMesh);
+            WriteToAppropriateMesh(sideMesh, PPart.SidesIconMesh, SidesMesh);
 
-            m = new UncheckedMesh(2 * vertPerLayer, 4 * vertPerLayer);
-            WriteCapVertices(points.First.Value, m, nSides, 0, true);
-            WriteCapVertices(points.Last.Value, m, nSides, vertPerLayer, odd);
-            WriteCapTriangles(m, nSides, 0, 0, false);
-            WriteCapTriangles(m, nSides, vertPerLayer, vertPerLayer, true);
-            WriteToAppropriateMesh(m, PPart.EndsIconMesh, EndsMesh);
+            UncheckedMesh capMesh = new UncheckedMesh(2 * verticesPerLayer, 4 * verticesPerLayer);
+            WriteCapVertices(points.First.Value, capMesh, nSides, 0, true);
+            WriteCapVertices(points.Last.Value, capMesh, nSides, verticesPerLayer, odd);
+            WriteCapTriangles(capMesh, nSides, 0, 0, false);
+            WriteCapTriangles(capMesh, nSides, verticesPerLayer, verticesPerLayer, true);
+            WriteToAppropriateMesh(capMesh, PPart.EndsIconMesh, EndsMesh);
         }
 
         private void WriteCollider(LinkedList<ProfilePoint> points, LinkedList<int> splitsList)
@@ -858,91 +881,98 @@ namespace ProceduralParts
             int triPerLayer = 2 * 3 * nSides;
             bool odd = false;
 
-            for (int i = 0; i < splitsList.Count - 1; i++)
+            int colliderNumber = 0;
+            int first = 0;
+            bool firstIteration = true;
+            foreach (var last in splitsList)
             {
-                int first = splitsList.ElementAt(i);
-                int last = splitsList.ElementAt(i + 1);
+                if (firstIteration)
+                {
+                    firstIteration = false;
+                    first = last;
+                    continue;
+                }
+
                 LinkedList<ProfilePoint> currentPoints = new LinkedList<ProfilePoint>();
                 for (int j = first; j <= last; j++)
                 {
-                    var pt = points.ElementAt(j);
-                    if (pt.inCollider)
+                    var point = points.ElementAt(j);
+                    if (point.inCollider)
                     {
-                        currentPoints.AddLast(pt);
+                        currentPoints.AddLast(point);
                     }
                 }
                 int layers = currentPoints.Count;
-                var go = new GameObject($"Mesh_Collider_{i}");
-                var coll = go.AddComponent<MeshCollider>();
+                var go = new GameObject($"Mesh_Collider_{colliderNumber++}");
+                var collider = go.AddComponent<MeshCollider>();
                 go.transform.SetParent(PPart.ColliderHolder.transform, false);
-                coll.convex = true;
+                collider.convex = true;
 
                 UncheckedMesh uMesh = new UncheckedMesh(vertPerLayer * layers, triPerLayer * (layers) + 2 * (nSides - 2));
 
-                GenerateColliderMesh(currentPoints, nSides, vertPerLayer, triPerLayer, uMesh, ref odd);
+                GenerateColliderMesh(currentPoints, nSides, uMesh, ref odd);
                 odd = !odd;
 
                 var colliderMesh = new Mesh();
+                // FIXME: Some situations throw here due to too few vertices?
                 uMesh.WriteTo(colliderMesh);
-                coll.sharedMesh = colliderMesh;
+                collider.sharedMesh = colliderMesh;
+
+                first = last;
             }
         }
 
-        void GenerateColliderMesh(LinkedList<ProfilePoint> points, int nSides, int vertPerLayer, int triPerLayer, UncheckedMesh m, ref bool odd)
+        void GenerateColliderMesh(LinkedList<ProfilePoint> points, int nSides, UncheckedMesh mesh, ref bool odd)
         {
             int vertOffset = 0;
             int triVertOffset = 0;
             int triOffset = 0;
             ProfilePoint prev = null;
-            foreach (ProfilePoint pt in points)
+            foreach (ProfilePoint point in points)
             {
-                WriteVertices(pt, m, nSides, vertOffset, odd);
+                WriteVertices(point, mesh, nSides, ref vertOffset, odd);
                 if (prev != null)
                 {
-                    WriteTriangles(m, nSides, triVertOffset, triOffset, odd);
-                    triVertOffset += vertPerLayer;
-                    triOffset += triPerLayer;
+                    WriteTriangles(mesh, nSides, ref triVertOffset, ref triOffset, odd);
                 }
                 else
                 {
                     // Generate bottom tris
-                    WriteCapTriangles(m, nSides, 0, 0, false);
+                    WriteCapTriangles(mesh, nSides, 0, 0, false);
                     triOffset += 3 * (nSides - 2);
                 }
                 odd = !odd;
-                prev = pt;
-                vertOffset += vertPerLayer;
+                prev = point;
             }
             // Generate top tris
-            WriteCapTriangles(m, nSides, triVertOffset, triOffset, true);
+            WriteCapTriangles(mesh, nSides, triVertOffset, triOffset, true);
             // Debug.Log($"[ProcPartsDebug] Points in Collider: {points.Count}");
-            // FIXME: Re-enable
             // Debug.Log($"[ProcPartsDebug] Collider Mesh: {m.DumpMesh()}");
         }
 
-        private void WriteCapVertices(ProfilePoint pt, UncheckedMesh m, int nSides, int vertOffset, bool odd)
+        private void WriteCapVertices(ProfilePoint point, UncheckedMesh mesh, int nSides, int vertOffset, bool odd)
         {
             int o = odd ? 0 : 1;
-            pt = CreatePoint(pt.t, 0);
+            point = CreatePoint(point.t, 0);
             float _2pi = Mathf.PI * 2f;
             for (int side = 0; side <= nSides; side++)
             {
                 int currSide = side == nSides ? 0 : side;
-                float t1 = ((float)(currSide + o/2f) / nSides + 0.25f) * _2pi;
-                var offset = B(pt.t, op);
+                float t1 = ((float)(currSide + o / 2f) / nSides + 0.25f) * _2pi;
+                var offset = B(point.t, op);
                 // We do not care about offset.y, since this should be the same as for pt
-                var offsetVec = new Vector3(0, 0, offset.x);
-                m.vertices[side+vertOffset] = new Vector3(pt.x/2f*Mathf.Cos(t1), pt.y, pt.x/2f*Mathf.Sin(t1)) + offsetVec;
-                m.normals[side+vertOffset] = new Vector3(0, pt.y > 0 ? 1f : -1f, 0);
-                m.tangents[side+vertOffset] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1);
-                m.uv[side+vertOffset] = new Vector2(Mathf.Cos(t1)/2f + 1f/2f, Mathf.Sin(t1)/2f + 1f/2f);
+                var offsetVec = new Vector3(0, 0, offset.x / 2f);
+                mesh.vertices[side + vertOffset] = new Vector3(point.diameter / 2f * Mathf.Cos(t1), point.y, point.diameter / 2f * Mathf.Sin(t1)) + offsetVec;
+                mesh.normals[side + vertOffset] = new Vector3(0, point.y > 0 ? 1f : -1f, 0);
+                mesh.tangents[side + vertOffset] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1);
+                mesh.uv[side + vertOffset] = new Vector2(Mathf.Cos(t1) / 2f + 1f / 2f, Mathf.Sin(t1) / 2f + 1f / 2f);
             }
         }
 
         private void WriteCapTriangles(UncheckedMesh mesh, int nSides, int vertexOffset, int triangleOffset, bool up)
         {
             var triangleIndexOffset = triangleOffset * 3;
-            for (var i = 0; i < nSides-2; i++)
+            for (var i = 0; i < nSides - 2; i++)
             {
                 mesh.triangles[i * 3 + triangleIndexOffset] = vertexOffset;
                 mesh.triangles[i * 3 + 1 + triangleIndexOffset] = (up ? i + 2 : i + 1) + vertexOffset;
@@ -950,76 +980,77 @@ namespace ProceduralParts
             }
         }
 
-        private void WriteVertices(ProfilePoint pt, UncheckedMesh m, int nSides, int vertOffset, bool odd)
+        private void WriteVertices(ProfilePoint point, UncheckedMesh mesh, int nSides, ref int vertOffset, bool odd)
         {
             int o = odd ? 1 : 0;
-            float uvv = pt.v;
-            pt = CreatePoint(pt.t, 0);
+            float uvv = point.v;
+            point = CreatePoint(point.t, 0);
             float _2pi = Mathf.PI * 2f;
-            for (int side = 0; side <= nSides; side++)
+            for (int side = 0; side <= nSides; side++, vertOffset++)
             {
                 int currSide = side == nSides ? 0 : side;
-                float t1 = ((float)(currSide + o/2f) / nSides + 0.25f) * _2pi;
-                var offset = B(pt.t, op);
-                var offsetDeriv = Bdt(pt.t, op);
+                float t1 = ((float)(currSide + o / 2f) / nSides + 0.25f) * _2pi;
+                var offset = B(point.t, op);
+                var offsetDeriv = Bdt(point.t, op);
                 Vector3 norm = new Vector3(offsetDeriv.x / 2f, offsetDeriv.y / 2f, 0).normalized;
                 // We do not care about offset.y, since this should be the same as for pt
-                var offsetVec = new Vector3(0, 0, offset.x);
+                var offsetVec = new Vector3(0, 0, offset.x / 2f);
+                // TODO: Implement correct normals and tangents
                 // change later, currently wrong (rotate the normal wrt the offset normal)
-                var trueNormal = pt.norm;
-                m.vertices[side+vertOffset] = new Vector3(pt.x/2f*Mathf.Cos(t1), pt.y, pt.x/2f*Mathf.Sin(t1)) + offsetVec;
-                m.normals[side+vertOffset] = Quaternion.AngleAxis(Vector3.Angle(Vector3.up, norm)/2f, Vector3.back) * new Vector3(pt.norm.x*Mathf.Cos(t1), pt.norm.y, pt.norm.x*Mathf.Sin(t1));
-                m.tangents[side+vertOffset] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1);
-                m.uv[side+vertOffset] = new Vector2((float)(side + o/2f) / nSides, uvv);
+                var trueNormal = point.norm;
+                mesh.vertices[vertOffset] = new Vector3(point.diameter / 2f * Mathf.Cos(t1), point.y, point.diameter / 2f * Mathf.Sin(t1)) + offsetVec;
+                mesh.normals[vertOffset] = Quaternion.AngleAxis(Vector3.Angle(Vector3.up, norm) / 2f, Vector3.back) * new Vector3(point.norm.x * Mathf.Cos(t1), point.norm.y, point.norm.x * Mathf.Sin(t1));
+                mesh.tangents[vertOffset] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1);
+                mesh.uv[vertOffset] = new Vector2((float)(side + o / 2f) / nSides, uvv);
             }
         }
 
-        private void WriteTriangles(UncheckedMesh m, int nSides, int vertOffset, int triOffset, bool odd)
+        private void WriteTriangles(UncheckedMesh mesh, int nSides, ref int vertOffset, ref int triOffset, bool odd)
         {
-            int i = 0;
+            int counter = 0;
             for (int side = 0; side < nSides; side++)
             {
+                counter++; // Just for adding to the offset
                 int current = side;
                 // int next = (side < (nSides) ? (side + 1) * 2 : 0);
                 int next = side + nSides + 1;
                 if (odd)
                 {
-                    m.triangles[triOffset + i++] = vertOffset + next + 1;
-                    m.triangles[triOffset + i++] = vertOffset + current + 1;
-                    m.triangles[triOffset + i++] = vertOffset + next;
+                    mesh.triangles[triOffset++] = vertOffset + next + 1;
+                    mesh.triangles[triOffset++] = vertOffset + current + 1;
+                    mesh.triangles[triOffset++] = vertOffset + next;
 
-                    m.triangles[triOffset + i++] = vertOffset + current;
-                    m.triangles[triOffset + i++] = vertOffset + next;
-                    m.triangles[triOffset + i++] = vertOffset + current + 1;
-                } else
+                    mesh.triangles[triOffset++] = vertOffset + current;
+                    mesh.triangles[triOffset++] = vertOffset + next;
+                    mesh.triangles[triOffset++] = vertOffset + current + 1;
+                }
+                else
                 {
-                    m.triangles[triOffset + i++] = vertOffset + current;
-                    m.triangles[triOffset + i++] = vertOffset + next;
-                    m.triangles[triOffset + i++] = vertOffset + next + 1;
+                    mesh.triangles[triOffset++] = vertOffset + current;
+                    mesh.triangles[triOffset++] = vertOffset + next;
+                    mesh.triangles[triOffset++] = vertOffset + next + 1;
 
-                    m.triangles[triOffset + i++] = vertOffset + current;
-                    m.triangles[triOffset + i++] = vertOffset + next + 1;
-                    m.triangles[triOffset + i++] = vertOffset + current + 1;
+                    mesh.triangles[triOffset++] = vertOffset + current;
+                    mesh.triangles[triOffset++] = vertOffset + next + 1;
+                    mesh.triangles[triOffset++] = vertOffset + current + 1;
                 }
             }
+            vertOffset += counter + 1;
         }
 
         private ProfilePoint CreatePoint(float t, float offsetMult, bool inCollider = true)
         {
-            // ReSharper disable once InconsistentNaming
             // B(t) = (1-t)^3 p0 + t(1-t)^2 p1 + t^2(1-t) p2 + t^3 p3
             Vector2 Bt = B(t, p);
             Vector2 OBt = B(t, op);
 
-            // ReSharper disable once InconsistentNaming
             // B'(t) = (1-t)^2 (p1-p0) + t(1-t) (p2-p1) + t^2 (p3-p2)
             Vector2 Btdt = Bdt(t, p);
-            Vector2 OBtdt = Bdt(t, op);
 
             // normalized perpendicular to tangent (derivative)
             Vector2 norm = new Vector2(Btdt.y, -Btdt.x / 2f).normalized;
 
-            return new ProfilePoint(Bt.x + OBt.x*offsetMult, Bt.y, t, t, norm, inCollider);
+            return new ProfilePoint(Bt.x + OBt.x * offsetMult, Bt.y, t, t, norm, inCollider);
         }
 
         private static Vector2 B(float t, Vector2[] p)
@@ -1032,25 +1063,12 @@ namespace ProceduralParts
             return 3 * (1 - t) * (1 - t) * (p[1] - p[0]) + 6 * t * (1 - t) * (p[2] - p[1]) + 3 * t * t * (p[3] - p[2]);
         }
 
-        private float BSolverGetT(float p0, float p1, float p2, float p3, float target)
-        {
-            // a*t^3+b*t^2+c*t+d
-            float a = 3*p1 - p0 - 3*p2 + p3;
-            float b = 3*p0 - 6*p1 + 3*p2;
-            float c = 3*p1 - 3*p0;
-            float d = p0-target;
-
-            float t = 0;
-
-            return t;
-        }
-
         #endregion
 
         #region Helper Classes
         protected class ProfilePoint
         {
-            public readonly float x;
+            public readonly float diameter;
             public readonly float y;
             public float v;
             public float t;
@@ -1061,15 +1079,17 @@ namespace ProceduralParts
 
             public bool inCollider;
 
-            public ProfilePoint(float x, float y, float v, float t, Vector2 norm, bool inCollider = true)
+            public ProfilePoint(float diameter, float y, float v, float t, Vector2 norm, bool inCollider = true)
             {
-                this.x = x;
+                this.diameter = diameter;
                 this.y = y;
                 this.v = v;
                 this.t = t;
                 this.norm = norm;
                 this.inCollider = inCollider;
             }
+
+            public Vector2 Pos => new Vector2(diameter, y);
         }
 
         private static void WriteToAppropriateMesh(UncheckedMesh mesh, Mesh iconMesh, Mesh normalMesh)
