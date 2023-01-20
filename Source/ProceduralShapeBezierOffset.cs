@@ -25,23 +25,23 @@ namespace ProceduralParts
         private ShapePreset selectedPreset;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Curve", groupName = ProceduralPart.PAWGroupName),
-         UI_ChooseOption(scene = UI_Scene.Editor)]
+        UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedShape;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+        UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float topDiameter = 1.25f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+        UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float bottomDiameter = 1.25f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-            UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+        UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Offset", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-            UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+        UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float offset = 0f;
 
         [KSPField(isPersistant = true)]
@@ -78,6 +78,12 @@ namespace ProceduralParts
         private float CornerCenterCornerAngle => 2 * Mathf.PI / NumSides;
 
         private float NormSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
+
+        [KSPField]
+        public string TopNodeName = "top";
+
+        [KSPField]
+        public string BottomNodeName = "bottom";
 
         #endregion
 
@@ -179,13 +185,13 @@ namespace ProceduralParts
                     if (ConfigNode.LoadObjectFromConfig(shape, shapeNode))
                         shapePresets.Add(shape.name, shape);
                 }
-                var s = new ShapePreset
+                var customShape = new ShapePreset
                 {
                     name = CustomShapeName,
                     displayName = CustomShapeName,
                     points = Vector4.zero
                 };
-                shapePresets.Add(s.name, s);
+                shapePresets.Add(customShape.name, customShape);
             }
         }
 
@@ -208,7 +214,6 @@ namespace ProceduralParts
             lengthEdit.incrementLarge = PPart.lengthLargeStep;
             lengthEdit.incrementSmall = PPart.lengthSmallStep;
 
-            // Fields[nameof(offset)].guiActiveEditor = PPart.diameterMin != PPart.diameterMax;
             UI_FloatEdit offsetEdit = Fields[nameof(offset)].uiControlEditor as UI_FloatEdit;
             offsetEdit.incrementLarge = PPart.diameterLargeStep;
             offsetEdit.incrementSmall = PPart.diameterSmallStep;
@@ -271,10 +276,26 @@ namespace ProceduralParts
             WriteBezier();
             part.CoMOffset = CoMOffset;
             // WriteMeshes in AbstractSoRShape typically does UpdateNodeSize, UpdateProps, RaiseModelAndColliderChanged
-            // UpdateNodeSize(TopNodeName);
-            // UpdateNodeSize(BottomNodeName);
+            UpdateNodeSize(TopNodeName);
+            UpdateNodeSize(BottomNodeName);
             PPart.UpdateProps();
             RaiseModelAndColliderChanged();
+        }
+
+        private void UpdateNodeSize(string nodeName)
+        {
+            if (part.attachNodes.Find(n => n.id == nodeName) is AttachNode node)
+            {
+                float relevantDiameter;
+                if (nodeName == TopNodeName)
+                    relevantDiameter = topDiameter;
+                else
+                    relevantDiameter = bottomDiameter;
+
+                node.size = Math.Min((int)(relevantDiameter / PPart.diameterLargeStep), 3);
+                node.breakingTorque = node.breakingForce = Mathf.Max(50 * node.size * node.size, 50);
+                RaiseChangeAttachNodeSize(node, relevantDiameter, Mathf.PI * relevantDiameter * relevantDiameter * 0.25f);
+            }
         }
 
         public override void AdjustDimensionBounds()
@@ -285,8 +306,6 @@ namespace ProceduralParts
             float minLength = PPart.lengthMin;
             float minTopDiameter = (coneTopMode == ConeEndMode.CanZero && coneBottomMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
             float minBottomDiameter = (coneBottomMode == ConeEndMode.CanZero && coneTopMode != ConeEndMode.Constant) ? 0 : PPart.diameterMin;
-            // float minTopDiameter = 0;
-            // float minBottomDiameter = 0;
 
             float minBottomDiameterOrig = minBottomDiameter;
             float minTopDiameterOrig = minTopDiameter;
@@ -373,13 +392,13 @@ namespace ProceduralParts
 
         public override void TranslateAttachmentsAndNodes(BaseField f, object obj)
         {
-            if (f.name == nameof(bottomDiameter) && obj is float oldBottomDiameter)
+            if (f.name == nameof(bottomDiameter))
             {
-                HandleDiameterChange((bottomDiameter + topDiameter) / 2, (oldBottomDiameter + topDiameter) / 2);
+                HandleDiameterChange(f, obj);
             }
-            if (f.name == nameof(topDiameter) && obj is float oldTopDiameter)
+            if (f.name == nameof(topDiameter))
             {
-                HandleDiameterChange((topDiameter + bottomDiameter) / 2, (oldTopDiameter + bottomDiameter) / 2);
+                HandleDiameterChange(f, obj);
             }
             if (f.name == nameof(length) && obj is float oldLength)
             {
@@ -402,7 +421,7 @@ namespace ProceduralParts
                 {
                     if (p.FindAttachNodeByPart(part) is AttachNode node && node.nodeType == AttachNode.NodeType.Surface)
                     {
-                        GetAttachmentNodeLocation(node, out Vector3 worldSpace, out Vector3 localToHere, out ShapeCoordinates coord);
+                        GetAttachmentNodeLocation(node, out Vector3 _, out Vector3 _, out ShapeCoordinates coord);
                         float y_from_bottom = coord.y + (length / 2);
                         float oldDiameterAtY = Mathf.Lerp(oldBottomDiameter, oldTopDiameter, y_from_bottom / length);
                         float newDiameterAtY = Mathf.Lerp(bottomDiameter, topDiameter, y_from_bottom / length);
@@ -423,7 +442,7 @@ namespace ProceduralParts
                 // Our nodes are relative to part center 0,0,0.  position.y > 0 are top nodes.
                 if (node.position.y > 0 && node.nodeType == AttachNode.NodeType.Stack)
                 {
-                    Vector3 translation = trans * Vector3.forward;
+                    Vector3 translation = offset * Vector3.forward;
                     TranslateNode(node, translation);
                     if (node.attachedPart is Part pushTarget)
                     {
@@ -479,7 +498,28 @@ namespace ProceduralParts
             ProceduralPart.tfInterface.InvokeMember("AddInteropValue", ProceduralPart.tfBindingFlags, null, null, new System.Object[] { this.part, "length", length, "ProceduralParts" });
         }
 
-        internal override void InitializeAttachmentNodes() => InitializeAttachmentNodes(length, (bottomDiameter + topDiameter) / 2, (node) => node.position.y > 0, offset * Vector3.forward);
+        // We completely override these methods because we need to handle the offset
+        internal override void InitializeAttachmentNodes()
+        {
+            InitializeStackAttachmentNodes(length);
+            InitializeSurfaceAttachmentNode(length, (bottomDiameter + topDiameter) / 2);
+        }
+        internal override void InitializeStackAttachmentNodes(float length)
+        {
+            foreach (AttachNode node in part.attachNodes)
+            {
+                if (node.owner != part)
+                    node.owner = part;
+                float direction = (node.position.y > 0) ? 1 : -1;
+                Vector3 translation = direction * (length / 2) * Vector3.up;
+                if (node.position.y > 0)
+                {
+                    translation += offset * Vector3.forward;
+                }
+                if (node.nodeType == AttachNode.NodeType.Stack)
+                    MoveNode(node, translation);
+            }
+        }
 
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
@@ -559,8 +599,6 @@ namespace ProceduralParts
                 op[1] = new Vector2(Mathf.Lerp(op[3].x, op[0].x, shape[2]), Mathf.Lerp(op[3].y, op[0].y, shape[3]));
             }
         }
-
-
 
         #endregion
 

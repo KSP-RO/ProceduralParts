@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using System;
 
 namespace ProceduralParts
 {
@@ -403,13 +402,13 @@ namespace ProceduralParts
 
         internal abstract void InitializeAttachmentNodes();
 
-        internal virtual void InitializeAttachmentNodes(float length, float diameter, Func<AttachNode,bool> offsetNode = null, Vector3? offset = null)
+        internal virtual void InitializeAttachmentNodes(float length, float diameter)
         {
-            InitializeStackAttachmentNodes(length, offsetNode, offset);
+            InitializeStackAttachmentNodes(length);
             InitializeSurfaceAttachmentNode(length, diameter);
         }
 
-        internal virtual void InitializeStackAttachmentNodes(float length, Func<AttachNode,bool> offsetNodeCriteria = null, Vector3? offset = null)
+        internal virtual void InitializeStackAttachmentNodes(float length)
         {
 //            Debug.Log($"{ModTag} InitializeStackAttachmentNodes for {this} length {length}");
             foreach (AttachNode node in part.attachNodes)
@@ -418,10 +417,6 @@ namespace ProceduralParts
                     node.owner = part;
                 float direction = (node.position.y > 0) ? 1 : -1;
                 Vector3 translation = direction * (length / 2) * Vector3.up;
-                if (offset != null && offsetNodeCriteria != null && offsetNodeCriteria(node))
-                {
-                    translation += (Vector3)offset;
-                }
                 if (node.nodeType == AttachNode.NodeType.Stack)
                     MoveNode(node, translation);
             }
@@ -443,7 +438,7 @@ namespace ProceduralParts
 
         // FIXME, Temporarily set to public to be able to use it in horizontal offset
         public void TranslateNode(AttachNode node, Vector3 translation) => MoveNode(node, node.position + translation);
-        private void MoveNode(AttachNode node, Vector3 destination)
+        public void MoveNode(AttachNode node, Vector3 destination)
         {
             if (Vector3.Distance(node.position, destination) > 0.01f)
             {
