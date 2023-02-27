@@ -738,7 +738,7 @@ namespace ProceduralParts
             LinkedList<int> positivePoints = ConcavePointsWithOffset(points, 1);
             LinkedList<int> negativePoints = ConcavePointsWithOffset(points, -1);
             // If an element exists in either of the lists, we want it in the result
-            LinkedList<int> breakPoints = new LinkedList<int>(positivePoints.Union(negativePoints));
+            LinkedList<int> breakPoints = new LinkedList<int>(positivePoints.Union(negativePoints).OrderBy(x => x));
             return breakPoints;
         }
         #endregion
@@ -953,7 +953,6 @@ namespace ProceduralParts
                 odd = !odd;
 
                 var colliderMesh = new Mesh();
-                // FIXME: Some situations throw here due to too few vertices?
                 uMesh.WriteTo(colliderMesh);
                 collider.sharedMesh = colliderMesh;
 
