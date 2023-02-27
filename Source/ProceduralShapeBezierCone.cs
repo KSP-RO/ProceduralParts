@@ -128,6 +128,23 @@ namespace ProceduralParts
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
+            if (HighLogic.LoadedScene == GameScenes.LOADING)
+            {
+                try
+                {
+                    coneTopMode = (node.HasValue("coneTopMode")) ?
+                        (ConeEndMode) Enum.Parse(typeof(ConeEndMode), node.GetValue("coneTopMode"), true) :
+                        ConeEndMode.CanZero;
+                    coneBottomMode = (node.HasValue("coneBottomMode")) ?
+                        (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneBottomMode"), true) :
+                        ConeEndMode.CanZero;
+                }
+                catch
+                {
+                    Debug.Log($"{ModTag} Invalid coneTopMode or coneBottomMode set for {this} in {node}");
+                    coneTopMode = coneBottomMode = ConeEndMode.CanZero;
+                }
+            }
             InitializeSelectedShape();
         }
 
@@ -218,9 +235,29 @@ namespace ProceduralParts
             offsetEdit.incrementLarge = PPart.diameterLargeStep;
             offsetEdit.incrementSmall = PPart.diameterSmallStep;
 
+            if (PPart.diameterMin == PPart.diameterMax || (coneTopMode == ConeEndMode.Constant && coneBottomMode == ConeEndMode.Constant))
+            {
+                Fields[nameof(topDiameter)].guiActiveEditor = false;
+                Fields[nameof(bottomDiameter)].guiActiveEditor = false;
+            }
+            else
+            {
+                if (coneTopMode == ConeEndMode.Constant)
+                {
+                    Fields[nameof(topDiameter)].guiActiveEditor = false;
+                    Fields[nameof(bottomDiameter)].guiName = "Diameter";
+                }
+                if (coneBottomMode == ConeEndMode.Constant)
+                {
+                    Fields[nameof(bottomDiameter)].guiActiveEditor = false;
+                    Fields[nameof(topDiameter)].guiName = "Diameter";
+                }
+            }
             AdjustDimensionBounds();
-            bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
-            topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
+            if (coneBottomMode != ConeEndMode.Constant)
+                bottomDiameter = Mathf.Clamp(bottomDiameter, bottomDiameterEdit.minValue, bottomDiameterEdit.maxValue);
+            if (coneTopMode != ConeEndMode.Constant)
+                topDiameter = Mathf.Clamp(topDiameter, topDiameterEdit.minValue, topDiameterEdit.maxValue);
             length = Mathf.Clamp(length, lengthEdit.minValue, lengthEdit.maxValue);
         }
 
@@ -1029,16 +1066,16 @@ namespace ProceduralParts
                 int currSide = side == nSides ? 0 : side;
                 float t1 = ((float)(currSide + o / 2f) / nSides + 0.25f) * _2pi;
                 var offset = B(point.t, op);
-                var offsetDeriv = Bdt(point.t, op);
-                Vector3 norm = new Vector3(offsetDeriv.x / 2f, offsetDeriv.y / 2f, 0).normalized;
                 // We do not care about offset.y, since this should be the same as for pt
                 var offsetVec = new Vector3(0, 0, offset.x / 2f);
-                // TODO: Implement correct normals and tangents
-                // change later, currently wrong (rotate the normal wrt the offset normal)
-                var trueNormal = point.norm;
                 mesh.vertices[vertOffset] = new Vector3(point.diameter / 2f * Mathf.Cos(t1), point.y, point.diameter / 2f * Mathf.Sin(t1)) + offsetVec;
-                mesh.normals[vertOffset] = Quaternion.AngleAxis(Vector3.Angle(Vector3.up, norm) / 2f, Vector3.back) * new Vector3(point.norm.x * Mathf.Cos(t1), point.norm.y, point.norm.x * Mathf.Sin(t1));
-                mesh.tangents[vertOffset] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1);
+                // TODO: Implement correct normals and tangents. Currently using mesh.RecalculateNormals()
+                // change later, currently wrong (rotate the normal wrt the offset normal)
+                // var offsetDeriv = Bdt(point.t, op);
+                // Vector3 norm = new Vector3(offsetDeriv.x / 2f, offsetDeriv.y / 2f, 0).normalized;
+                // var trueNormal = point.norm;
+                // mesh.normals[vertOffset] = Quaternion.AngleAxis(Vector3.Angle(Vector3.up, norm) / 2f, Vector3.back) * new Vector3(point.norm.x * Mathf.Cos(t1), point.norm.y, point.norm.x * Mathf.Sin(t1));
+                // mesh.tangents[vertOffset] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1);
                 mesh.uv[vertOffset] = new Vector2((float)(side + o / 2f) / nSides, uvv);
             }
         }
@@ -1134,6 +1171,8 @@ namespace ProceduralParts
         {
             var target = HighLogic.LoadedScene == GameScenes.LOADING ? iconMesh : normalMesh;
             mesh.WriteTo(target);
+            target.RecalculateNormals();
+            target.RecalculateTangents();
         }
 
         #endregion
