@@ -6,9 +6,9 @@ using KSPAPIExtensions;
 
 namespace ProceduralParts
 {
-    public class ProceduralShapeBezierOffset : ProceduralAbstractShape
+    public class ProceduralShapeBezierCone : ProceduralAbstractShape
     {
-        private const string ModTag = "[ProceduralShapeBezierOffset]";
+        private const string ModTag = "[ProceduralShapeBezierCone]";
         public override Vector3 CoMOffset => CoMOffset_internal();
         private const string CustomShapeName = "Custom";
 
