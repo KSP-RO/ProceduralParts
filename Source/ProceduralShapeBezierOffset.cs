@@ -442,7 +442,7 @@ namespace ProceduralParts
                 // Our nodes are relative to part center 0,0,0.  position.y > 0 are top nodes.
                 if (node.position.y > 0 && node.nodeType == AttachNode.NodeType.Stack)
                 {
-                    Vector3 translation = offset * Vector3.forward;
+                    Vector3 translation = trans * Vector3.forward;
                     TranslateNode(node, translation);
                     if (node.attachedPart is Part pushTarget)
                     {
@@ -451,17 +451,18 @@ namespace ProceduralParts
                 }
             }
 
-            // TODO: translate surface attached parts when changing offset
-            // foreach (Part p in part.children)
-            // {
-            //     if (p.FindAttachNodeByPart(part) is AttachNode node && node.nodeType == AttachNode.NodeType.Surface)
-            //     {
-            //         GetAttachmentNodeLocation(node, out Vector3 worldSpace, out Vector3 localToHere, out ShapeCoordinates coord);
-            //         float ratio = offset / oldOffset;
-            //         coord.y *= ratio;
-            //         MovePartByAttachNode(node, coord);
-            //     }
-            // }
+            foreach (Part p in part.children)
+            {
+                if (p.FindAttachNodeByPart(part) is AttachNode node && node.nodeType == AttachNode.NodeType.Surface)
+                {
+                    GetAttachmentNodeLocation(node, out Vector3 _, out Vector3 _, out ShapeCoordinates coord);
+                    float y_from_bottom = coord.y + (length / 2);
+                    float oldOffsetAtY = Mathf.Lerp(0, oldOffset, y_from_bottom / length);
+                    float newOffsetAtY = Mathf.Lerp(0, offset, y_from_bottom / length);
+                    float change = newOffsetAtY - oldOffsetAtY;
+                    TranslatePart(p, change * Vector3.forward);
+                }
+            }
         }
 
         private Vector3 CoMOffset_internal()
