@@ -12,7 +12,7 @@ namespace ProceduralParts
         #region Config parameters
 
         [KSPField(guiActiveEditor = true, guiName = "Diameters", groupName = ProceduralPart.PAWGroupName)]
-        private const string diamTitleString = "";
+        private string diamTitleString = "";
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Inner", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]

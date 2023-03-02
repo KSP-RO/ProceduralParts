@@ -8,7 +8,7 @@ namespace ProceduralParts
 {
     public abstract class ProceduralAbstractSoRShape : ProceduralAbstractShape
     {
-        private const string ModTag = "[ProceduralAbstractShapeSoR]";
+        private static readonly string ModTag = "[ProceduralAbstractShapeSoR]";
 
         #region Config fields
 
