@@ -25,23 +25,23 @@ namespace ProceduralParts
         private ShapePreset selectedPreset;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Curve", groupName = ProceduralPart.PAWGroupName),
-        UI_ChooseOption(scene = UI_Scene.Editor)]
+         UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedShape;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-        UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float topDiameter = 1.25f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-        UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float bottomDiameter = 1.25f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-        UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Offset", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
-        UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
+         UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float offset = 0f;
 
         [KSPField(isPersistant = true)]
@@ -133,7 +133,7 @@ namespace ProceduralParts
                 try
                 {
                     coneTopMode = (node.HasValue("coneTopMode")) ?
-                        (ConeEndMode) Enum.Parse(typeof(ConeEndMode), node.GetValue("coneTopMode"), true) :
+                        (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneTopMode"), true) :
                         ConeEndMode.CanZero;
                     coneBottomMode = (node.HasValue("coneBottomMode")) ?
                         (ConeEndMode)Enum.Parse(typeof(ConeEndMode), node.GetValue("coneBottomMode"), true) :
@@ -150,7 +150,6 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
-            Debug.Log("[ProcPartsDebug] OnStart called");
             InitializeSelectedShape();
             base.OnStart(state);
             if (HighLogic.LoadedSceneIsEditor)
@@ -306,7 +305,6 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
-            Debug.Log("[ProcPartsDebug] UpdateShape called");
             Volume = CalculateVolume();
             SetControlPoints(length, topDiameter, bottomDiameter);
             // Ensure correct control points if something called AdjustDimensionBounds or CalculateVolume when handling volume change event
@@ -375,7 +373,6 @@ namespace ProceduralParts
             (Fields[nameof(topDiameter)].uiControlEditor as UI_FloatEdit).minValue = minTopDiameter;
             (Fields[nameof(bottomDiameter)].uiControlEditor as UI_FloatEdit).minValue = minBottomDiameter;
             (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).minValue = minLength;
-            Debug.Log($"[ProcPartsDebug] MinLength = {minLength}");
         }
 
         // IteratorIncrement is approximately 1/1000.
@@ -429,11 +426,7 @@ namespace ProceduralParts
 
         public override void TranslateAttachmentsAndNodes(BaseField f, object obj)
         {
-            if (f.name == nameof(bottomDiameter))
-            {
-                HandleDiameterChange(f, obj);
-            }
-            if (f.name == nameof(topDiameter))
+            if (f.name == nameof(bottomDiameter) || f.name == nameof(topDiameter))
             {
                 HandleDiameterChange(f, obj);
             }
@@ -472,7 +465,6 @@ namespace ProceduralParts
 
         private void HandleOffsetChange(float offset, float oldOffset)
         {
-            // TODO: Implement the translation in a better way. Currently changed the internal method to public
             float trans = offset - oldOffset;
             foreach (AttachNode node in part.attachNodes)
             {
@@ -493,9 +485,9 @@ namespace ProceduralParts
                 if (p.FindAttachNodeByPart(part) is AttachNode node && node.nodeType == AttachNode.NodeType.Surface)
                 {
                     GetAttachmentNodeLocation(node, out Vector3 _, out Vector3 _, out ShapeCoordinates coord);
-                    float y_from_bottom = coord.y + (length / 2);
-                    float oldOffsetAtY = Mathf.Lerp(0, oldOffset, y_from_bottom / length);
-                    float newOffsetAtY = Mathf.Lerp(0, offset, y_from_bottom / length);
+                    float yFromBottom = coord.y + (length / 2);
+                    float oldOffsetAtY = Mathf.Lerp(0, oldOffset, yFromBottom / length);
+                    float newOffsetAtY = Mathf.Lerp(0, offset, yFromBottom / length);
                     float change = newOffsetAtY - oldOffsetAtY;
                     TranslatePart(p, change * Vector3.forward);
                 }
@@ -542,6 +534,7 @@ namespace ProceduralParts
             InitializeStackAttachmentNodes(length);
             InitializeSurfaceAttachmentNode(length, (bottomDiameter + topDiameter) / 2);
         }
+
         internal override void InitializeStackAttachmentNodes(float length)
         {
             foreach (AttachNode node in part.attachNodes)
@@ -562,10 +555,11 @@ namespace ProceduralParts
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
             CalculateVolume();  // Update the bezier curve control nodes
-                                // The Bezier curve control points are NOT normalized.
-                                //  p0 = new Vector2(bottomDiameter, -length / 2f);
-                                //  p3 = new Vector2(topDiameter, length / 2f);
-                                // But we do need to normalize the length and shift such that 0 <= t <= 1
+
+            // The Bezier curve control points are NOT normalized.
+            //  p0 = new Vector2(bottomDiameter, -length / 2f);
+            //  p3 = new Vector2(topDiameter, length / 2f);
+            // But we do need to normalize the length and shift such that 0 <= t <= 1
             float t = (coords.y / length) + (1f / 2);
             Vector2 Bt = B(t, p);
             Debug.Log($"{ModTag} Normalized {coords.y} to {t} (0=bottom, 1=top), B(t)={Bt} as (diameter, length). TopDiameter:{topDiameter} BotDiameter:{bottomDiameter} Len: {length}");
@@ -618,7 +612,6 @@ namespace ProceduralParts
 
         private void SetOffsetControlPoints(float length, float offset)
         {
-            // Debug.Log("[ProcPartsDebug] offset control points were set");
             // There are four control points, the bottom (p0) and the top ones (p3) are obvious
             op[0] = new Vector2(0, -length / 2f);
             op[3] = new Vector2(offset * 2f, length / 2f);
@@ -644,8 +637,8 @@ namespace ProceduralParts
 
         private void WriteBezier()
         {
-            var pointsPositive = GeneratePoints(1f);
-            var pointsNegative = GeneratePoints(-1f);
+            LinkedList<ProfilePoint> pointsPositive = GeneratePoints(1f);
+            LinkedList<ProfilePoint> pointsNegative = GeneratePoints(-1f);
 
             LinkedList<ProfilePoint> points;
             float offsetMult;
@@ -663,7 +656,7 @@ namespace ProceduralParts
             // Subdivide due to diameter changes that are straight lines
             SubdivideHorizontal(points, offsetMult);
             // Figure out what parts of the cone are concave to split them into convex parts for colliders
-            var splitsList = ConcavePoints(points);
+            LinkedList<int> splitsList = ConcavePoints(points);
 
             // Need to figure out the v coords.
             float sumLengths = 0;
@@ -741,9 +734,9 @@ namespace ProceduralParts
 
         private bool PointIsConcave(LinkedListNode<ProfilePoint> pointNode, float offsetMult)
         {
-            var left = CreatePoint(pointNode.Previous.Value.t, offsetMult);
-            var middle = CreatePoint(pointNode.Value.t, offsetMult);
-            var right = CreatePoint(pointNode.Next.Value.t, offsetMult);
+            ProfilePoint left = CreatePoint(pointNode.Previous.Value.t, offsetMult);
+            ProfilePoint middle = CreatePoint(pointNode.Value.t, offsetMult);
+            ProfilePoint right = CreatePoint(pointNode.Next.Value.t, offsetMult);
             return MiddleIsConcave(left, middle, right);
         }
 
@@ -868,7 +861,7 @@ namespace ProceduralParts
                 for (int i = 0; i < ts.Count; ++i)
                 {
                     // The difference from the line
-                    var offsetVec = B(ts[i], op) * offsetMult;
+                    Vector2 offsetVec = B(ts[i], op) * offsetMult;
                     offsetVec.y = 0;
                     float devTS = Vector2.Dot(B(ts[i], p) + offsetVec, norm) - devM;
 
@@ -936,7 +929,7 @@ namespace ProceduralParts
                 previous = point;
             }
 
-            var tankULength = nSides * NormSideLength * (topDiameter + bottomDiameter);
+            float tankULength = nSides * NormSideLength * (topDiameter + bottomDiameter);
 
             RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
             WriteToAppropriateMesh(sideMesh, PPart.SidesIconMesh, SidesMesh);
@@ -960,7 +953,7 @@ namespace ProceduralParts
             int colliderNumber = 0;
             int first = 0;
             bool firstIteration = true;
-            foreach (var last in splitsList)
+            foreach (int last in splitsList)
             {
                 if (firstIteration)
                 {
@@ -972,15 +965,15 @@ namespace ProceduralParts
                 LinkedList<ProfilePoint> currentPoints = new LinkedList<ProfilePoint>();
                 for (int j = first; j <= last; j++)
                 {
-                    var point = points.ElementAt(j);
+                    ProfilePoint point = points.ElementAt(j);
                     if (point.inCollider)
                     {
                         currentPoints.AddLast(point);
                     }
                 }
                 int layers = currentPoints.Count;
-                var go = new GameObject($"Mesh_Collider_{colliderNumber++}");
-                var collider = go.AddComponent<MeshCollider>();
+                GameObject go = new GameObject($"Mesh_Collider_{colliderNumber++}");
+                MeshCollider collider = go.AddComponent<MeshCollider>();
                 go.transform.SetParent(PPart.ColliderHolder.transform, false);
                 collider.convex = true;
 
@@ -989,7 +982,7 @@ namespace ProceduralParts
                 GenerateColliderMesh(currentPoints, nSides, uMesh, ref odd);
                 odd = !odd;
 
-                var colliderMesh = new Mesh();
+                Mesh colliderMesh = new Mesh();
                 uMesh.WriteTo(colliderMesh);
                 collider.sharedMesh = colliderMesh;
 
@@ -1034,9 +1027,9 @@ namespace ProceduralParts
             {
                 int currSide = side == nSides ? 0 : side;
                 float t1 = ((float)(currSide + o / 2f) / nSides + 0.25f) * _2pi;
-                var offset = B(point.t, op);
+                Vector2 offset = B(point.t, op);
                 // We do not care about offset.y, since this should be the same as for pt
-                var offsetVec = new Vector3(0, 0, offset.x / 2f);
+                Vector3 offsetVec = new Vector3(0, 0, offset.x / 2f);
                 mesh.vertices[side + vertOffset] = new Vector3(point.diameter / 2f * Mathf.Cos(t1), point.y, point.diameter / 2f * Mathf.Sin(t1)) + offsetVec;
                 mesh.normals[side + vertOffset] = new Vector3(0, point.y > 0 ? 1f : -1f, 0);
                 mesh.tangents[side + vertOffset] = new Vector4(-Mathf.Sin(t1), 0, Mathf.Cos(t1), -1);
@@ -1046,8 +1039,8 @@ namespace ProceduralParts
 
         private void WriteCapTriangles(UncheckedMesh mesh, int nSides, int vertexOffset, int triangleOffset, bool up)
         {
-            var triangleIndexOffset = triangleOffset * 3;
-            for (var i = 0; i < nSides - 2; i++)
+            int triangleIndexOffset = triangleOffset * 3;
+            for (int i = 0; i < nSides - 2; i++)
             {
                 mesh.triangles[i * 3 + triangleIndexOffset] = vertexOffset;
                 mesh.triangles[i * 3 + 1 + triangleIndexOffset] = (up ? i + 2 : i + 1) + vertexOffset;
@@ -1065,9 +1058,9 @@ namespace ProceduralParts
             {
                 int currSide = side == nSides ? 0 : side;
                 float t1 = ((float)(currSide + o / 2f) / nSides + 0.25f) * _2pi;
-                var offset = B(point.t, op);
+                Vector2 offset = B(point.t, op);
                 // We do not care about offset.y, since this should be the same as for pt
-                var offsetVec = new Vector3(0, 0, offset.x / 2f);
+                Vector3 offsetVec = new Vector3(0, 0, offset.x / 2f);
                 mesh.vertices[vertOffset] = new Vector3(point.diameter / 2f * Mathf.Cos(t1), point.y, point.diameter / 2f * Mathf.Sin(t1)) + offsetVec;
                 // TODO: Implement correct normals and tangents. Currently using mesh.RecalculateNormals()
                 // change later, currently wrong (rotate the normal wrt the offset normal)
@@ -1169,7 +1162,7 @@ namespace ProceduralParts
 
         private static void WriteToAppropriateMesh(UncheckedMesh mesh, Mesh iconMesh, Mesh normalMesh)
         {
-            var target = HighLogic.LoadedScene == GameScenes.LOADING ? iconMesh : normalMesh;
+            Mesh target = HighLogic.LoadedScene == GameScenes.LOADING ? iconMesh : normalMesh;
             mesh.WriteTo(target);
             target.RecalculateNormals();
             target.RecalculateTangents();

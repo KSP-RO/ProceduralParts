@@ -436,7 +436,6 @@ namespace ProceduralParts
             }
         }
 
-        // FIXME, Temporarily set to public to be able to use it in horizontal offset
         public void TranslateNode(AttachNode node, Vector3 translation) => MoveNode(node, node.position + translation);
         public void MoveNode(AttachNode node, Vector3 destination)
         {
