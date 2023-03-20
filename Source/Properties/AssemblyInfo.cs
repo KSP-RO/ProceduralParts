@@ -23,7 +23,11 @@ using System.Runtime.InteropServices;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("a1c9118f-14a4-4aaf-bb43-87b1c13a7d4d")]
 
-[assembly: KSPAssembly("ProceduralParts", 2, 4)]
+#if CIBUILD
+[assembly: KSPAssembly("ProceduralParts", @MAJOR@, @MINOR@)]
+#else
+[assembly: KSPAssembly("ProceduralParts", 2, 99)]
+#endif
 
 // Version information for an assembly consists of the following four values:
 //
@@ -36,5 +40,5 @@ using System.Runtime.InteropServices;
 #if CIBUILD
 [assembly: AssemblyFileVersion("@MAJOR@.@MINOR@.@PATCH@.@BUILD@")]
 #else
-[assembly: AssemblyFileVersion("2.4.3.1")]
+[assembly: AssemblyFileVersion("2.99.0.0")]
 #endif
