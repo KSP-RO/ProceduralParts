@@ -436,8 +436,8 @@ namespace ProceduralParts
             }
         }
 
-        private void TranslateNode(AttachNode node, Vector3 translation) => MoveNode(node, node.position + translation);
-        private void MoveNode(AttachNode node, Vector3 destination)
+        public void TranslateNode(AttachNode node, Vector3 translation) => MoveNode(node, node.position + translation);
+        public void MoveNode(AttachNode node, Vector3 destination)
         {
             if (Vector3.Distance(node.position, destination) > 0.01f)
             {
