@@ -155,8 +155,7 @@ namespace ProceduralParts
 
         public void OnDestroy()
         {
-            if (HighLogic.LoadedSceneIsEditor)
-                GameEvents.onVariantApplied.Remove(OnVariantApplied);
+            GameEvents.onVariantApplied.Remove(OnVariantApplied);
             GameEvents.onGameSceneSwitchRequested.Remove(OnEditorExit);
         }
         public void OnGUI() => texturePickerGUI?.OnGUI();
