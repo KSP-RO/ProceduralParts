@@ -48,6 +48,17 @@ namespace ProceduralTools
             Destroy(this);
         }
 
-        public static bool FARinstalled => AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
+        private static bool? _farInstalled;
+        public static bool FARinstalled
+        {
+            get
+            {
+                if (!_farInstalled.HasValue)
+                {
+                    _farInstalled = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name == "FerramAerospaceResearch");
+                }
+                return _farInstalled.Value;
+            }
+        }
     }
 }
