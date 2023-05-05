@@ -300,8 +300,11 @@ namespace ProceduralParts
         private void ColliderChanged() => part.SendEvent("OnPartColliderChanged", null, 0);
         protected void RaiseModelAndColliderChanged()
         {
-            ModelChanged();
-            ColliderChanged();
+            if (PartLoader.Instance.IsReady())
+            {
+                ModelChanged();
+                ColliderChanged();
+            }
         }
 
         #endregion
