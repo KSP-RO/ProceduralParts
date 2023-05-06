@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using UnityEngine;
 
 namespace ProceduralTools
@@ -7,14 +8,8 @@ namespace ProceduralTools
     {
         public Part part;
 
-        public static DragCubeTool UpdateDragCubes(Part p, bool immediate = false)
+        public static DragCubeTool UpdateDragCubes(Part p)
         {
-            if (immediate)
-            {
-                UpdateCubes(p);
-                return null;
-            }
-
             var tool = p.GetComponent<DragCubeTool>();
             if (tool == null)
             {
@@ -24,18 +19,28 @@ namespace ProceduralTools
             return tool;
         }
 
+        public static void UpdateDragCubesImmediate(Part p)
+        {
+            if (!Ready(p))
+                throw new InvalidOperationException("Not ready for drag cube rendering yet");
+             
+            UpdateCubes(p);
+        }
+
         public void FixedUpdate()
         {
             if (Ready())
                 UpdateCubes();
         }
 
-        public bool Ready()
+        public bool Ready() => Ready(part);
+
+        private static bool Ready(Part p)
         {
             if (HighLogic.LoadedSceneIsFlight)
                 return FlightGlobals.ready; //&& !part.packed && part.vessel.loaded;
             if (HighLogic.LoadedSceneIsEditor)
-                return part.localRoot == EditorLogic.RootPart && part.gameObject.layer != LayerMask.NameToLayer("TransparentFX");
+                return p.localRoot == EditorLogic.RootPart && p.gameObject.layer != LayerMask.NameToLayer("TransparentFX");
             return true;
         }
 
