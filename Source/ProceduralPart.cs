@@ -554,8 +554,16 @@ namespace ProceduralParts
         [KSPEvent(guiActive = false, active = true)]
         public void OnPartColliderChanged()
         {
-            if (!(HighLogic.LoadedSceneIsEditor && !updateDragCubesInEditor))
-                ProceduralTools.DragCubeTool.UpdateDragCubes(part);
+            if (!HighLogic.LoadedSceneIsEditor || updateDragCubesInEditor)
+            {
+                // Drag cubes should get generated immediately during the partcatalog compilation stage;
+                // in all other cases there may need to be a delay.
+                if (PartLoader.Instance.IsReady())
+                    ProceduralTools.DragCubeTool.UpdateDragCubes(part);
+                else
+                    ProceduralTools.DragCubeTool.UpdateDragCubesImmediate(part);
+                
+            }
         }
 
         public void UpdateProps()

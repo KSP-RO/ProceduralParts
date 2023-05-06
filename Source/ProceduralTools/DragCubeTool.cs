@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using UnityEngine;
 
 namespace ProceduralTools
@@ -7,17 +8,23 @@ namespace ProceduralTools
     {
         public Part part;
 
-        public static DragCubeTool UpdateDragCubes(Part p, bool immediate = false)
+        public static DragCubeTool UpdateDragCubes(Part p)
         {
             var tool = p.GetComponent<DragCubeTool>();
             if (tool == null)
             {
                 tool = p.gameObject.AddComponent<DragCubeTool>();
                 tool.part = p;
-                if (immediate && tool.Ready())
-                    tool.UpdateCubes();
             }
             return tool;
+        }
+
+        public static void UpdateDragCubesImmediate(Part p)
+        {
+            if (!Ready(p))
+                throw new InvalidOperationException("Not ready for drag cube rendering yet");
+             
+            UpdateCubes(p);
         }
 
         public void FixedUpdate()
@@ -26,26 +33,33 @@ namespace ProceduralTools
                 UpdateCubes();
         }
 
-        public bool Ready()
+        public bool Ready() => Ready(part);
+
+        private static bool Ready(Part p)
         {
             if (HighLogic.LoadedSceneIsFlight)
                 return FlightGlobals.ready; //&& !part.packed && part.vessel.loaded;
             if (HighLogic.LoadedSceneIsEditor)
-                return part.localRoot == EditorLogic.RootPart && part.gameObject.layer != LayerMask.NameToLayer("TransparentFX");
+                return p.localRoot == EditorLogic.RootPart && p.gameObject.layer != LayerMask.NameToLayer("TransparentFX");
             return true;
         }
 
         private void UpdateCubes()
         {
-            if (FARinstalled)
-                part.SendMessage("GeometryPartModuleRebuildMeshData");
-            var dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(part);
-            part.DragCubes.ClearCubes();
-            part.DragCubes.Cubes.Add(dragCube);
-            part.DragCubes.ResetCubeWeights();
-            part.DragCubes.ForceUpdate(true, true, false);
-            part.DragCubes.SetDragWeights();
+            UpdateCubes(part);
             Destroy(this);
+        }
+
+        private static void UpdateCubes(Part p)
+        {
+            if (FARinstalled)
+                p.SendMessage("GeometryPartModuleRebuildMeshData");
+            DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(p);
+            p.DragCubes.ClearCubes();
+            p.DragCubes.Cubes.Add(dragCube);
+            p.DragCubes.ResetCubeWeights();
+            p.DragCubes.ForceUpdate(true, true, false);
+            p.DragCubes.SetDragWeights();
         }
 
         private static bool? _farInstalled;
