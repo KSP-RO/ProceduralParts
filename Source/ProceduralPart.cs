@@ -554,8 +554,8 @@ namespace ProceduralParts
         [KSPEvent(guiActive = false, active = true)]
         public void OnPartColliderChanged()
         {
-            if (!(HighLogic.LoadedSceneIsEditor && !updateDragCubesInEditor))
-                ProceduralTools.DragCubeTool.UpdateDragCubes(part);
+            if (!HighLogic.LoadedSceneIsEditor || updateDragCubesInEditor)
+                ProceduralTools.DragCubeTool.UpdateDragCubes(part, immediate: !PartLoader.Instance.IsReady());
         }
 
         public void UpdateProps()

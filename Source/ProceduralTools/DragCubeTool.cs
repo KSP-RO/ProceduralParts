@@ -9,13 +9,17 @@ namespace ProceduralTools
 
         public static DragCubeTool UpdateDragCubes(Part p, bool immediate = false)
         {
+            if (immediate)
+            {
+                UpdateCubes(p);
+                return null;
+            }
+
             var tool = p.GetComponent<DragCubeTool>();
             if (tool == null)
             {
                 tool = p.gameObject.AddComponent<DragCubeTool>();
                 tool.part = p;
-                if (immediate && tool.Ready())
-                    tool.UpdateCubes();
             }
             return tool;
         }
@@ -37,15 +41,20 @@ namespace ProceduralTools
 
         private void UpdateCubes()
         {
-            if (FARinstalled)
-                part.SendMessage("GeometryPartModuleRebuildMeshData");
-            var dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(part);
-            part.DragCubes.ClearCubes();
-            part.DragCubes.Cubes.Add(dragCube);
-            part.DragCubes.ResetCubeWeights();
-            part.DragCubes.ForceUpdate(true, true, false);
-            part.DragCubes.SetDragWeights();
+            UpdateCubes(part);
             Destroy(this);
+        }
+
+        private static void UpdateCubes(Part p)
+        {
+            if (FARinstalled)
+                p.SendMessage("GeometryPartModuleRebuildMeshData");
+            DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(p);
+            p.DragCubes.ClearCubes();
+            p.DragCubes.Cubes.Add(dragCube);
+            p.DragCubes.ResetCubeWeights();
+            p.DragCubes.ForceUpdate(true, true, false);
+            p.DragCubes.SetDragWeights();
         }
 
         private static bool? _farInstalled;
