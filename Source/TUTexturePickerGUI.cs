@@ -72,12 +72,13 @@ namespace ProceduralParts
         private const int INDENT = 15;
         private Rect Window = new Rect(250, 100, GUIWidth, GUIHeight);
         public ProceduralPart parent;
-        private readonly Assembly TUAssembly = AssemblyLoader.loadedAssemblies.FirstOrDefault(a => a.assembly.GetName().Name == "TexturesUnlimited")?.assembly;
-        private Type TexturesUnlimitedLoaderType, TUTextureContainerType, KSPTextureSwitchType;
-        private Type TextureSetType, TextureSetMaterialDataType;
-        private Type ShaderPropertyType, ShaderPropertyTextureType;
-        private MethodInfo TUSetRecoloringMethod;
-        private IDictionary loadedSets;
+        private static readonly Assembly TUAssembly = AssemblyLoader.loadedAssemblies.FirstOrDefault(a => a.assembly.GetName().Name == "TexturesUnlimited")?.assembly;
+        private static bool TUSetupDone = false;
+        private static Type TexturesUnlimitedLoaderType, TUTextureContainerType, KSPTextureSwitchType;
+        private static Type TextureSetType, TextureSetMaterialDataType;
+        private static Type ShaderPropertyType, ShaderPropertyTextureType;
+        private static MethodInfo TUSetRecoloringMethod;
+        private static IDictionary loadedSets;
         private BaseField CurrentTextureField => parent?.part?.Modules["KSPTextureSwitch"]?.Fields["currentTextureSet"];
 
         private bool DictionariesInitialized = false;
@@ -89,6 +90,7 @@ namespace ProceduralParts
         private static readonly TextureSetContainerMetalComparer MetalsComparer = new TextureSetContainerMetalComparer();
         private static readonly TextureSetContainerMaskComparer MasksComparer = new TextureSetContainerMaskComparer();
         private Vector2 scrollPos = new Vector2();
+
         public TUTexturePickerGUI(ProceduralPart parent)
         {
             this.parent = parent;
@@ -219,8 +221,10 @@ namespace ProceduralParts
             GUILayout.EndHorizontal();
         }
 
-        public void SetupTUReflection()
+        public static void SetupTUReflection()
         {
+            if (TUSetupDone) return;
+
             if (TUAssembly is Assembly)
             {
                 TexturesUnlimitedLoaderType = TUAssembly.GetType("KSPShaderTools.TexturesUnlimitedLoader");
@@ -233,6 +237,8 @@ namespace ProceduralParts
                 loadedSets = TexturesUnlimitedLoaderType.GetField("loadedTextureSets", BindingFlags.Public | BindingFlags.Static).GetValue(null) as IDictionary;
                 TUSetRecoloringMethod = KSPTextureSwitchType.GetMethod("setSectionColors");
             }
+
+            TUSetupDone = true;
         }
     }
 }
