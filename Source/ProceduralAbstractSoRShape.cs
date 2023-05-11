@@ -198,8 +198,6 @@ namespace ProceduralParts
             // set the texture scale.
             RaiseChangeTextureScale("sides", PPart.legacyTextureHandler.SidesMaterial, new Vector2(tankULength, tankVLength));
 
-            
-
             if(HighLogic.LoadedScene == GameScenes.LOADING)
                 m.WriteTo(PPart.SidesIconMesh);
             else
@@ -213,8 +211,6 @@ namespace ProceduralParts
 
             first.circ.WriteEndcap(first.dia, first.y, false, 0, 0, m, false);
             last.circ.WriteEndcap(last.dia, last.y, true, first.circ.totVertexes, (first.circ.totVertexes - 2) * 3, m, !odd);
-
-            
 
             if (HighLogic.LoadedScene == GameScenes.LOADING)
                 m.WriteTo(PPart.EndsIconMesh);

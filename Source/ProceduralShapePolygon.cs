@@ -1,6 +1,7 @@
 ﻿using KSPAPIExtensions;
 using System;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace ProceduralParts
 {
@@ -144,6 +145,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
+            Profiler.BeginSample("UpdateShape Polygon");
             part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             OuterDiameter = InnerDiameter / OuterToInnerFactor;
@@ -153,6 +155,7 @@ namespace ProceduralParts
             UpdateNodeSize(BottomNodeName);
             PPart.UpdateProps();
             RaiseModelAndColliderChanged();
+            Profiler.EndSample();
         }
 
         public override void AdjustDimensionBounds()

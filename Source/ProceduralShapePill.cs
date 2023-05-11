@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace ProceduralParts
 {
@@ -158,6 +159,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool forceUpdate=true)
         {
+            Profiler.BeginSample("UpdateShape Pill");
             part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             LinkedList<ProfilePoint> points = new LinkedList<ProfilePoint>();
@@ -204,6 +206,7 @@ namespace ProceduralParts
             }
 
             WriteMeshes(points);
+            Profiler.EndSample();
         }
 
         public override float CalculateVolume() => CalculateVolume(length, diameter, fillet);

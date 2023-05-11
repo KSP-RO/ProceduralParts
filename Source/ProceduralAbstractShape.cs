@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine.Profiling;
 
 namespace ProceduralParts
 {
@@ -77,9 +78,11 @@ namespace ProceduralParts
                 if (value != _volume)
                 {
                     _volume = value;
+                    Profiler.BeginSample("PP-VolumeChangeEvents");
                     ChangeVolume(volumeName, value);
                     if (HighLogic.LoadedSceneIsEditor)
                         GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+                    Profiler.EndSample();
                 }
             }
         }
@@ -296,8 +299,21 @@ namespace ProceduralParts
         }
         
         protected void RaiseChangeAttachNodeSize(AttachNode node, float minDia, float area) => ChangeAttachNodeSize(node, minDia, area);
-        private void ModelChanged() => part.SendEvent("OnPartModelChanged", null, 0);
-        private void ColliderChanged() => part.SendEvent("OnPartColliderChanged", null, 0);
+
+        private void ModelChanged()
+        {
+            Profiler.BeginSample("ModelChanged");
+            part.SendEvent("OnPartModelChanged", null, 0);
+            Profiler.EndSample();
+        }
+
+        private void ColliderChanged()
+        {
+            Profiler.BeginSample("ColliderChanged");
+            part.SendEvent("OnPartColliderChanged", null, 0);
+            Profiler.EndSample();
+        }
+
         protected void RaiseModelAndColliderChanged()
         {
             ModelChanged();

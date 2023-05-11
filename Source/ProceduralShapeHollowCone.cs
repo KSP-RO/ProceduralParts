@@ -2,6 +2,7 @@
 using System.Linq;
 using UnityEngine;
 using KSPAPIExtensions;
+using UnityEngine.Profiling;
 
 namespace ProceduralParts
 {
@@ -238,6 +239,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
+            Profiler.BeginSample("UpdateShape HCone");
             part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             GenerateMeshes(bottomOuterDiameter / 2, bottomInnerDiameter / 2, topOuterDiameter / 2, topInnerDiameter / 2, length, numSides);
@@ -248,6 +250,7 @@ namespace ProceduralParts
             UpdateNodeSize(BottomNodeName);
             PPart.UpdateProps();
             RaiseModelAndColliderChanged();
+            Profiler.EndSample();
         }
 
         private void UpdateNodeSize(string nodeName)

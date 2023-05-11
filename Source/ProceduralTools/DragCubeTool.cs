@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace ProceduralTools
 {
@@ -52,6 +53,7 @@ namespace ProceduralTools
 
         private static void UpdateCubes(Part p)
         {
+            Profiler.BeginSample("UpdateCubes");
             if (FARinstalled)
                 p.SendMessage("GeometryPartModuleRebuildMeshData");
             DragCube dragCube = DragCubeSystem.Instance.RenderProceduralDragCube(p);
@@ -60,6 +62,7 @@ namespace ProceduralTools
             p.DragCubes.ResetCubeWeights();
             p.DragCubes.ForceUpdate(true, true, false);
             p.DragCubes.SetDragWeights();
+            Profiler.EndSample();
         }
 
         private static bool? _farInstalled;

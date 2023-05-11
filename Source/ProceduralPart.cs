@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using KSPAPIExtensions;
 using System.Reflection;
+using UnityEngine.Profiling;
 
 namespace ProceduralParts
 {
@@ -97,6 +98,7 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
+            Profiler.BeginSample("PP-OnStart");
             isInitialized = true;
             InitializeObjects();
             InitializeShapes();
@@ -144,6 +146,7 @@ namespace ProceduralParts
                 GameEvents.onVariantApplied.Add(OnVariantApplied);
                 GameEvents.onGameSceneSwitchRequested.Add(OnEditorExit);
             }
+            Profiler.EndSample();
         }
 
         public override void OnStartFinished(StartState state)

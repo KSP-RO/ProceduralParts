@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using KSPAPIExtensions;
+using UnityEngine.Profiling;
 
 namespace ProceduralParts
 {
@@ -193,6 +194,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
+            Profiler.BeginSample("UpdateShape HPill");
             part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             GenerateMeshes(MajorRadius, MinorRadius, length, fillet / 2, (int)numSides);
@@ -203,6 +205,7 @@ namespace ProceduralParts
             UpdateNodeSize(BottomNodeName);
             PPart.UpdateProps();
             RaiseModelAndColliderChanged();
+            Profiler.EndSample();
         }
 
         private void UpdateNodeSize(string nodeName)

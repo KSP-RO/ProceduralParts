@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace ProceduralParts
 {
@@ -53,6 +54,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
+            Profiler.BeginSample("UpdateShape Cyl");
             part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             Vector2 norm = new Vector2(1, 0);
@@ -61,6 +63,7 @@ namespace ProceduralParts
                 new ProfilePoint(diameter, -0.5f * length, 0f, norm),
                 new ProfilePoint(diameter, 0.5f * length, 1f, norm)
                 );
+            Profiler.EndSample();
         }
 
         public override void AdjustDimensionBounds()

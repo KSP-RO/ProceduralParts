@@ -1,6 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using KSPAPIExtensions;
+using UnityEngine.Profiling;
 
 namespace ProceduralParts
 {
@@ -210,6 +211,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
+            Profiler.BeginSample("UpdateShape Truss");
             part.CoMOffset = CoMOffset;
             Volume = CalculateVolume();
             GenerateMeshes(bottomDiameter / 2, topDiameter / 2, length, rodDiameter / 2, (int)nbRods, tiltAngle * Mathf.Deg2Rad, offsetAngle * Mathf.Deg2Rad, symmetryRods);
@@ -219,6 +221,7 @@ namespace ProceduralParts
             UpdateNodeSize(BottomNodeName, bottomDiameter);
             PPart.UpdateProps();
             RaiseModelAndColliderChanged();
+            Profiler.EndSample();
         }
 
         private void UpdateNodeSize(string nodeName, float nodeDiameter)

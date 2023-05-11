@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using KSPAPIExtensions;
+using UnityEngine.Profiling;
 
 namespace ProceduralParts
 {
@@ -305,6 +306,7 @@ namespace ProceduralParts
 
         internal override void UpdateShape(bool force = true)
         {
+            Profiler.BeginSample("UpdateShape BCone");
             Volume = CalculateVolume();
             SetControlPoints(length, topDiameter, bottomDiameter);
             // Ensure correct control points if something called AdjustDimensionBounds or CalculateVolume when handling volume change event
@@ -315,6 +317,7 @@ namespace ProceduralParts
             UpdateNodeSize(BottomNodeName);
             PPart.UpdateProps();
             RaiseModelAndColliderChanged();
+            Profiler.EndSample();
         }
 
         private void UpdateNodeSize(string nodeName)
