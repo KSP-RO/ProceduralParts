@@ -78,11 +78,14 @@ namespace ProceduralParts
                 if (value != _volume)
                 {
                     _volume = value;
-                    Profiler.BeginSample("PP-VolumeChangeEvents");
-                    ChangeVolume(volumeName, value);
-                    if (HighLogic.LoadedSceneIsEditor)
-                        GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
-                    Profiler.EndSample();
+                    if (PPart.isInitialized)
+                    {
+                        Profiler.BeginSample("PP-VolumeChangeEvents");
+                        ChangeVolume(volumeName, value);
+                        if (HighLogic.LoadedSceneIsEditor)
+                            GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+                        Profiler.EndSample();
+                    }
                 }
             }
         }

@@ -24,7 +24,7 @@ namespace ProceduralParts
          UI_Toggle(disabledText = "Show", enabledText = "Hide", scene = UI_Scene.Editor, affectSymCounterparts = UI_Scene.None)]
         public bool showTUPickerGUI = false;
 
-        private bool isInitialized = false;
+        internal bool isInitialized = false;
         public static bool installedFAR = false;
         public static bool installedTU = false;
         public static bool staticallyInitialized = false;
@@ -74,7 +74,6 @@ namespace ProceduralParts
         {
             if (!isInitialized)
             {
-                isInitialized = true;
                 InitializeObjects();
                 InitializeShapes();
                 if (shape is ProceduralAbstractShape)
@@ -84,6 +83,7 @@ namespace ProceduralParts
                         shape.FixEditorIconScale();
                 }
                 UpdateTexture();
+                isInitialized = true;
             }
 
             // Need to rescale everything to make it look good in the icon, but reenable otherwise OnStart won't get called again.
@@ -99,7 +99,6 @@ namespace ProceduralParts
         public override void OnStart(StartState state)
         {
             Profiler.BeginSample("PP-OnStart");
-            isInitialized = true;
             InitializeObjects();
             InitializeShapes();
 
@@ -115,6 +114,8 @@ namespace ProceduralParts
                 shape.UpdateShape();
             if (part.variants is ModulePartVariants)
                 part.variants.useMultipleDragCubes = false;
+
+            isInitialized = true;
 
             if (HighLogic.LoadedSceneIsEditor)
             {
