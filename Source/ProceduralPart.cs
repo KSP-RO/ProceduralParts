@@ -553,7 +553,7 @@ namespace ProceduralParts
         #endregion
 
         [KSPField]
-        bool updateDragCubesInEditor = false;
+        public bool updateDragCubesInEditor = false;
 
         [KSPEvent(guiActive = false, active = true)]
         public void OnPartColliderChanged()
