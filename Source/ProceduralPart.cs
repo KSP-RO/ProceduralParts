@@ -106,8 +106,12 @@ namespace ProceduralParts
             {
                 Debug.Log($"{ModTag} TechLimits: {part.name} diameter=({diameterMin:G3}, {diameterMax:G3}) length=({lengthMin:G3}, {lengthMax:G3}) volume=({volumeMin:G3}, {volumeMax:G3})");
                 legacyTextureHandler.ValidateSelectedTexture();
-                texturePickerGUI = new TUTexturePickerGUI(this);
-                Fields[nameof(showTUPickerGUI)].guiActiveEditor = installedTU && !forceLegacyTextures;
+                BaseField bf = Fields[nameof(showTUPickerGUI)];
+                bf.guiActiveEditor = installedTU && !forceLegacyTextures;
+                if (bf.guiActiveEditor)
+                {
+                    bf.uiControlEditor.onFieldChanged = OnShowTUPickerGUIChanged;
+                }
             }
 
             if (shape is ProceduralAbstractShape)
@@ -162,7 +166,21 @@ namespace ProceduralParts
             GameEvents.onVariantApplied.Remove(OnVariantApplied);
             GameEvents.onGameSceneSwitchRequested.Remove(OnEditorExit);
         }
-        public void OnGUI() => texturePickerGUI?.OnGUI();
+
+        private void OnShowTUPickerGUIChanged(BaseField f, object obj)
+        {
+            if (showTUPickerGUI && texturePickerGUI == null)
+            {
+                texturePickerGUI = gameObject.AddComponent<TUTexturePickerGUI>();
+                texturePickerGUI.ShowForPart(this);
+            }
+            else if (!showTUPickerGUI && texturePickerGUI != null)
+            {
+                Destroy(texturePickerGUI);
+                texturePickerGUI = null;
+            }
+        }
+
         private void OnEditorExit(GameEvents.FromToAction<GameScenes, GameScenes> _) => showTUPickerGUI = false;
         private void OnForceLegacyTextureChanged(BaseField f, object obj) { SetTextureFieldVisibility(); UpdateTexture(); }
         public void OnTextureChanged(BaseField f, object obj) => UpdateTexture();

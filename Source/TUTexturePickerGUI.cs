@@ -65,7 +65,7 @@ namespace ProceduralParts
         }
     }
 
-    internal class TUTexturePickerGUI
+    internal class TUTexturePickerGUI : MonoBehaviour
     {
         private const int GUIWidth = 400;
         private const int GUIHeight = 500;
@@ -91,7 +91,7 @@ namespace ProceduralParts
         private static readonly TextureSetContainerMaskComparer MasksComparer = new TextureSetContainerMaskComparer();
         private Vector2 scrollPos = new Vector2();
 
-        public TUTexturePickerGUI(ProceduralPart parent)
+        public void ShowForPart(ProceduralPart parent)
         {
             this.parent = parent;
             SetupTUReflection();
@@ -110,6 +110,7 @@ namespace ProceduralParts
                 Window = GUILayout.Window(GetHashCode(), Window, GUIDisplay, "Textures Unlimited Texture Selector", GUILayout.Width(GUIWidth), GUILayout.Height(GUIHeight));
             }
         }
+
         private void BuildToggles()
         {
             MainToggles.Clear();
@@ -186,7 +187,13 @@ namespace ProceduralParts
                 GUILayout.EndScrollView();
             }
 
-            if (GUILayout.Button("Close")) parent.showTUPickerGUI = false;
+            if (GUILayout.Button("Close"))
+            {
+                Destroy(this);
+                parent.showTUPickerGUI = false;
+                parent.texturePickerGUI = null;
+            }
+
             GUI.DragWindow();
         }
 
