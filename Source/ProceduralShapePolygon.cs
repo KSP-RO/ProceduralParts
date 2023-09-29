@@ -74,7 +74,7 @@ namespace ProceduralParts
             //      => (0.25 * innerDIameter * innerDiameter * normSideLength * cornerCount)
         }
 
-        private float Length => length;
+        private new float Length => length;
         private int CornerCount => (int)cornerCount;
         private float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
         private float EdgeToEdgeAngle => Mathf.PI - CornerCenterCornerAngle;
@@ -147,6 +147,10 @@ namespace ProceduralParts
         {
             Profiler.BeginSample("UpdateShape Polygon");
             part.CoMOffset = CoMOffset;
+            MinDiameter = MaxDiameter = diameter;
+            InnerMinDiameter = InnerMaxDiameter = -1f;
+            base.Length = length;
+            NominalVolume = ProceduralShapeCylinder.CalculateVolume(length, diameter);
             Volume = CalculateVolume();
             OuterDiameter = InnerDiameter / OuterToInnerFactor;
             GenerateMeshes();

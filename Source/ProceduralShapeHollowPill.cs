@@ -196,6 +196,12 @@ namespace ProceduralParts
         {
             Profiler.BeginSample("UpdateShape HPill");
             part.CoMOffset = CoMOffset;
+            MaxDiameter = outerDiameter;
+            MinDiameter = outerDiameter - fillet * 2f;
+            InnerMaxDiameter = innerDiameter;
+            InnerMinDiameter = innerDiameter - fillet * 2f;
+            Length = length;
+            NominalVolume = ProceduralShapePill.CalculateVolume(length, outerDiameter, fillet);
             Volume = CalculateVolume();
             GenerateMeshes(MajorRadius, MinorRadius, length, fillet / 2, (int)numSides);
 

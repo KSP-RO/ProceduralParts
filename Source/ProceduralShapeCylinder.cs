@@ -56,7 +56,11 @@ namespace ProceduralParts
         {
             Profiler.BeginSample("UpdateShape Cyl");
             part.CoMOffset = CoMOffset;
-            Volume = CalculateVolume();
+            MaxDiameter = MinDiameter = diameter;
+            InnerMaxDiameter = InnerMinDiameter = -1f;
+            Length = length;
+            NominalVolume = CalculateVolume();
+            Volume = NominalVolume;
             Vector2 norm = new Vector2(1, 0);
 
             WriteMeshes(
@@ -92,7 +96,7 @@ namespace ProceduralParts
         }
 
         public override float CalculateVolume() => CalculateVolume(length, diameter);
-        public float CalculateVolume(float length, float diameter)
+        public static float CalculateVolume(float length, float diameter)
         {
             return diameter * diameter * 0.25f * Mathf.PI * length;
         }

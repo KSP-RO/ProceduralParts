@@ -307,7 +307,12 @@ namespace ProceduralParts
         internal override void UpdateShape(bool force = true)
         {
             Profiler.BeginSample("UpdateShape BCone");
-            Volume = CalculateVolume();
+            MaxDiameter = Mathf.Max(topDiameter, bottomDiameter);
+            MinDiameter = Mathf.Min(topDiameter, bottomDiameter);
+            InnerMaxDiameter = InnerMinDiameter = -1f;
+            Length = length;
+            NominalVolume = CalculateVolume();
+            Volume = NominalVolume;
             SetControlPoints(length, topDiameter, bottomDiameter);
             // Ensure correct control points if something called AdjustDimensionBounds or CalculateVolume when handling volume change event
             WriteBezier();

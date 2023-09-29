@@ -146,7 +146,12 @@ namespace ProceduralParts
         {
             Profiler.BeginSample("UpdateShape Cone");
             part.CoMOffset = CoMOffset;
-            Volume = CalculateVolume();
+            MaxDiameter = Mathf.Max(topDiameter, bottomDiameter);
+            MinDiameter = Mathf.Min(topDiameter, bottomDiameter);
+            InnerMaxDiameter = InnerMinDiameter = -1f;
+            Length = length;
+            NominalVolume = CalculateVolume();
+            Volume = NominalVolume;
             Vector2 norm = new Vector2(length, (bottomDiameter - topDiameter) / 2f);
             norm.Normalize();
 
@@ -249,7 +254,7 @@ namespace ProceduralParts
         }
 
         public override float CalculateVolume() => CalculateVolume(length, topDiameter, bottomDiameter);
-        public virtual float CalculateVolume(float length, float topDiameter, float bottomDiameter)
+        public static float CalculateVolume(float length, float topDiameter, float bottomDiameter)
         {
             return (Mathf.PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;
         }

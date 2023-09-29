@@ -213,6 +213,12 @@ namespace ProceduralParts
         {
             Profiler.BeginSample("UpdateShape Truss");
             part.CoMOffset = CoMOffset;
+            MaxDiameter = Mathf.Max(bottomDiameter, topDiameter);
+            MinDiameter = Mathf.Min(bottomDiameter, topDiameter);
+            InnerMaxDiameter = MaxDiameter - rodDiameter * 2f;
+            InnerMinDiameter = MinDiameter - rodDiameter * 2f;
+            Length = length;
+            NominalVolume = ProceduralShapeCone.CalculateVolume(length, topDiameter, bottomDiameter);
             Volume = CalculateVolume();
             GenerateMeshes(bottomDiameter / 2, topDiameter / 2, length, rodDiameter / 2, (int)nbRods, tiltAngle * Mathf.Deg2Rad, offsetAngle * Mathf.Deg2Rad, symmetryRods);
 

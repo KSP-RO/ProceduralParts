@@ -241,6 +241,12 @@ namespace ProceduralParts
         {
             Profiler.BeginSample("UpdateShape HCone");
             part.CoMOffset = CoMOffset;
+            MaxDiameter = Mathf.Max(topOuterDiameter, bottomOuterDiameter);
+            MinDiameter = Mathf.Min(topOuterDiameter, bottomOuterDiameter);
+            InnerMaxDiameter = Mathf.Max(topInnerDiameter, bottomInnerDiameter);
+            InnerMinDiameter = Mathf.Min(topInnerDiameter, bottomInnerDiameter);
+            Length = length;
+            NominalVolume = ProceduralShapeCone.CalculateVolume(length, topOuterDiameter, bottomOuterDiameter);
             Volume = CalculateVolume();
             GenerateMeshes(bottomOuterDiameter / 2, bottomInnerDiameter / 2, topOuterDiameter / 2, topInnerDiameter / 2, length, numSides);
 

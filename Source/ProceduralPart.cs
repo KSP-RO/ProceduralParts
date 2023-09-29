@@ -8,7 +8,7 @@ using UnityEngine.Profiling;
 
 namespace ProceduralParts
 {
-    public class ProceduralPart : PartModule, IPartCostModifier
+    public class ProceduralPart : PartModule, IPartCostModifier, IPartMassModifier
     {
         public static readonly string ModTag = "[ProceduralParts]";
         public const string PAWGroupName = "ProcParts";
@@ -593,6 +593,28 @@ namespace ProceduralParts
             foreach (var prop in GetComponents<IProp>())
                 prop.UpdateProp();
         }
+
+        #region Mass override for hollow tanks
+
+        [KSPField]
+        public float densityForHollowVolume = 0f;
+
+        [KSPField(isPersistant = true)]
+        public float moduleMass = 0f;
+
+        public ModifierChangeWhen GetModuleMassChangeWhen() => ModifierChangeWhen.FIXED;
+
+        public float GetModuleMass(float defaultMass, ModifierStagingSituation sit)
+        {
+            if (shape == null || !HighLogic.LoadedSceneIsEditor)
+                return moduleMass;
+
+            moduleMass = shape.NominalVolume < shape.Volume ? 0f : densityForHollowVolume * (shape.NominalVolume - shape.Volume);
+
+            return moduleMass;
+        }
+
+        #endregion
 
         #region TestFlight
         public static Type tfInterface = null;

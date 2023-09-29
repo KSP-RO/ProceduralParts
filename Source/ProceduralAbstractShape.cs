@@ -91,6 +91,66 @@ namespace ProceduralParts
         }
         private float _volume;
 
+        public float NominalVolume
+        {
+            get => _nominalVolume;
+            protected set
+            {
+                _nominalVolume = value;
+            }
+        }
+        private float _nominalVolume;
+
+        public float MaxDiameter
+        {
+            get => _maxDiameter;
+            protected set
+            {
+                _maxDiameter = value;
+            }
+        }
+        private float _maxDiameter;
+
+        public float MinDiameter
+        {
+            get => _minDiameter;
+            protected set
+            {
+                _minDiameter = value;
+            }
+        }
+        private float _minDiameter;
+
+        public float InnerMinDiameter
+        {
+            get => _innerMinDiameter;
+            protected set
+            {
+                _innerMinDiameter = value;
+            }
+        }
+        private float _innerMinDiameter;
+
+        public float InnerMaxDiameter
+        {
+            get => _innerMaxDiameter;
+            protected set
+            {
+                _innerMaxDiameter = value;
+            }
+        }
+        private float _innerMaxDiameter;
+
+        public float Length
+        {
+            get => _length;
+            protected set
+            {
+                _length = value;
+            }
+        }
+        private float _length;
+
         #endregion
 
         #region Events
@@ -279,6 +339,7 @@ namespace ProceduralParts
             var data = new BaseEventDetails (BaseEventDetails.Sender.USER);
             data.Set<string> ("volName", volName);
             data.Set<double> ("newTotalVolume", newVolume);
+            data.Set<double> ("newNominalVolume", NominalVolume);
             Debug.Log($"{ModTag} {part.name} OnPartVolumeChanged volName:{volName} vol:{newVolume:F4}");
             part.SendEvent ("OnPartVolumeChanged", data, 0);
         }

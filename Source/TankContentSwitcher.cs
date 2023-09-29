@@ -342,7 +342,7 @@ namespace ProceduralParts
 
         #endregion
 
-        public ProceduralPart PPart => _pPart ?? (_pPart = GetComponent<ProceduralPart>());
+        public ProceduralPart PPart => _pPart != null ? _pPart : (_pPart = GetComponent<ProceduralPart>());
         private ProceduralPart _pPart;
     }
 }

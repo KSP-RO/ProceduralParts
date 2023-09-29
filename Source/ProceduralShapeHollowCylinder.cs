@@ -151,6 +151,10 @@ namespace ProceduralParts
         {
             Profiler.BeginSample("UpdateShape HCyl");
             part.CoMOffset = CoMOffset;
+            MinDiameter = MaxDiameter = outerDiameter;
+            InnerMinDiameter = InnerMaxDiameter = innerDiameter;
+            Length = length;
+            NominalVolume = ProceduralShapeCylinder.CalculateVolume(length, outerDiameter);
             Volume = CalculateVolume();
             GenerateMeshes(outerDiameter / 2, innerDiameter / 2, length, numSides);
 
