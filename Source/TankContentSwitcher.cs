@@ -80,6 +80,16 @@ namespace ProceduralParts
                 UpdateTankMass();
                 UpdateMassDisplay();
             }
+
+            // Done here and done in OnStart in PP to get ordering right
+            // since these get fired in reverse-add order
+            if (HighLogic.LoadedSceneIsEditor)
+                GameEvents.onEditorShipModified.Add(OnShipModified);
+        }
+
+        protected void OnDestroy()
+        {
+            GameEvents.onEditorShipModified.Remove(OnShipModified);
         }
 
         #endregion
@@ -293,7 +303,13 @@ namespace ProceduralParts
             if (!string.IsNullOrEmpty(tankVolumeName))
             {
                 mass = SelectedTankType.dryDensity * tankVolume + SelectedTankType.massConstant;
-                mass *= (PPart is ProceduralPart) ? PPart.CurrentShape.massMultiplier : 1;
+                if (PPart != null)
+                {
+                    mass *= PPart.CurrentShape.massMultiplier;
+                    if (PPart.density > 0f)
+                        mass *= PPart.density * (1f / ProceduralPart.NominalDensity);
+
+                }
             }
         }
 
@@ -303,6 +319,8 @@ namespace ProceduralParts
             {
                 double resourceMass = part.Resources.Cast<PartResource>().Sum(r => r.maxAmount * r.info.density);
                 float totalMass = mass + Convert.ToSingle(resourceMass);
+                if (PPart != null)
+                    totalMass += PPart.moduleMass;
                 massDisplay = (SelectedTankType.isStructural) ?
                                 MathUtils.FormatMass(totalMass) :
                                 $"Dry: {MathUtils.FormatMass(mass)} / Wet: {MathUtils.FormatMass(totalMass)}";
@@ -344,5 +362,11 @@ namespace ProceduralParts
 
         public ProceduralPart PPart => _pPart != null ? _pPart : (_pPart = GetComponent<ProceduralPart>());
         private ProceduralPart _pPart;
+
+        private void OnShipModified(ShipConstruct _)
+        {
+            UpdateTankMass();
+            UpdateMassDisplay();
+        }
     }
 }
