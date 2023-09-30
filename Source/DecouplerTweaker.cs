@@ -60,12 +60,21 @@ namespace ProceduralParts
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="F3", groupName = ProceduralPart.PAWGroupName)]
         public float mass = 0;
 
+        [KSPField]
+        public bool usePFMass = false;
+        [KSPField]
+        public Vector4 specificMass = new Vector4(0.0002f, 0.0075f, 0.005f, 0f);
+        [KSPField]
+        public float decouplerMassMult = 4f;
+
         private ModuleDecouple decouple;
         internal const float ImpulsePerForceUnit = 0.02f;
+        private ProceduralPart procPart;
 
         public override void OnStart(StartState state)
         {
             decouple = part.FindModuleImplementing<ModuleDecouple>();
+            procPart = part.FindModuleImplementing<ProceduralPart>();
             if (decouple == null)
             {
                 Debug.LogError($"[ProceduralParts] No ModuleDecouple found on {part}");
@@ -89,6 +98,16 @@ namespace ProceduralParts
                 decouple.isOmniDecoupler = isOmniDecoupler;
                 decouple.ejectionForce = ejectionImpulse / TimeWarp.fixedDeltaTime;
                 GameEvents.onTimeWarpRateChanged.Add(OnTimeWarpRateChanged);
+            }
+        }
+
+        public override void OnStartFinished(StartState state)
+        {
+            base.OnStartFinished(state);
+            if (HighLogic.LoadedSceneIsEditor && mass == 0f && density > 0)
+            {
+                if (procPart != null)
+                    UpdateMass(procPart.Volume);
             }
         }
 
@@ -143,9 +162,24 @@ namespace ProceduralParts
         {
             if (HighLogic.LoadedSceneIsEditor && density > 0 && data.Get<double>("newTotalVolume") is double volume)
             {
-                mass = Convert.ToSingle(density * volume);
-                GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+                UpdateMass(volume);
             }
+        }
+
+        private void UpdateMass(double volume)
+        {
+            if (usePFMass && procPart != null)
+            {
+                float diam = procPart.Diameter;
+                float baseMass = (((((specificMass.x * diam) + specificMass.y) * diam) + specificMass.z) * diam) + specificMass.w;
+                mass = baseMass * decouplerMassMult;
+                mass *= Mathf.Lerp(0.9f, 1.1f, Mathf.InverseLerp(0.1f, 0.3f, procPart.Length / diam));
+            }
+            else
+            {
+                mass = Convert.ToSingle(density * volume);
+            }
+            GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
         }
     }
 }
