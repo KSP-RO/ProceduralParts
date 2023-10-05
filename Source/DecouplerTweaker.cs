@@ -61,7 +61,7 @@ namespace ProceduralParts
         public float mass = 0;
 
         [KSPField]
-        public bool usePFMass = false;
+        public bool usePFStyleMass = false;
         [KSPField]
         public Vector4 specificMass = new Vector4(0.0002f, 0.0075f, 0.005f, 0f);
         [KSPField]
@@ -168,12 +168,12 @@ namespace ProceduralParts
 
         private void UpdateMass(double volume)
         {
-            if (usePFMass && procPart != null)
+            if (usePFStyleMass && procPart != null)
             {
                 float diam = procPart.Diameter;
                 float baseMass = (((((specificMass.x * diam) + specificMass.y) * diam) + specificMass.z) * diam) + specificMass.w;
                 mass = baseMass * decouplerMassMult;
-                mass *= Mathf.Lerp(0.9f, 1.1f, Mathf.InverseLerp(0.1f, 0.3f, procPart.Length / diam));
+                //mass *= Mathf.Lerp(0.9f, 1.1f, Mathf.InverseLerp(0.1f, 0.3f, procPart.Length / diam));
             }
             else
             {
