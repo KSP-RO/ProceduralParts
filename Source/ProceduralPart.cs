@@ -514,15 +514,16 @@ namespace ProceduralParts
         [KSPField]
         public bool displayCost = true;
 
+        private bool? _hasMFT = null;
+
 		public ModifierChangeWhen GetModuleCostChangeWhen () => ModifierChangeWhen.FIXED;
 
         private bool ContainsMFT(Part p)
         {
-            foreach (PartModule pm in p.Modules)
-            {
-                if (pm.name.Equals("ModuleFuelTanks")) return true;
-            }
-            return false;
+            if (!_hasMFT.HasValue)
+                _hasMFT = part.Modules.Contains("ModuleFuelTanks");
+
+            return _hasMFT.Value;
         }
 
         private void GetResourceCosts(Part p, out float maxCost, out float actualCost)
