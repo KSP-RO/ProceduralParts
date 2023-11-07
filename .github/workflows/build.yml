@@ -45,6 +45,11 @@ jobs:
       - name: Build mod solution
         run: msbuild /p:Configuration=Release /p:ReferencePath="${{ steps.download-assemblies.outputs.ksp-dll-path }}" ${GITHUB_WORKSPACE}/Source/ProceduralParts.sln
 
+      - name: Remove excess DLLs
+        uses: KSP-RO/BuildTools/remove-excess-dlls@master
+        with:
+          path: ${GITHUB_WORKSPACE}/GameData/
+
       - name: Build metadata
         uses: KSP-RO/BuildTools/update-version-file@master
         with:
