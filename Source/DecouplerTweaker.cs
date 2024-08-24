@@ -54,8 +54,8 @@ namespace ProceduralParts
         public bool isOmniDecoupler = false;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Impulse", guiUnits = " kN*s", guiFormat = "F1", groupName = ProceduralPart.PAWGroupName),
-         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0.1f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall = 1, incrementSlide = 0.1f, unit = " kN")]
-        public float ejectionImpulse = 0.1f;
+         UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall = 1, incrementSlide = 0.1f, sigFigs = 1, unit = " kN")]
+        public float ejectionImpulse = -1f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName="Mass", guiUnits="T", guiFormat="F3", groupName = ProceduralPart.PAWGroupName)]
         public float mass = 0;
@@ -87,14 +87,14 @@ namespace ProceduralParts
                 Fields[nameof(isOmniDecoupler)].guiActiveEditor =
                     string.IsNullOrEmpty(separatorTechRequired) || ResearchAndDevelopment.GetTechnologyState(separatorTechRequired) == RDTech.State.Available;
 
-                if (ejectionImpulse < float.Epsilon || float.IsNaN(ejectionImpulse))
-                    ejectionImpulse = decouple.ejectionForce * ImpulsePerForceUnit;
+                if (ejectionImpulse < 0 || float.IsNaN(ejectionImpulse))
+                    ejectionImpulse = Math.Min(decouple.ejectionForce * ImpulsePerForceUnit, maxImpulse);
 
                 (Fields[nameof(ejectionImpulse)].uiControlEditor as UI_FloatEdit).maxValue = maxImpulse;
             }
             else if (HighLogic.LoadedSceneIsFlight)
             {
-                if (float.IsNaN(ejectionImpulse)) ejectionImpulse = 0;
+                if (ejectionImpulse < 0 || float.IsNaN(ejectionImpulse)) ejectionImpulse = 0;
                 decouple.isOmniDecoupler = isOmniDecoupler;
                 decouple.ejectionForce = ejectionImpulse / TimeWarp.fixedDeltaTime;
                 GameEvents.onTimeWarpRateChanged.Add(OnTimeWarpRateChanged);
@@ -146,7 +146,8 @@ namespace ProceduralParts
                 maxImpulse = CalcMaxImpulse(minDia, ejectionImpulseEdit.minValue);
                 float oldMax = float.IsPositiveInfinity(ejectionImpulseEdit.maxValue) ? maxImpulse : ejectionImpulseEdit.maxValue;
                 float ratio = Mathf.Clamp01(ejectionImpulse / oldMax);
-                ejectionImpulse = maxImpulse * ratio;
+                if (ratio > 0)
+                    ejectionImpulse = maxImpulse * ratio;
                 ejectionImpulseEdit.maxValue = maxImpulse;
             }
         }
