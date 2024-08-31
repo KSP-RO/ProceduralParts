@@ -690,5 +690,29 @@ namespace ProceduralParts
             }
         }
         #endregion
+
+        /// <summary>
+        /// Called from RP-1
+        /// </summary>
+        /// <param name="validationError"></param>
+        /// <param name="canBeResolved"></param>
+        /// <param name="costToResolve"></param>
+        /// <param name="techToResolve"></param>
+        /// <returns></returns>
+        public virtual bool Validate(out string validationError, out bool canBeResolved, out float costToResolve, out string techToResolve)
+        {
+            validationError = null;
+            canBeResolved = false;
+            costToResolve = 0;
+            techToResolve = null;
+
+            if (density + 0.0001 < minDensity)
+            {
+                validationError = $"density needs to be {minDensity:0.###} or higher";
+                return false;
+            }
+
+            return true;
+        }
     }
 }
