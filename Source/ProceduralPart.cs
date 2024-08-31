@@ -48,7 +48,7 @@ namespace ProceduralParts
 
         [KSPField(isPersistant = true, guiActiveEditor = false, guiName = "Stringer Mass", groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName)]
         [UI_FloatRange(minValue = 0f, maxValue = 1.0f, stepIncrement = 0.01f)]
-        public float density = 0;
+        public float density = -1;
         public const float NominalDensity = 0.15f;
         [KSPField] public float minDensity = 0f;
         [KSPField] public float maxDensity = 0f;
@@ -78,8 +78,6 @@ namespace ProceduralParts
             // An existing vessel part or .craft file that has never set this value before, but not the availablePart
             if (HighLogic.LoadedScene != GameScenes.LOADING && !node.HasValue(nameof(forceLegacyTextures)))
                 forceLegacyTextures = true;
-
-            SetPFFields();
         }
 
         public override string GetInfo()
@@ -159,11 +157,11 @@ namespace ProceduralParts
                 opt.onFieldChanged = OnShapeSelectionChanged;
 
                 Fields[nameof(costDisplay)].guiActiveEditor = displayCost;
+                SetPFFields();
 
                 GameEvents.onVariantApplied.Add(OnVariantApplied);
                 GameEvents.onGameSceneSwitchRequested.Add(OnEditorExit);
             }
-            SetPFFields();
 
             // Done here and done in OnStartFinished in TankContentSwitcher to get ordering right
             // since these get fired in reverse-add order
@@ -665,6 +663,9 @@ namespace ProceduralParts
             {
                 fieldDensity.guiActiveEditor = false;
             }
+
+            if (density < 0f)
+                density = Math.Max(minDensity, 0f);
         }
 
         private void OnShipModified(ShipConstruct _)
