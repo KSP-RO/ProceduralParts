@@ -74,6 +74,7 @@ namespace ProceduralParts
             //      => (0.25 * innerDIameter * innerDiameter * normSideLength * cornerCount)
         }
 
+        public override string ShapeKey => $"PP-Poly|N{cornerCount}|{diameter}|{length}";
         private new float Length => length;
         private int CornerCount => (int)cornerCount;
         private float CornerCenterCornerAngle => 2 * Mathf.PI / CornerCount;
