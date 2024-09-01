@@ -9,6 +9,7 @@ namespace ProceduralParts
     {
         #region KSPFields
         private const string ModTag = "[ProceduralShapeHollowTruss]";
+        private const float maxMeshBendError = 0.02f;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Top D", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
@@ -61,9 +62,9 @@ namespace ProceduralParts
                 return realLength;
             }
         }
-
-        const float maxMeshBendError = 0.02f;
         #endregion
+
+        public override string ShapeKey => $"PP-HTruss|N{nbRods}{(symmetryRods ? "S" : "")}|{topDiameter}|{bottomDiameter}|{length}|{rodDiameter}|{tiltAngle}|{offsetAngle}";
 
         public override void OnStart(StartState state)
         {
