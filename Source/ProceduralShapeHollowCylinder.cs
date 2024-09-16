@@ -9,6 +9,7 @@ namespace ProceduralParts
     class ProceduralShapeHollowCylinder : ProceduralAbstractShape
     {
         private const string ModTag = "[ProceduralShapeHollowCylinder]";
+        private const float maxError = 0.0125f;
 
         #region Config parameters
 
@@ -27,8 +28,6 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
-        private const float maxError = 0.0125f;
-
         public int numSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt(outerDiameter)/(2f * maxError)), 24);
 
         [KSPField]
@@ -40,6 +39,8 @@ namespace ProceduralParts
         #endregion
 
         #region Utility Properties
+
+        public override string ShapeKey => $"PP-HCyl|{outerDiameter}|{innerDiameter}|{length}";
 
         private float CornerCenterCornerAngle => 2 * Mathf.PI / numSides;
         private float NormSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
