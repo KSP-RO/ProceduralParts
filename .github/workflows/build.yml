@@ -25,7 +25,7 @@ jobs:
 
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [check-secret]
     if: needs.check-secret.outputs.has-password == 'true'
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -66,7 +66,7 @@ jobs:
           cp -v -R "${GITHUB_WORKSPACE}/GameData" "${RELEASE_DIR}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: ProceduralParts
           path: ${{ steps.assemble-release.outputs.release-dir }}
