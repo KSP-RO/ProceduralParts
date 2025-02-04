@@ -44,10 +44,10 @@ namespace ProceduralParts
         public float density = 0;
 
         /// <summary>
-        /// If specified, this will set a maximum impulse based on the diameter of the node.
+        /// If specified, this will set a maximum impulse based on the mass of the node.
         /// </summary>
         [KSPField]
-        public float maxImpulseDiameterRatio = 0;
+        public float maxImpulseMassRatio = 125;
 
         [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Style:", groupName = ProceduralPart.PAWGroupName),
          UI_Toggle(disabledText = "Decoupler", enabledText = "Separator")]
@@ -138,12 +138,11 @@ namespace ProceduralParts
         {
             if (HighLogic.LoadedSceneIsEditor &&
                 data.Get<AttachNode>("node") is AttachNode node &&
-                data.Get<float>("minDia") is float minDia &&
                 node.id == textureMessageName &&
                 maxImpulseDiameterRatio >= float.Epsilon &&
                 Fields[nameof(ejectionImpulse)].uiControlEditor is UI_FloatEdit ejectionImpulseEdit)
             {
-                maxImpulse = CalcMaxImpulse(minDia, ejectionImpulseEdit.minValue);
+                maxImpulse = CalcMaxImpulse(mass, ejectionImpulseEdit.minValue);
                 float oldMax = float.IsPositiveInfinity(ejectionImpulseEdit.maxValue) ? maxImpulse : ejectionImpulseEdit.maxValue;
                 float ratio = Mathf.Clamp01(ejectionImpulse / oldMax);
                 if (ratio > 0)
@@ -152,10 +151,10 @@ namespace ProceduralParts
             }
         }
 
-        private float CalcMaxImpulse(float diam, float min)
+        private float CalcMaxImpulse(float mass, float min)
         {
-            diam = Mathf.Max(diam, 0.001f); // Disallow values too small
-            return Mathf.Max(maxImpulseDiameterRatio * diam, min);
+            diam = Mathf.Max(mass, 0.001f); // Disallow values too small
+            return Mathf.Max(maxImpulseDiameterRatio * mass, min);
         }
 
         [KSPEvent(active = true)]
