@@ -139,7 +139,7 @@ namespace ProceduralParts
             if (HighLogic.LoadedSceneIsEditor &&
                 data.Get<AttachNode>("node") is AttachNode node &&
                 node.id == textureMessageName &&
-                maxImpulseDiameterRatio >= float.Epsilon &&
+                maxImpulseMassRatio >= float.Epsilon &&
                 Fields[nameof(ejectionImpulse)].uiControlEditor is UI_FloatEdit ejectionImpulseEdit)
             {
                 maxImpulse = CalcMaxImpulse(mass, ejectionImpulseEdit.minValue);
@@ -153,8 +153,8 @@ namespace ProceduralParts
 
         private float CalcMaxImpulse(float mass, float min)
         {
-            diam = Mathf.Max(mass, 0.001f); // Disallow values too small
-            return Mathf.Max(maxImpulseDiameterRatio * mass, min);
+            mass = Mathf.Max(mass, 0.001f); // Disallow values too small
+            return Mathf.Max(maxImpulseMassRatio * mass, min);
         }
 
         [KSPEvent(active = true)]
