@@ -42,3 +42,5 @@ using System.Runtime.InteropServices;
 #else
 [assembly: AssemblyFileVersion("2.99.0.0")]
 #endif
+
+[assembly: KSPAssemblyDependency("ROUtils", 1, 1)]

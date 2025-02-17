@@ -5,6 +5,7 @@ using UnityEngine;
 using KSPAPIExtensions;
 using System.Reflection;
 using UnityEngine.Profiling;
+using ROUtils;
 
 namespace ProceduralParts
 {
@@ -596,13 +597,7 @@ namespace ProceduralParts
         {
             if (!HighLogic.LoadedSceneIsEditor || updateDragCubesInEditor)
             {
-                // Drag cubes should get generated immediately during the partcatalog compilation stage;
-                // in all other cases there may need to be a delay.
-                if (PartLoader.Instance.IsReady())
-                    ProceduralTools.DragCubeTool.UpdateDragCubes(part);
-                else
-                    ProceduralTools.DragCubeTool.UpdateDragCubesImmediate(part);
-                
+                DragCubeTool.UpdateDragCubes(part, CurrentShape.ShapeKey);
             }
         }
 
