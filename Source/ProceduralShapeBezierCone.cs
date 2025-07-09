@@ -25,23 +25,23 @@ namespace ProceduralParts
         internal static readonly Dictionary<string, ShapePreset> shapePresets = new Dictionary<string, ShapePreset>();
         private ShapePreset selectedPreset;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Curve", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_Shape_Curve", groupName = ProceduralPart.PAWGroupName),
          UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedShape;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Top", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "#PP_Shape_Top", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float topDiameter = 1.25f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Bottom", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "#PP_Shape_Bottom", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float bottomDiameter = 1.25f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_Shape_Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Offset", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_Shape_Offset", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float offset = 0f;
 
@@ -245,12 +245,12 @@ namespace ProceduralParts
                 if (coneTopMode == ConeEndMode.Constant)
                 {
                     Fields[nameof(topDiameter)].guiActiveEditor = false;
-                    Fields[nameof(bottomDiameter)].guiName = "Diameter";
+                    Fields[nameof(bottomDiameter)].guiName = "#PP_Shape_Diameter";
                 }
                 if (coneBottomMode == ConeEndMode.Constant)
                 {
                     Fields[nameof(bottomDiameter)].guiActiveEditor = false;
-                    Fields[nameof(topDiameter)].guiName = "Diameter";
+                    Fields[nameof(topDiameter)].guiName = "#PP_Shape_Diameter";
                 }
             }
             AdjustDimensionBounds();

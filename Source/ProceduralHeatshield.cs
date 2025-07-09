@@ -25,7 +25,7 @@ namespace ProceduralParts
         [KSPField(isPersistant = true)]
         public float mass = -1;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "Fairing"),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiActive = false, guiName = "#PP_GUI_Fairing"),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = 0.01f, incrementLarge = -0.1f, incrementSmall = 0.01f, useSI = true, unit = "m", sigFigs = 5)]
         public float fairingThickness = 0.05f;
 

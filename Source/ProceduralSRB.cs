@@ -565,7 +565,7 @@ namespace ProceduralParts
 
         #region Heat
 
-        [KSPField(isPersistant = true, guiName = "Heat", guiActiveEditor = true, guiFormat = "F3", guiUnits = "K/s", groupName = PAWGroupName)]
+        [KSPField(isPersistant = true, guiName = "#PP_GUI_Heat", guiActiveEditor = true, guiFormat = "F3", guiUnits = "K/s", groupName = PAWGroupName)]
         public float heatProduction;
 
         [KSPField]

@@ -5,6 +5,7 @@ using UnityEngine;
 using KSPAPIExtensions;
 using System.Reflection;
 using UnityEngine.Profiling;
+using KSP.Localization;
 
 namespace ProceduralParts
 {
@@ -352,14 +353,14 @@ namespace ProceduralParts
 
         public bool ApplyLegacyTextures() => forceLegacyTextures || !TUEnabled;
 
-        [KSPField(guiName = "Legacy Textures", isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false),
-         UI_Toggle(disabledText = "Disabled", enabledText = "Enabled", scene = UI_Scene.Editor)]
+        [KSPField(guiName = "#PP_GUI_LegacyTextures", isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false),
+         UI_Toggle(disabledText = "#PP_Disabled", enabledText = "#PP_Enabled", scene = UI_Scene.Editor)]
         public bool forceLegacyTextures = false;
 
-        [KSPField(guiName = "Texture", isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(guiName = "#PP_GUI_Texture", isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string textureSet = "Original";
 
-        [KSPField(guiName = "Ends Texture", isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(guiName = "#PP_GUI_EndsTexture", isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public int capTextureIndex = 0;
 
         private void SetTextureFieldVisibility()
@@ -401,7 +402,7 @@ namespace ProceduralParts
 
         #region Tank shape
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Shape", groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_GUI_Shape", groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string shapeName;
         public void SetShapeName(string s)
         {
@@ -506,7 +507,7 @@ namespace ProceduralParts
         [KSPField(isPersistant=true)]
         public float moduleCost = 0f;
 
-        [KSPField(guiActiveEditor = true, guiName = "cost")]
+        [KSPField(guiActiveEditor = true, guiName = "#PP_cost")]
         private string costDisplay = "";
 
         [KSPField]
@@ -581,9 +582,12 @@ namespace ProceduralParts
                     }
                 }
                 moduleCost = cost;
-                
-                costDisplay = $"Dry: {dryCost:N0} Wet: {actualCost:N0}";
+
+                costDisplay = Localizer.Format("#PP_GUI_costDisplay",((int)Math.Round(dryCost)).ToString("N0"),((int)Math.Round(actualCost)).ToString("N0"));
+                //costDisplay = Localizer.Format("#PP_GUI_costDisplay", dryCost, actualCost);
+                //$"Dry: {dryCost:N0} Wet: {actualCost:N0}"
             }
+
             return moduleCost;
         }
         #endregion
