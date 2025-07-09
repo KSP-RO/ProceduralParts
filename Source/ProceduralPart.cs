@@ -270,10 +270,10 @@ namespace ProceduralParts
         public string partModelName = "stretchyTank";
 
         [KSPField]
-        public string sidesName = "#PP_plugin_Texture_sides";
+        public string sidesName = "sides";
 
         [KSPField]
-        public string endsName = "#PP_plugin_Texture_Ends";
+        public string endsName = "#ends";
 
         [KSPField]
         public string colliderHolder = "colliderHolder";
