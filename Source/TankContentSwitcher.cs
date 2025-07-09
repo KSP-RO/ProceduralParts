@@ -325,7 +325,7 @@ namespace ProceduralParts
                 massDisplay = (SelectedTankType.isStructural) ?
                                 MathUtils.FormatMass(totalMass) :
                                 KSP.Localization.
-                                Localizer.Format("#PP_plugin_Switcher_massDisplay", MathUtils.FormatMass(totalMass),MathUtils.FormatMass(totalMass));
+                                Localizer.Format("#PP_plugin_Switcher_massDisplay", MathUtils.FormatMass(mass),MathUtils.FormatMass(totalMass));
                                 //$"Dry: {MathUtils.FormatMass(mass)} / Wet: {MathUtils.FormatMass(totalMass)}";
             }
         }

@@ -24,7 +24,7 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
-        [KSPField(isPersistant = false, guiActiveEditor = true, guiActive = false, guiName = "Circumdiameter", guiFormat = "F3", guiUnits = "\u2009m", groupName = ProceduralPart.PAWGroupName)]
+        [KSPField(isPersistant = false, guiActiveEditor = true, guiActive = false, guiName = "#PP_plugin_Shape_Circumdiameter", guiFormat = "F3", guiUnits = "\u2009m", groupName = ProceduralPart.PAWGroupName)]
         public float OuterDiameter = 0;
 
         [KSPField]
