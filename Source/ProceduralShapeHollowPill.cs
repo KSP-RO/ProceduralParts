@@ -13,22 +13,22 @@ namespace ProceduralParts
     {
         private const string ModTag = "[ProceduralShapeHollowPill]";
 
-        [KSPField(guiActiveEditor = true, guiName = "#PP_HollowPill_Diameters", groupName = ProceduralPart.PAWGroupName)]
+        [KSPField(guiActiveEditor = true, guiName = "#PP_plugin_Shape_Diameters", groupName = ProceduralPart.PAWGroupName)]
         private string diamTitleString = "";
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_HollowPill_Inner", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Shape_Inner", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float innerDiameter = 1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_HollowPill_Outer", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Shape_Outer", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float outerDiameter = 2f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_HollowPill_Fillet", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Shape_Fillet", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float fillet = 0f;
 

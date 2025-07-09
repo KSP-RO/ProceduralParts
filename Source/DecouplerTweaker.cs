@@ -49,15 +49,15 @@ namespace ProceduralParts
         [KSPField]
         public float maxImpulseMassRatio = 125;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_Decoupler_Style", groupName = ProceduralPart.PAWGroupName),
-         UI_Toggle(disabledText = "#PP_Decoupler_Decoupler", enabledText = "#PP_Decoupler_Separator")]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Decoupler_Style", groupName = ProceduralPart.PAWGroupName),
+         UI_Toggle(disabledText = "#PP_plugin_Decoupler_Decoupler", enabledText = "#PP_plugin_Decoupler_Separator")]
         public bool isOmniDecoupler = false;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_Decoupler_Impulse", guiUnits = " kN*s", guiFormat = "F1", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Decoupler_Impulse", guiUnits = " kN*s", guiFormat = "F1", groupName = ProceduralPart.PAWGroupName),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 0f, maxValue = float.PositiveInfinity, incrementLarge = 10f, incrementSmall = 1, incrementSlide = 0.1f, sigFigs = 1, unit = " kN")]
         public float ejectionImpulse = -1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName= "#PP_Mass", guiUnits="T", guiFormat="F3", groupName = ProceduralPart.PAWGroupName)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName= "#PP_plugin_Mass", guiUnits="T", guiFormat="F3", groupName = ProceduralPart.PAWGroupName)]
         public float mass = 0;
 
         [KSPField]

@@ -14,7 +14,7 @@ namespace ProceduralParts
         // ReSharper disable once InconsistentNaming
         public const string PAWGroupName = "ProcSRB";
         // ReSharper disable once InconsistentNaming
-        public const string PAWGroupDisplayName = "ProceduralSRB";
+        public const string PAWGroupDisplayName = "#PP_plugin_ProceduralSRB";
 
         public ProceduralPart PPart => _pPart ??= GetComponent<ProceduralPart>();
         private ProceduralPart _pPart;
@@ -145,7 +145,7 @@ namespace ProceduralParts
 
         #region Bell selection
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "SRB Type", groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_SRB_Type", groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string selectedBellName;
 
         [KSPField(isPersistant = true)]
@@ -355,21 +355,21 @@ namespace ProceduralParts
 
         private bool UsingME => ModularEnginesChangeThrust != null;
 
-        [KSPField(guiName = "Isp", guiActiveEditor = true, groupName = PAWGroupName)]
+        [KSPField(guiName = "#PP_plugin_SRB_Isp", guiActiveEditor = true, groupName = PAWGroupName)]
         public string srbISP;
 
-        [KSPField(isPersistant = true, guiName = "Thrust", guiActive = true, guiActiveEditor = true, guiFormat = "F3", guiUnits = "kN", groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName),
+        [KSPField(isPersistant = true, guiName = "#PP_plugin_SRB_Thrust", guiActive = true, guiActiveEditor = true, guiFormat = "F3", guiUnits = "kN", groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = float.PositiveInfinity, incrementLarge = 100f, incrementSmall = 10, incrementSlide = 1f, sigFigs = 5, unit = "kN", useSI = true)]
         public float thrust = 250;
 
-        [KSPField(guiActiveEditor = true, guiName = "Thrust", groupName = PAWGroupName)]
+        [KSPField(guiActiveEditor = true, guiName = "#PP_plugin_SRB_Thrust", groupName = PAWGroupName)]
         public string thrustStats;
 
-        [KSPField(isPersistant = true, guiName = "Burn Time", guiActive = true, guiActiveEditor = true, guiFormat = "F1", guiUnits = "s", groupName = PAWGroupName),
+        [KSPField(isPersistant = true, guiName = "#PP_plugin_SRB_BurnTime", guiActive = true, guiActiveEditor = true, guiFormat = "F1", guiUnits = "s", groupName = PAWGroupName),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = 1f, maxValue = 600f, incrementLarge = 60f, incrementSmall = 5, incrementSlide = 0.1f, unit = "s", sigFigs = 1)]
         public float burnTimeME = 60;
 
-        [KSPField(isPersistant = true, guiName = "Deflection", guiActiveEditor = true, guiFormat = "F1", guiUnits = "°", groupName = PAWGroupName),
+        [KSPField(isPersistant = true, guiName = "#PP_plugin_SRB_Deflection", guiActiveEditor = true, guiFormat = "F1", guiUnits = "°", groupName = PAWGroupName),
          UI_FloatEdit(scene = UI_Scene.Editor, minValue = -25f, maxValue = 25f, incrementLarge = 5f, incrementSmall = 1f, incrementSlide = 0.05f, unit = "°", sigFigs = 2)]
         public float thrustDeflection;
 
@@ -431,8 +431,11 @@ namespace ProceduralParts
 
             float thrust0 = thrust;
             float thrust1 = thrust * isp1 / isp0;
-            srbISP = $"{isp0:F0}s Vac / {isp1:F0}s ASL";
-            thrustStats = $"{thrust0.ToStringSI(unit: "N", exponent: 3)} Vac / {thrust1.ToStringSI(unit: "N", exponent: 3)} ASL";
+            srbISP = KSP.Localization.Localizer.Format("#PP_plugin_SRB_ISPInfo", Math.Round(isp0,1), Math.Round(isp1,1));
+            //$"{isp0:F0}s Vac / {isp1:F0}s ASL"
+            thrustStats = KSP.Localization.Localizer.Format("#PP_plugin_SRB_ThrustStats", 
+                thrust0.ToStringSI(unit: "N", exponent: 3), thrust1.ToStringSI(unit: "N", exponent: 3));
+            //$"{thrust0.ToStringSI(unit: "N", exponent: 3)} Vac / {thrust1.ToStringSI(unit: "N", exponent: 3)} ASL"
 
             heatProduction = heatPerThrust * Mathf.Sqrt(thrust) / (1 + part.mass);
 
@@ -565,7 +568,7 @@ namespace ProceduralParts
 
         #region Heat
 
-        [KSPField(isPersistant = true, guiName = "#PP_GUI_Heat", guiActiveEditor = true, guiFormat = "F3", guiUnits = "K/s", groupName = PAWGroupName)]
+        [KSPField(isPersistant = true, guiName = "#PP_plugin_SRB_Heat", guiActiveEditor = true, guiFormat = "F3", guiUnits = "K/s", groupName = PAWGroupName)]
         public float heatProduction;
 
         [KSPField]

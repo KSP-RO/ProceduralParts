@@ -103,10 +103,10 @@ namespace ProceduralParts
         [KSPField(isPersistant = true)]
         public float tankVolume;
 
-        [KSPField(guiActiveEditor = true, guiName = "#PP_Mass", groupName = "TCS", groupDisplayName = "TankContentSwitcher")]
+        [KSPField(guiActiveEditor = true, guiName = "#PP_plugin_Mass", groupName = "TCS", groupDisplayName = "TankContentSwitcher")]
         public string massDisplay;
 
-        [KSPField(guiActiveEditor = true, guiName = "#PP_Volume", groupName = "TCS")]
+        [KSPField(guiActiveEditor = true, guiName = "#PP_plugin_Volume", groupName = "TCS")]
         public string volumeDisplay;
 
         [KSPField(isPersistant = true)]
@@ -115,7 +115,7 @@ namespace ProceduralParts
         [KSPField]
         public string tankVolumeName;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_TankType", groupName = "TCS"), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_TankType", groupName = "TCS"), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string tankType;
         private TankTypeOption SelectedTankType => tankTypeOptions.ContainsKey(tankType) ? tankTypeOptions[tankType] : null;
 
@@ -325,7 +325,7 @@ namespace ProceduralParts
                 massDisplay = (SelectedTankType.isStructural) ?
                                 MathUtils.FormatMass(totalMass) :
                                 KSP.Localization.
-                                Localizer.Format("#PP_Switcher_massDisplay", MathUtils.FormatMass(totalMass),MathUtils.FormatMass(totalMass));
+                                Localizer.Format("#PP_plugin_Switcher_massDisplay", MathUtils.FormatMass(totalMass),MathUtils.FormatMass(totalMass));
                                 //$"Dry: {MathUtils.FormatMass(mass)} / Wet: {MathUtils.FormatMass(totalMass)}";
             }
         }

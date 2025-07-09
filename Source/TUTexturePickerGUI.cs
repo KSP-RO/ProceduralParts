@@ -107,7 +107,7 @@ namespace ProceduralParts
                     BuildToggles();
                     DictionariesInitialized = true;
                 }
-                Window = GUILayout.Window(GetHashCode(), Window, GUIDisplay, "#PP_Picker_TUTextureSelector", GUILayout.Width(GUIWidth), GUILayout.Height(GUIHeight));
+                Window = GUILayout.Window(GetHashCode(), Window, GUIDisplay, KSP.Localization.Localizer.Format("#PP_plugin_Texture_TUTextureSelector"), GUILayout.Width(GUIWidth), GUILayout.Height(GUIHeight));
             }
         }
 
@@ -187,7 +187,7 @@ namespace ProceduralParts
                 GUILayout.EndScrollView();
             }
 
-            if (GUILayout.Button("#PP_Close"))
+            if (GUILayout.Button(KSP.Localization.Localizer.Format("#PP_plugin_Close")))
             {
                 Destroy(this);
                 parent.showTUPickerGUI = false;

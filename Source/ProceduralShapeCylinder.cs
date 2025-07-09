@@ -8,11 +8,11 @@ namespace ProceduralParts
         private const string ModTag = "[ProceduralShapeCylinder]";
         #region Config parameters
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_Diameter", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Diameter", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float diameter = 1.25f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
          UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float length = 1f;
 
