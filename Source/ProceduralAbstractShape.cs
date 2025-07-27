@@ -151,6 +151,11 @@ namespace ProceduralParts
         }
         private float _length;
 
+        /// <summary>
+        /// Key that will uniquely identify the geometry of the current shape.
+        /// </summary>
+        public abstract string ShapeKey { get; }
+
         #endregion
 
         #region Events
