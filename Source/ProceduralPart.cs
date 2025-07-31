@@ -5,6 +5,7 @@ using UnityEngine;
 using KSPAPIExtensions;
 using System.Reflection;
 using UnityEngine.Profiling;
+using ROUtils;
 using KSP.Localization;
 
 namespace ProceduralParts
@@ -273,7 +274,7 @@ namespace ProceduralParts
         public string sidesName = "sides";
 
         [KSPField]
-        public string endsName = "#ends";
+        public string endsName = "ends";
 
         [KSPField]
         public string colliderHolder = "colliderHolder";
@@ -549,13 +550,13 @@ namespace ProceduralParts
 
                 foreach (PartModule pm in part.Modules)
                 {
-                    if(pm is ICostMultiplier)
+                    if (pm is ICostMultiplier)
                     {
-                       cost *= (pm as ICostMultiplier).GetCurrentCostMult();
+                        cost *= (pm as ICostMultiplier).GetCurrentCostMult();
                     }
                 }
-                float dryCost=0;
-                float actualCost=0;
+                float dryCost = 0;
+                float actualCost = 0;
 
                 if (!ContainsMFT(part) && PartResourceLibrary.Instance != null)
                 {
@@ -583,13 +584,9 @@ namespace ProceduralParts
                 }
                 moduleCost = cost;
 
-                
-
                 costDisplay = Localizer.Format("#PP_plugin_GUI_costDisplay",dryCost,actualCost);
-                //costDisplay = Localizer.Format("#PP_plugin_GUI_costDisplay", dryCost, actualCost);
-                //$"Dry: {dryCost:N0} Wet: {actualCost:N0}"
+                //costDisplay = $"Dry: {dryCost:N0} Wet: {actualCost:N0}";
             }
-
             return moduleCost;
         }
         #endregion
@@ -602,13 +599,7 @@ namespace ProceduralParts
         {
             if (!HighLogic.LoadedSceneIsEditor || updateDragCubesInEditor)
             {
-                // Drag cubes should get generated immediately during the partcatalog compilation stage;
-                // in all other cases there may need to be a delay.
-                if (PartLoader.Instance.IsReady())
-                    ProceduralTools.DragCubeTool.UpdateDragCubes(part);
-                else
-                    ProceduralTools.DragCubeTool.UpdateDragCubesImmediate(part);
-                
+                DragCubeTool.UpdateDragCubes(part, CurrentShape.ShapeKey);
             }
         }
 
