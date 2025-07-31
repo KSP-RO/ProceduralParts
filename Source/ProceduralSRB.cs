@@ -431,7 +431,7 @@ namespace ProceduralParts
 
             float thrust0 = thrust;
             float thrust1 = thrust * isp1 / isp0;
-            srbISP = KSP.Localization.Localizer.Format("#PP_plugin_SRB_ISPInfo", Math.Round(isp0,1), Math.Round(isp1,1));
+            srbISP = KSP.Localization.Localizer.Format("#PP_plugin_SRB_ISPInfo", Math.Round(isp0), Math.Round(isp1));
             //$"{isp0:F0}s Vac / {isp1:F0}s ASL"
             thrustStats = KSP.Localization.Localizer.Format("#PP_plugin_SRB_ThrustStats", 
                 thrust0.ToStringSI(unit: "N", exponent: 3), thrust1.ToStringSI(unit: "N", exponent: 3));
