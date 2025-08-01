@@ -25,6 +25,8 @@ namespace ProceduralParts
 
         #endregion
 
+        public override string ShapeKey => $"PP-Pill|{diameter}|{length}|{fillet}";
+
         #region Initialization
 
         public override void OnStart(StartState state)

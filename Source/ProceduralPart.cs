@@ -6,7 +6,6 @@ using KSPAPIExtensions;
 using System.Reflection;
 using UnityEngine.Profiling;
 using ROUtils;
-using KSP.Localization;
 
 namespace ProceduralParts
 {
@@ -584,7 +583,7 @@ namespace ProceduralParts
                 }
                 moduleCost = cost;
 
-                costDisplay = Localizer.Format("#PP_plugin_GUI_costDisplay",dryCost,actualCost);
+                costDisplay = KSP.Localization.Localizer.Format("#PP_plugin_GUI_costDisplay",dryCost,actualCost);
                 //costDisplay = $"Dry: {dryCost:N0} Wet: {actualCost:N0}";
             }
             return moduleCost;

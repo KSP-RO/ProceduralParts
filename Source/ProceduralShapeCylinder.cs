@@ -18,6 +18,8 @@ namespace ProceduralParts
 
         #endregion
 
+        public override string ShapeKey => $"PP-Cyl|{diameter}|{length}";
+
         #region Initialization
 
         public override void OnStart(StartState state)

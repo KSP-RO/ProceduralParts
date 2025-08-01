@@ -66,6 +66,15 @@ namespace ProceduralParts
 
         #endregion
 
+        public override string ShapeKey
+        {
+            get
+            {
+                string shape = selectedShape != CustomShapeName ? selectedShape : $"{shapePoints.x};{shapePoints.y};{shapePoints.z};{shapePoints.w}";
+                return $"BCone|{topDiameter}|{bottomDiameter}|{length}|{offset}|{shape}";
+            }
+        }
+
         #region Helper Funcs
 
         internal const float MaxCircleError = 0.01f;

@@ -12,6 +12,7 @@ namespace ProceduralParts
     class ProceduralShapeHollowPill : ProceduralAbstractShape
     {
         private const string ModTag = "[ProceduralShapeHollowPill]";
+        private const float maxError = 0.0125f;
 
         [KSPField(guiActiveEditor = true, guiName = "#PP_plugin_Shape_Diameters", groupName = ProceduralPart.PAWGroupName)]
         private string diamTitleString = "";
@@ -32,8 +33,6 @@ namespace ProceduralParts
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float fillet = 0f;
 
-        private const float maxError = 0.0125f;
-
         public int numSides => (int)Math.Max(Mathf.PI * Mathf.Sqrt(Mathf.Sqrt(outerDiameter)/(2f * maxError)), 24);
 
         public float MajorRadius => (outerDiameter + innerDiameter) / 4;
@@ -47,6 +46,8 @@ namespace ProceduralParts
 
         private float CornerCenterCornerAngle => 2 * Mathf.PI / numSides;
         private float NormSideLength => Mathf.Tan(CornerCenterCornerAngle / 2);
+
+        public override string ShapeKey => $"PP-HPill|{innerDiameter}|{outerDiameter}|{length}|{fillet}";
 
         public override void OnStart(StartState state)
         {

@@ -25,6 +25,8 @@ namespace ProceduralParts
 
         #endregion
 
+        public override string ShapeKey => $"PP-Cone|{topDiameter}|{bottomDiameter}|{length}";
+
         #region Limit paramters
 
         /// <summary>
