@@ -11,36 +11,36 @@ namespace ProceduralParts
         private const string ModTag = "[ProceduralShapeHollowTruss]";
         private const float maxMeshBendError = 0.02f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Top D", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_HollowTruss_TopDiameter", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float topDiameter = 1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Bottom D", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_HollowTruss_BottomDiameter", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float bottomDiameter = 2f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Rod D", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_HollowTruss_RodDiameter", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit="m", useSI = true)]
         public float rodDiameter = 0.125f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Rods", guiUnits = "#", guiFormat = "F0", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_HollowTruss_Rods", guiUnits = "#", guiFormat = "F0", groupName = ProceduralPart.PAWGroupName),
             UI_FloatRange(minValue = 3, maxValue = 30, stepIncrement = 1, scene = UI_Scene.Editor)]
         public float nbRods = 12;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Tilt Angle", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_HollowTruss_TiltAngle", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, minValue = -180f, maxValue = 180f, incrementLarge = 10f, incrementSmall = 1f, incrementSlide = SliderPrecision, sigFigs = 3, unit = "°", useSI = true)]
         public float tiltAngle = 10f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Offset Angle", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_HollowTruss_OffsetAngle", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementLarge = 10f, incrementSmall = 1f, incrementSlide = SliderPrecision, sigFigs = 3, unit = "°", useSI = true)]
         public float offsetAngle = 0f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Symmetrical rods", groupName = ProceduralPart.PAWGroupName),
-            UI_Toggle(disabledText = "Disabled", enabledText = "Enabled", scene = UI_Scene.Editor, affectSymCounterparts = UI_Scene.None)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_HollowTruss_symmetryRods", groupName = ProceduralPart.PAWGroupName),
+            UI_Toggle(disabledText = "#PP_plugin_Disabled", enabledText = "#PP_plugin_Enabled", scene = UI_Scene.Editor, affectSymCounterparts = UI_Scene.None)]
         public bool symmetryRods = true;
 
         [KSPField]
