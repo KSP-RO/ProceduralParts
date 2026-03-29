@@ -13,7 +13,7 @@ namespace ProceduralParts
     {
         public static readonly string ModTag = "[ProceduralParts]";
         public const string PAWGroupName = "ProcParts";
-        public const string PAWGroupDisplayName = "ProceduralParts";
+        public const string PAWGroupDisplayName = "#PP_plugin_ProceduralParts";
         private const float TranslateTolerance = 0.01f;
 
         internal LegacyTextureHandler legacyTextureHandler;
@@ -21,7 +21,7 @@ namespace ProceduralParts
 
         #region Initialization
 
-        [KSPField(guiActiveEditor = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, guiName = "Texture Selector GUI"),
+        [KSPField(guiActiveEditor = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, guiName = "#PP_plugin_Texture_TextureSelectorGUI"),
          UI_Toggle(disabledText = "Show", enabledText = "Hide", scene = UI_Scene.Editor, affectSymCounterparts = UI_Scene.None)]
         public bool showTUPickerGUI = false;
 
@@ -353,14 +353,14 @@ namespace ProceduralParts
 
         public bool ApplyLegacyTextures() => forceLegacyTextures || !TUEnabled;
 
-        [KSPField(guiName = "Legacy Textures", isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false),
-         UI_Toggle(disabledText = "Disabled", enabledText = "Enabled", scene = UI_Scene.Editor)]
+        [KSPField(guiName = "#PP_plugin_Texture_LegacyTextures", isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false),
+         UI_Toggle(disabledText = "#PP_plugin_Disabled", enabledText = "#PP_plugin_Enabled", scene = UI_Scene.Editor)]
         public bool forceLegacyTextures = false;
 
-        [KSPField(guiName = "Texture", isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(guiName = "#PP_plugin_Texture_Texture", isPersistant = true, groupName = PAWGroupName, groupDisplayName = PAWGroupDisplayName, groupStartCollapsed = false), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string textureSet = "Original";
 
-        [KSPField(guiName = "Ends Texture", isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(guiName = "#PP_plugin_Texture_EndsTexture", isPersistant = true, groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public int capTextureIndex = 0;
 
         private void SetTextureFieldVisibility()
@@ -402,7 +402,7 @@ namespace ProceduralParts
 
         #region Tank shape
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Shape", groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Shape_Shape", groupName = PAWGroupName), UI_ChooseOption(scene = UI_Scene.Editor)]
         public string shapeName;
         public void SetShapeName(string s)
         {
@@ -507,7 +507,7 @@ namespace ProceduralParts
         [KSPField(isPersistant=true)]
         public float moduleCost = 0f;
 
-        [KSPField(guiActiveEditor = true, guiName = "cost")]
+        [KSPField(guiActiveEditor = true, guiName = "#PP_plugin_cost")]
         private string costDisplay = "";
 
         [KSPField]
@@ -549,13 +549,13 @@ namespace ProceduralParts
 
                 foreach (PartModule pm in part.Modules)
                 {
-                    if(pm is ICostMultiplier)
+                    if (pm is ICostMultiplier)
                     {
-                       cost *= (pm as ICostMultiplier).GetCurrentCostMult();
+                        cost *= (pm as ICostMultiplier).GetCurrentCostMult();
                     }
                 }
-                float dryCost=0;
-                float actualCost=0;
+                float dryCost = 0;
+                float actualCost = 0;
 
                 if (!ContainsMFT(part) && PartResourceLibrary.Instance != null)
                 {
@@ -582,8 +582,9 @@ namespace ProceduralParts
                     }
                 }
                 moduleCost = cost;
-                
-                costDisplay = $"Dry: {dryCost:N0} Wet: {actualCost:N0}";
+
+                costDisplay = KSP.Localization.Localizer.Format("#PP_plugin_GUI_costDisplay",dryCost,actualCost);
+                //costDisplay = $"Dry: {dryCost:N0} Wet: {actualCost:N0}";
             }
             return moduleCost;
         }

@@ -13,29 +13,29 @@ namespace ProceduralParts
 
         #region Config parameters
 
-        [KSPField(guiActiveEditor = true, guiName = "Top diameters", groupName = ProceduralPart.PAWGroupName)]
+        [KSPField(guiActiveEditor = true, guiName = "#PP_plugin_Shape_Top", groupName = ProceduralPart.PAWGroupName)]
         private string topTitleString = "";
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Inner", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Shape_Inner", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float topInnerDiameter = 1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Outer", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Shape_Outer", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float topOuterDiameter = 2f;
 
-        [KSPField(guiActiveEditor = true, guiName = "Bottom diameters", groupName = ProceduralPart.PAWGroupName)]
+        [KSPField(guiActiveEditor = true, guiName = "#PP_plugin_shape_Bottomdiameters", groupName = ProceduralPart.PAWGroupName)]
         private string bottomTitleString = "";
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Inner", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Shape_Inner", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float bottomInnerDiameter = 1f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Outer", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Shape_Outer", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float bottomOuterDiameter = 2f;
 
-        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
+        [KSPField(isPersistant = true, guiActiveEditor = true, guiName = "#PP_plugin_Length", guiFormat = "F3", guiUnits = "m", groupName = ProceduralPart.PAWGroupName),
             UI_FloatEdit(scene = UI_Scene.Editor, incrementSlide = SliderPrecision, sigFigs = 5, unit = "m", useSI = true)]
         public float length = 1f;
 
