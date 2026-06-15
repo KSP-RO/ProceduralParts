@@ -59,6 +59,16 @@ namespace ProceduralParts
             }
         }
 
+        public override void CopyDimensions(ProceduralAbstractShape fromShape)
+        {
+            length = fromShape.Length;
+            outerDiameter = fromShape.MaxDiameter;
+            // Carry the source's bore if it had one; AdjustDimensionBounds() (run by the caller)
+            // clamps it to stay inside the wall.
+            if (fromShape.InnerMaxDiameter > 0f)
+                innerDiameter = fromShape.InnerMaxDiameter;
+        }
+
         public override void AdjustDimensionBounds()
         {
             float maxOuterDiameter = PPart.diameterMax;
@@ -72,6 +82,10 @@ namespace ProceduralParts
             maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, 0f, PPart.diameterMax);
 
             maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, 0f, outerDiameter - PPart.diameterMin);
+            // Enforce the bore staying inside the wall for any setter, not just the slider: the
+            // lines below only bound the slider range, so clamp the value too. Otherwise a
+            // programmatic write (shape switch, external code) can leave inner >= outer.
+            innerDiameter = Mathf.Min(innerDiameter, maxInnerDiameter);
             minOuterDiameter = Mathf.Clamp(minOuterDiameter, innerDiameter + PPart.diameterMin, maxOuterDiameter);
 
             minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);

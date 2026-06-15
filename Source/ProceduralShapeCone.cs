@@ -164,6 +164,12 @@ namespace ProceduralParts
             Profiler.EndSample();
         }
 
+        public override void CopyDimensions(ProceduralAbstractShape fromShape)
+        {
+            length = fromShape.Length;
+            topDiameter = bottomDiameter = fromShape.MaxDiameter;
+        }
+
         public override void AdjustDimensionBounds()
         {
             // V = (PI * length * (topDiameter * topDiameter + topDiameter * bottomDiameter + bottomDiameter * bottomDiameter)) / 12f;

@@ -73,6 +73,15 @@ namespace ProceduralParts
             }
         }
 
+        public override void CopyDimensions(ProceduralAbstractShape fromShape)
+        {
+            length = fromShape.Length;
+            topOuterDiameter = bottomOuterDiameter = fromShape.MaxDiameter;
+            // Carry the source's bore if it had one; AdjustDimensionBounds() clamps it inside the wall.
+            if (fromShape.InnerMaxDiameter > 0f)
+                topInnerDiameter = bottomInnerDiameter = fromShape.InnerMaxDiameter;
+        }
+
         public override void AdjustDimensionBounds()
         {
             float bottomMaxOuterDiameter = PPart.diameterMax;
@@ -93,6 +102,10 @@ namespace ProceduralParts
 
             bool bottomAllowedZero = topOuterDiameter > topInnerDiameter;
             bottomMaxInnerDiameter = Mathf.Clamp(bottomMaxInnerDiameter, 0f, bottomOuterDiameter - (bottomAllowedZero ? 0f : PPart.diameterMin));
+            // Enforce the bore staying inside the wall for any setter, not just the slider (see
+            // ProceduralShapeHollowCylinder). Uses the same allowed-zero max as the slider, so a
+            // closed end (inner == outer, when the other end is open) is still permitted.
+            bottomInnerDiameter = Mathf.Min(bottomInnerDiameter, bottomMaxInnerDiameter);
             bottomMinOuterDiameter = Mathf.Clamp(bottomMinOuterDiameter, bottomInnerDiameter + (bottomAllowedZero ? 0f : PPart.diameterMin), bottomMaxOuterDiameter);
 
             // Clamp top diameters
@@ -101,6 +114,7 @@ namespace ProceduralParts
 
             bool topAllowedZero = bottomOuterDiameter > bottomInnerDiameter;
             topMaxInnerDiameter = Mathf.Clamp(topMaxInnerDiameter, 0f, topOuterDiameter - (topAllowedZero ? 0f : PPart.diameterMin));
+            topInnerDiameter = Mathf.Min(topInnerDiameter, topMaxInnerDiameter);
             topMinOuterDiameter = Mathf.Clamp(topMinOuterDiameter, topInnerDiameter + (topAllowedZero ? 0f : PPart.diameterMin), topMaxOuterDiameter);
 
             minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);

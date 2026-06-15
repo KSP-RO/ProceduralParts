@@ -207,6 +207,16 @@ namespace ProceduralParts
         public abstract void AdjustDimensionBounds();
         public abstract void TranslateAttachmentsAndNodes(BaseField f, object obj);
 
+        /// <summary>
+        /// Copy the bounding dimensions of the previously selected shape onto this shape's editable
+        /// fields, so switching shape in the editor preserves the part's overall size (length and
+        /// outer/inner diameters) instead of snapping to this shape's persisted defaults. Concrete
+        /// shapes map the generic <see cref="Length"/>/<see cref="MaxDiameter"/>/<see cref="InnerMaxDiameter"/>
+        /// onto their own fields; the caller runs AdjustDimensionBounds()/UpdateShape() afterward to
+        /// clamp to this shape's limits. The base implementation keeps the shape's own dimensions.
+        /// </summary>
+        public virtual void CopyDimensions(ProceduralAbstractShape fromShape) { }
+
         public virtual void HandleLengthChange(float length, float oldLength)
         {
             float trans = length - oldLength;

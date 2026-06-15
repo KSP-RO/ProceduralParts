@@ -91,6 +91,12 @@ namespace ProceduralParts
             }
         }
 
+        public override void CopyDimensions(ProceduralAbstractShape fromShape)
+        {
+            length = fromShape.Length;
+            diameter = fromShape.MaxDiameter;
+        }
+
         public override void AdjustDimensionBounds()
         {
             // v = 1/24 pi (6 d^2 l+3 (pi-4) d f^2+(10-3 pi) f^3) for d
@@ -131,6 +137,11 @@ namespace ProceduralParts
 
             minLength = Mathf.Clamp(minLength, PPart.lengthMin, PPart.lengthMax - PPart.lengthSmallStep);
             minDiameter = Mathf.Clamp(minDiameter, PPart.diameterMin, PPart.diameterMax - PPart.diameterSmallStep);
+
+            // Clamp the fillet value too, not just the slider: a shape switch (CopyDimensions) can
+            // leave a large persisted fillet against a newly small diameter/length, building a
+            // degenerate capsule.
+            fillet = Mathf.Min(fillet, maxFillet);
 
             (Fields[nameof(diameter)].uiControlEditor as UI_FloatEdit).maxValue = maxDiameter;
             (Fields[nameof(length)].uiControlEditor as UI_FloatEdit).maxValue = maxLength;

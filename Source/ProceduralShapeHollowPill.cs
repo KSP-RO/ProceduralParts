@@ -81,6 +81,15 @@ namespace ProceduralParts
             }
         }
 
+        public override void CopyDimensions(ProceduralAbstractShape fromShape)
+        {
+            length = fromShape.Length;
+            outerDiameter = fromShape.MaxDiameter;
+            // Carry the source's bore if it had one; AdjustDimensionBounds() clamps it inside the wall.
+            if (fromShape.InnerMaxDiameter > 0f)
+                innerDiameter = fromShape.InnerMaxDiameter;
+        }
+
         public override void AdjustDimensionBounds()
         {
             float maxOuterDiameter = PPart.diameterMax;
@@ -104,11 +113,18 @@ namespace ProceduralParts
             maxOuterDiameter = Mathf.Clamp(maxOuterDiameter, PPart.diameterMin, PPart.diameterMax);
             maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, 0f, PPart.diameterMax);
             maxInnerDiameter = Mathf.Clamp(maxInnerDiameter, 0f, outerDiameter - PPart.diameterMin);
+            // Enforce the bore staying inside the wall for any setter, not just the slider (see
+            // ProceduralShapeHollowCylinder): clamp the value, not only the slider range.
+            innerDiameter = Mathf.Min(innerDiameter, maxInnerDiameter);
 
             minOuterDiameter = Mathf.Clamp(minOuterDiameter, innerDiameter + PPart.diameterMin, maxOuterDiameter);
 
             maxFillet = Mathf.Clamp(maxFillet, 0, length);
             maxFillet = Mathf.Clamp(maxFillet, 0, (outerDiameter - innerDiameter) / 2f);
+            // Clamp the fillet value too, not just the slider: a shape switch (CopyDimensions) can
+            // leave a large persisted fillet against a newly thin wall / short length, which would
+            // drive MinorRadius / MinDiameter negative and build a degenerate torus.
+            fillet = Mathf.Min(fillet, maxFillet);
 
             (Fields[nameof(outerDiameter)].uiControlEditor as UI_FloatEdit).maxValue = maxOuterDiameter;
             (Fields[nameof(outerDiameter)].uiControlEditor as UI_FloatEdit).minValue = minOuterDiameter;

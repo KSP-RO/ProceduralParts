@@ -95,6 +95,14 @@ namespace ProceduralParts
                 MonoUtilities.RefreshPartContextWindow(part);
         }
 
+        public override void CopyDimensions(ProceduralAbstractShape fromShape)
+        {
+            length = fromShape.Length;
+            // Map the source diameter onto the truss envelope (top/bottom rings); leave the rod
+            // thickness alone. realLength is derived from these, so it follows automatically.
+            topDiameter = bottomDiameter = fromShape.MaxDiameter;
+        }
+
         public override void AdjustDimensionBounds()
         {
             float maxLength = PPart.lengthMax;

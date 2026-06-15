@@ -350,6 +350,12 @@ namespace ProceduralParts
             }
         }
 
+        public override void CopyDimensions(ProceduralAbstractShape fromShape)
+        {
+            length = fromShape.Length;
+            topDiameter = bottomDiameter = fromShape.MaxDiameter;
+        }
+
         public override void AdjustDimensionBounds()
         {
             float maxLength = PPart.lengthMax;

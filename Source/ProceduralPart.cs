@@ -451,8 +451,25 @@ namespace ProceduralParts
 
             fromShape.isEnabled = fromShape.enabled = false;
 
+            bool refreshed = false;
             if (shape != fromShape)
             {
+                // Preserve the part's size across the shape switch: copy the previous shape's
+                // bounding length/diameters onto the new shape and refresh its geometry *before*
+                // repositioning attachments below, so they map onto the same dimensions instead of
+                // the new shape's persisted defaults (which would shift the part and its children).
+                // This is the only AdjustDimensionBounds()/UpdateShape() pass when it runs -- the
+                // tail call below is skipped (refreshed) to avoid a second full mesh rebuild and the
+                // duplicate model/collider-changed events that drives.
+                if (HighLogic.LoadedSceneIsEditor)
+                {
+                    shape.isEnabled = shape.enabled = true;
+                    shape.CopyDimensions(fromShape);
+                    shape.AdjustDimensionBounds();
+                    shape.UpdateShape();
+                    refreshed = true;
+                }
+
                 ProceduralAbstractShape.ShapeCoordinates coord = new ProceduralAbstractShape.ShapeCoordinates();
                 // For each surface-attached child, get the cylindrical coordinates, normalize them, and re-attach.
                 foreach (Part child in part.children)
@@ -477,9 +494,12 @@ namespace ProceduralParts
             }
 
             shape.isEnabled = shape.enabled = true;
-            shape.AdjustDimensionBounds();
-            shape.UpdateShape();
-            if (HighLogic.LoadedSceneIsEditor) 
+            if (!refreshed)
+            {
+                shape.AdjustDimensionBounds();
+                shape.UpdateShape();
+            }
+            if (HighLogic.LoadedSceneIsEditor)
             {
                 shape.ChangeVolume(shape.volumeName, shape.Volume);
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
