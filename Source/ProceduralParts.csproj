@@ -113,6 +113,7 @@
     <Compile Include="ProceduralShapeCylinder.cs" />
     <Compile Include="ProceduralAbstractShape.cs" />
     <Compile Include="ProceduralPart.cs" />
+    <Compile Include="ModuleIntakeScale.cs" />
     <Compile Include="ProceduralAbstractSoRShape.cs" />
     <Compile Include="ProceduralTools\KSPFieldTool.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
