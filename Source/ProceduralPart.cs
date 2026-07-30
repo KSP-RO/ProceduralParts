@@ -110,6 +110,9 @@ namespace ProceduralParts
         public override void OnStart(StartState state)
         {
             Profiler.BeginSample("PP-OnStart");
+            // isEnabled is persisted, so a part saved while this module was asleep (see OnStartFinished)
+            // would come back asleep. Always start awake and decide again once the part has started.
+            isEnabled = enabled = true;
             InitializeObjects();
             InitializeShapes();
 
@@ -176,6 +179,13 @@ namespace ProceduralParts
             shape.InitializeAttachmentNodes();
             UpdateTexture();
             FixStackAttachments();
+
+            // Outside the editor this module is done as well: its PAW controls are all editor-only, the
+            // cost and mass it reports are cached values served through the IPartCostModifier and
+            // IPartMassModifier interfaces (which KSP queries without looking at isEnabled), and its
+            // [KSPEvent] handlers still get delivered by Part.SendEvent() while asleep.
+            if (!HighLogic.LoadedSceneIsEditor)
+                isEnabled = enabled = false;
         }
 
         public void OnDestroy()
@@ -415,6 +425,15 @@ namespace ProceduralParts
         private readonly Dictionary<string, ProceduralAbstractShape> availableShapes = new Dictionary<string, ProceduralAbstractShape>();
         public ProceduralAbstractShape CurrentShape { get => shape; }
 
+        // Only the selected shape ever has work to do, and only while
+        // the part can still be edited: everywhere else its meshes, colliders and attachment nodes are
+        // final by the time the part has started, and none of its PAW controls are shown.
+        // Sleeping modules are skipped by Part.ModulesOnUpdate()/ModulesOnFixedUpdate() and by the PAW.
+        // Direct calls, KSPField values, IPartMassModifier/IPartCostModifier and [KSPEvent] handlers
+        // reached through Part.SendEvent() all keep working while asleep.
+        // GameScenes.LOADING is included so that the prefab and the editor icon are built as before.
+        private static bool ShapesShouldBeAwake => HighLogic.LoadedSceneIsEditor || HighLogic.LoadedScene == GameScenes.LOADING;
+
         private void InitializeShapes()
         {
             availableShapes.Clear();
@@ -432,7 +451,7 @@ namespace ProceduralParts
                 shapeName = availableShapes.Keys.First();
             }
             shape = availableShapes[shapeName];
-            shape.isEnabled = shape.enabled = true;
+            shape.isEnabled = shape.enabled = ShapesShouldBeAwake;
         }
 
         // Entry condition:  shape == fromShape
@@ -476,7 +495,7 @@ namespace ProceduralParts
                 FixStackAttachments(true);
             }
 
-            shape.isEnabled = shape.enabled = true;
+            shape.isEnabled = shape.enabled = ShapesShouldBeAwake;
             shape.AdjustDimensionBounds();
             shape.UpdateShape();
             if (HighLogic.LoadedSceneIsEditor) 
