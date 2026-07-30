@@ -52,6 +52,9 @@ namespace ProceduralParts
 
         public override void OnStart(StartState state)
         {
+            // isEnabled is persisted, so a part saved while this module was asleep (see OnStartFinished)
+            // would come back asleep. Always start awake and decide again once the part has started.
+            isEnabled = enabled = true;
             InitializeTankType();
 
             if (HighLogic.LoadedSceneIsEditor)
@@ -79,6 +82,10 @@ namespace ProceduralParts
             {
                 UpdateTankMass();
                 UpdateMassDisplay();
+                // Nothing left to do outside the editor: the mass display and the tank type selector are
+                // editor-only PAW controls, and the mass reported through IPartMassModifier is a cached
+                // value that KSP queries without looking at isEnabled.
+                isEnabled = enabled = false;
             }
 
             // Done here and done in OnStart in PP to get ordering right
