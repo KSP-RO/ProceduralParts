@@ -92,6 +92,9 @@
     <Reference Include="UnityEngine.TextRenderingModule">
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.UI">
       <Private>False</Private>
     </Reference>
@@ -104,6 +107,7 @@
     <Compile Include="ProceduralShapeBezierCone.cs" />
     <Compile Include="ProceduralShapePill.cs" />
     <Compile Include="ProceduralShapePolygon.cs" />
+    <Compile Include="ProceduralShapeSpine.cs" />
     <Compile Include="ProceduralShapeHollowCylinder.cs" />
     <Compile Include="ProceduralShapeHollowPill.cs" />
     <Compile Include="ProceduralShapeHollowCone.cs" />
