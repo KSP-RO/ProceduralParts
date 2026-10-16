@@ -23,6 +23,8 @@ namespace ProceduralParts
         internal const float SliderPrecision = 0.001f;
         internal const float IteratorIncrement = 1048.5f / (1024 * 1024); // a float slightly below sliderprecision
 
+        private const float MinScalableDiameter = 0.001f;
+
         public bool IsAvailable => string.IsNullOrEmpty(techRequired) || ResearchAndDevelopment.GetTechnologyState(techRequired) == RDTech.State.Available;
         public bool IsObsolete => !string.IsNullOrEmpty(techObsolete) && ResearchAndDevelopment.GetTechnologyState(techObsolete) == RDTech.State.Available;
         public virtual Vector3 CoMOffset => Vector3.zero;
@@ -555,6 +557,24 @@ namespace ProceduralParts
 
             public override string ToString() => $"(u: {u} y: {y} r: {r})";
         }
+
+        /// <summary>
+        /// Rescales a radial coordinate after the shape diameter at that height changed.
+        /// A zero old diameter cannot be scaled from, so the radius is shifted by the diameter change instead.
+        /// </summary>
+        public static float ScaleRadius(float r, float oldDiameter, float newDiameter)
+        {
+            if (oldDiameter > MinScalableDiameter)
+                return r * newDiameter / oldDiameter;
+            return r + (newDiameter - oldDiameter) / 2;
+        }
+
+        /// <summary>
+        /// Converts a radial coordinate to a fraction of the shape radius.
+        /// A point on a zero-diameter end is treated as being on the surface.
+        /// </summary>
+        public static float NormalizeRadius(float r, float diameter) =>
+            diameter > MinScalableDiameter ? r / (diameter / 2) : 1;
 
         public virtual void GetCylindricCoordinates(Vector3 position, ShapeCoordinates coords)
         {
