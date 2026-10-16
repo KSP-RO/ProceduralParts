@@ -132,7 +132,7 @@ namespace ProceduralParts
 
         public override void NormalizeCylindricCoordinates(ShapeCoordinates coords)
         {
-            coords.r /= (bottomOuterDiameter / 2);
+            coords.r = NormalizeRadius(coords.r, bottomOuterDiameter);
             coords.y /= length;
         }
 
@@ -175,8 +175,7 @@ namespace ProceduralParts
                         float y_from_bottom = coord.y + (length / 2);
                         float oldDiameterAtY = Mathf.Lerp(oldBottomDiameter, oldTopDiameter, y_from_bottom / length);
                         float newDiameterAtY = Mathf.Lerp(bottomOuterDiameter, topOuterDiameter, y_from_bottom / length);
-                        float ratio = newDiameterAtY / oldDiameterAtY;
-                        coord.r *= ratio;
+                        coord.r = ScaleRadius(coord.r, oldDiameterAtY, newDiameterAtY);
                         MovePartByAttachNode(node, coord);
                     }
                 }
