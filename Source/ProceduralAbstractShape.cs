@@ -22,6 +22,8 @@ namespace ProceduralParts
         private static readonly string ModTag = "[ProceduralAbstractShape]";
         internal const float SliderPrecision = 0.001f;
         internal const float IteratorIncrement = 1048.5f / (1024 * 1024); // a float slightly below sliderprecision
+        // Stack nodes are told apart by the sign of their y position, so never place them at 0.
+        internal const float MinNodeLength = 0.00001f;
 
         public bool IsAvailable => string.IsNullOrEmpty(techRequired) || ResearchAndDevelopment.GetTechnologyState(techRequired) == RDTech.State.Available;
         public bool IsObsolete => !string.IsNullOrEmpty(techObsolete) && ResearchAndDevelopment.GetTechnologyState(techObsolete) == RDTech.State.Available;
@@ -501,7 +503,7 @@ namespace ProceduralParts
                 if (node.owner != part)
                     node.owner = part;
                 float direction = (node.position.y > 0) ? 1 : -1;
-                Vector3 translation = direction * (length / 2) * Vector3.up;
+                Vector3 translation = direction * (Mathf.Max(length, MinNodeLength) / 2) * Vector3.up;
                 if (node.nodeType == AttachNode.NodeType.Stack)
                     MoveNode(node, translation);
             }
@@ -524,7 +526,7 @@ namespace ProceduralParts
         public void TranslateNode(AttachNode node, Vector3 translation) => MoveNode(node, node.position + translation);
         public void MoveNode(AttachNode node, Vector3 destination)
         {
-            if (Vector3.Distance(node.position, destination) > 0.01f)
+            if (node.position != destination)
             {
 //                Debug.Log($"{ModTag} MoveNode() moved {node.id} from {node.position} to {destination} = {part.transform.TransformPoint(destination)} (worldspace)");
                 if (node.nodeTransform is Transform)

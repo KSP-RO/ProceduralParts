@@ -156,8 +156,8 @@ namespace ProceduralParts
             if (f.name == nameof(length) && obj is float oldLength)
             {
                 // Make sure to not pass a length of 0, as that breaks the direction selection in the method called.
-                float nodeLength = Mathf.Max(0.00001f, length);
-                HandleLengthChange(nodeLength, oldLength);
+                // Clamp both, so the nodes move by the same amount they were placed with.
+                HandleLengthChange(Mathf.Max(MinNodeLength, length), Mathf.Max(MinNodeLength, oldLength));
             }
         }
 

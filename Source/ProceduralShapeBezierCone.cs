@@ -559,7 +559,7 @@ namespace ProceduralParts
                 if (node.owner != part)
                     node.owner = part;
                 float direction = (node.position.y > 0) ? 1 : -1;
-                Vector3 translation = direction * (length / 2) * Vector3.up;
+                Vector3 translation = direction * (Mathf.Max(length, MinNodeLength) / 2) * Vector3.up;
                 if (node.position.y > 0)
                 {
                     translation += offset * Vector3.forward;
