@@ -513,8 +513,6 @@ namespace ProceduralParts
 
         private Vector3 CoMOffset_internal()
         {
-            // Does not handle horizontal offset, only vertical
-
             //CoM integral over x(t)^2*y'(t):
             // int_0->1:y(t)*x(t)^2*y'(t) dt / int_0->1:x(t)^2*y'(t) dt
             //where x(t), x'(t), y(t) are from the Bezier function
@@ -535,7 +533,31 @@ namespace ProceduralParts
                         990f * x1 * x1 * y0 + 396f * x2 * x2 * y0 - 594f * x1 * x1 * y2 + 594f * x2 * x2 * y1 + 110f * x3 * x3 * y0 - 396f * x1 * x1 * y3 + 660f * x3 * x3 * y1 - 990f * x2 * x2 * y3 + 2310f * x3 * x3 * y2 -
                         3080f * x3 * x3 * y3 + 990f * x1 * x2 * y0 + 594f * x1 * x2 * y1 + 264f * x1 * x3 * y0 - 594f * x1 * x2 * y2 + 396f * x1 * x3 * y1 + 330f * x2 * x3 * y0 - 990f * x1 * x2 * y3 + 990f * x2 * x3 * y1 - 660f * x1 * x3 * y3 + 990f * x2 * x3 * y2 - 2310f * x2 * x3 * y3;
 
-            return new Vector3(0, num / den, 0);
+            return new Vector3(0, num / den, HorizontalCoMOffset());
+        }
+
+        // 6-point Gauss-Legendre nodes and weights on [-1, 1], positive half
+        private static readonly float[] gaussNodes = { 0.2386191860831909f, 0.6612093864662645f, 0.9324695142031521f };
+        private static readonly float[] gaussWeights = { 0.4679139345726910f, 0.3607615730481386f, 0.1713244923791704f };
+
+        private float HorizontalCoMOffset()
+        {
+            // The cross-section at t is centered at z(t) = B(t, op).x / 2 (see WriteVertices)
+            //CoM integral: int_0->1:z(t)*x(t)^2*y'(t) dt / int_0->1:x(t)^2*y'(t) dt
+            // The integrand is a degree 11 polynomial in t, which 6-point Gauss-Legendre integrates exactly
+            float num = 0, den = 0;
+            for (int i = 0; i < gaussNodes.Length; i++)
+            {
+                for (int sign = -1; sign <= 1; sign += 2)
+                {
+                    float t = (1 + sign * gaussNodes[i]) / 2;
+                    float x = B(t, p).x;
+                    float a = gaussWeights[i] * x * x * Bdt(t, p).y;
+                    num += a * B(t, op).x / 2;
+                    den += a;
+                }
+            }
+            return num / den;
         }
 
         public override void UpdateTFInterops()
