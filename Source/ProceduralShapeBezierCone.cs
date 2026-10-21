@@ -863,14 +863,19 @@ namespace ProceduralParts
                 }
 
 
+                // Written so that NaN fails the test and is removed.
                 for (int i = 0; i < ts.Count; ++i)
                 {
-                    if (ts[i] < tM || ts[i] > tN)
+                    if (!(ts[i] >= tM && ts[i] <= tN))
                         ts.RemoveAt(i--);
                 }
 
+                // The deviation is zero at both ends, so a root always exists between them.
+                // None is left only when a, b and c are rounding noise on a segment that is
+                // straight to float precision, which can make b^2-ac slightly negative.
+                // A NaN kept here would become a point whose intervals yield NaN again, without end.
                 if (ts.Count == 0)
-                    throw new InvalidProgramException("There should be a point maximally distant from the line or the maths is really wrong.");
+                    continue;
 
                 norm = norm.normalized;
                 float devM = pM.diameter * norm.x + pM.y * norm.y;
